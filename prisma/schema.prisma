@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Entity {
+  id            String   @id @default(cuid())
+  name          String
+  type          String
+  verified      Boolean  @default(false)
+  logoUrl       String?
+  chains        String[]
+  totalUsdValue Float    @default(0)
+  wallets       Wallet[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([type])
+  @@index([totalUsdValue(sort: Desc)])
+}
+
+model Wallet {
+  id           String   @id @default(cuid())
+  address      String   @unique
+  chain        String
+  entityId     String?
+  entity            Entity?           @relation(fields: [entityId], references: [id])
+  smartMoneyWallet  SmartMoneyWallet?
+  labels            String[]
+  riskScore         Int               @default(0)
+  lastSeen     DateTime
+  holdings     TokenHolding[]
+  transactions Transaction[]
+  createdAt    DateTime @default(now())
+
+  @@index([chain])
+  @@index([entityId])
+}
+
+model Token {
+  id             String   @id @default(cuid())
+  address        String
+  chain          String
+  name           String
+  symbol         String
+  price          Float    @default(0)
+  marketCap      Float    @default(0)
+  volume24h      Float    @default(0)
+  holderCount    Int      @default(0)
+  smartMoneyFlow Float    @default(0)
+  holdings       TokenHolding[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([address, chain])
+  @@index([smartMoneyFlow(sort: Desc)])
+  @@index([volume24h(sort: Desc)])
+}
+
+model TokenHolding {
+  id       String @id @default(cuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tokenId  String
+  token    Token  @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  amount   Float
+  usdValue Float
+
+  @@unique([walletId, tokenId])
+  @@index([usdValue(sort: Desc)])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  hash        String   @unique
+  fromWallet  String
+  toWallet    String
+  tokenId     String?
+  amountUsd   Float
+  chain       String
+  timestamp   DateTime
+  decodedType String
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, timestamp(sort: Desc)])
+  @@index([chain, timestamp(sort: Desc)])
+}
+
+model PredictionMarket {
+  id          String   @id @default(cuid())
+  source      String
+  externalId  String   @unique
+  title       String
+  category    String
+  yesPrice    Float    @default(0.5)
+  noPrice     Float    @default(0.5)
+  volume24h   Float    @default(0)
+  totalVolume Float    @default(0)
+  traderCount Int      @default(0)
+  status      String   @default("open")
+  trades      PredictionTrade[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, status])
+  @@index([volume24h(sort: Desc)])
+  @@index([totalVolume(sort: Desc)])
+}
+
+model PredictionTrade {
+  id        String   @id @default(cuid())
+  marketId  String
+  market    PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  wallet    String
+  direction String
+  shares    Float
+  price     Float
+  timestamp DateTime
+
+  @@index([marketId, timestamp(sort: Desc)])
+  @@index([wallet])
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  userId      String
+  triggerType String
+  conditions  Json
+  isActive    Boolean  @default(true)
+  lastFired   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isActive])
+}
+
+model SmartMoneyWallet {
+  id       String   @id @default(cuid())
+  walletId String   @unique
+  wallet   Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  category String
+  score    Float
+  addedAt  DateTime @default(now())
+
+  @@index([score(sort: Desc)])
+  @@index([category])
+}
+
+model DeFiProtocol {
+  id               String   @id @default(cuid())
+  name             String
+  chain            String
+  category         String
+  tvl              Float    @default(0)
+  tvlChange24h     Float    @default(0)
+  volume24h        Float    @default(0)
+  uniqueUsers      Int      @default(0)
+  smartMoneyInflow Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([tvl(sort: Desc)])
+  @@index([chain, category])
+  @@index([smartMoneyInflow(sort: Desc)])
+}
+
+model NFTCollection {
+  id             String   @id @default(cuid())
+  name           String
+  address        String   @unique
+  chain          String
+  floorPrice     Float    @default(0)
+  volume24h      Float    @default(0)
+  uniqueHolders  Int      @default(0)
+  smartMoneyPct  Float    @default(0)
+  washTradeScore Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([volume24h(sort: Desc)])
+  @@index([floorPrice(sort: Desc)])
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  role         String   @default("free")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model IndexerCheckpoint {
+  id         String   @id @default(cuid())
+  chain      String   @unique
+  lastBlock  BigInt   @default(0)
+  lastTxHash String?
+  updatedAt  DateTime @updatedAt
+}

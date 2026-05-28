@@ -1,0 +1,95 @@
+services:
+  # ── Infrastructure ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus}
+      POSTGRES_DB: nexus
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── DB Init (runs once, then exits) ─────────────────────────────
+  db-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    command: >
+      sh -c "npx prisma db push --skip-generate && npm run db:seed"
+    environment:
+      - DATABASE_URL=postgresql://nexus:${POSTGRES_PASSWORD:-nexus}@postgres:5432/nexus
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Application ─────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://nexus:${POSTGRES_PASSWORD:-nexus}@postgres:5432/nexus
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-nexus-dev-secret}
+      - NEXTAUTH_URL=http://localhost:3000
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ws:
+    build:
+      context: ./ws-server
+    ports:
+      - "3001:3001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - NEXUS_API_KEYS=${NEXUS_API_KEYS:-nexus-dev-key}
+      - PORT=3001
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  indexer:
+    build:
+      context: ./indexer
+    environment:
+      - DATABASE_URL=postgresql://nexus:${POSTGRES_PASSWORD:-nexus}@postgres:5432/nexus
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

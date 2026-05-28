@@ -1,0 +1,21 @@
+{
+  "name": "nexus-ws-server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch server.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ioredis": "^5.6.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^20",
+    "tsx": "^4.22.3",
+    "typescript": "^5"
+  }
+}
