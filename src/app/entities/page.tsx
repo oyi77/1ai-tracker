@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { cn, formatUsd, formatPercent, formatRelativeTime, getEntityTypeColor } from "@/lib/utils";
 import { PageHeader } from "@/components/domain/page-header";
 import { EntityBadge } from "@/components/domain/entity-badge";
 import { RiskScore } from "@/components/domain/risk-score";
 import { PnlBadge } from "@/components/domain/pnl-badge";
 import { EntityCard } from "@/components/entity/EntityCard";
-import { mockEntities, type Entity } from "@/lib/mock/entities";
+import type { Entity } from "@/lib/mock/entities";
 import {
   ArrowUpDown,
   LayoutGrid,
@@ -32,6 +32,30 @@ export default function EntitiesPage() {
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [chainFilter, setChainFilter] = useState<string[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetch("/api/entities")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to fetch entities: ${res.status}`);
+        return res.json();
+      })
+      .then((json) => {
+        if (!cancelled) setEntities(json.data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -64,7 +88,7 @@ export default function EntitiesPage() {
   };
 
   const filtered = useMemo(() => {
-    let list = [...mockEntities];
+    let list = [...entities];
 
     if (search) {
       const q = search.toLowerCase();
@@ -92,7 +116,7 @@ export default function EntitiesPage() {
     });
 
     return list;
-  }, [search, typeFilter, chainFilter, sortKey, sortDir]);
+  }, [entities, search, typeFilter, chainFilter, sortKey, sortDir]);
 
   const sortHeaders: { key: SortKey; label: string; align?: string }[] = [
     { key: "name", label: "Entity" },
@@ -195,6 +219,21 @@ export default function EntitiesPage() {
         </div>
       </div>
 
+      {loading && (
+        <div className="flex h-48 items-center justify-center rounded-lg border border-white/5 bg-bg-surface">
+          <p className="text-sm text-text-muted">Loading entities...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex h-48 flex-col items-center justify-center gap-2 rounded-lg border border-white/5 bg-bg-surface">
+          <p className="text-sm text-red-400">Failed to load entities</p>
+          <p className="text-xs text-text-muted">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && (
+      <>
       {/* Table View */}
       {view === "table" && (
         <div className="overflow-x-auto rounded-lg border border-white/5 bg-bg-surface">
@@ -309,6 +348,8 @@ export default function EntitiesPage() {
         <div className="flex h-48 items-center justify-center rounded-lg border border-white/5 bg-bg-surface">
           <p className="text-sm text-text-muted">No entities match your filters</p>
         </div>
+      )}
+      </>
       )}
     </div>
   );

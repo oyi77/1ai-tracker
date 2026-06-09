@@ -14,14 +14,37 @@ import {
   Image as ImageIcon,
   ChevronLeft,
   ChevronRight,
+  TrendingUp,
+  Zap,
+  Building2,
+  Database,
+  BarChart3,
+  Rss,
+  Gauge,
+  Grid3X3,
+  CircleDollarSign,
+  LineChart,
+  Briefcase,
 } from "lucide-react";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Terminal", href: "/terminal", icon: LineChart },
+  { label: "Tokens", href: "/tokens", icon: Coins },
+  { label: "Sectors", href: "/sectors", icon: Grid3X3 },
+  { label: "DeFi", href: "/defi", icon: TrendingUp },
+  { label: "Stablecoins", href: "/stablecoins", icon: CircleDollarSign },
+  { label: "Fear & Greed", href: "/fear-greed", icon: Gauge },
+  { label: "Entities", href: "/entities", icon: Building2 },
+  { label: "Smart Money", href: "/smart-money", icon: Zap },
+  { label: "News Feed", href: "/feeds", icon: Rss },
+  { label: "Predictions", href: "/predictions", icon: BarChart3 },
   { label: "NFT Intel", href: "/nft", icon: ImageIcon },
   { label: "Cross-Chain Flows", href: "/flows", icon: GitBranch },
   { label: "Alerts", href: "/alerts", icon: Bell },
   { label: "Marketplace", href: "/marketplace", icon: Store },
+  { label: "Portfolio", href: "/portfolio", icon: Briefcase },
+  { label: "Data Sources", href: "/data-sources", icon: Database },
 ];
 
 interface SidebarProps {

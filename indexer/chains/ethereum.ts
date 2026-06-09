@@ -1,10 +1,9 @@
 import WebSocket from "ws";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db";
 import { decodeTransaction, storeTransaction } from "../processors/transaction";
 import { detectSmartMoneyActivity } from "../processors/smart-money";
 import { publishEvent } from "../publisher";
 
-const prisma = new PrismaClient();
 
 // Free public WebSocket RPC endpoints (no API key needed)
 const CHAINS = ["eth", "arb", "base", "op"] as const;

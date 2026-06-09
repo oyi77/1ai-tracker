@@ -1,8 +1,7 @@
 import WebSocket from "ws";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db";
 import { publishEvent } from "../publisher";
 
-const prisma = new PrismaClient();
 
 // Free public Solana WebSocket RPC (no API key needed)
 const SOLANA_WS_URL = process.env.SOLANA_WS_URL || "wss://api.mainnet-beta.solana.com";

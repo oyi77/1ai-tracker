@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db";
 import { publishEvent } from "../publisher";
 
-const prisma = new PrismaClient();
 
 const BLOCKSTREAM_API = "https://blockstream.info/api";
 const POLL_INTERVAL_MS = 30_000; // 30 seconds

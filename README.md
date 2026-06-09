@@ -36,6 +36,18 @@ NEXUS is an **open-source crypto intelligence platform** that monitors blockchai
 | Solana | WebSocket | `wss://api.mainnet-beta.solana.com` | Free |
 | Bitcoin | REST Polling | `https://blockstream.info/api` | Free |
 
+### Optional Enhanced APIs (Free Tiers)
+
+| Provider | Use Case | Free Tier | API Key |
+|----------|----------|-----------|---------|
+| [Alchemy](https://alchemy.com) | Token balances, transfers, NFT data, enhanced RPC | 30M CU/month | Optional |
+| [DeFiLlama](https://defillama.com) | TVL, yields, DEX volumes, stablecoins | Unlimited | Not needed |
+| [Etherscan](https://etherscan.io) | Transaction history, gas prices, contract data | 5 calls/sec | Optional |
+| [Helius](https://helius.dev) | Enriched Solana txs, DAS API, webhooks | 100K credits/day | Optional |
+| [Jupiter](https://jup.ag) | Solana token pricing | Unlimited | Not needed |
+| [CoinGecko](https://coingecko.com) | Market data, prices | 10-30 calls/min | Not needed |
+| [DexScreener](https://dexscreener.com) | DEX pair data | 300 calls/min | Not needed |
+| [Polymarket](https://polymarket.com) | Prediction market data | Unlimited | Not needed |
 ---
 
 ## Quick Start
@@ -57,11 +69,13 @@ This boots 5 services:
 | `postgres` | 5432 | PostgreSQL 16 database |
 | `redis` | 6379 | Redis Pub/Sub event bus |
 | `db-init` | — | Runs once: schema push + seed (50 entities, 500 markets, 10K trades) |
-| `web` | 3000 | Next.js 16 application |
-| `ws` | 3001 | WebSocket sidecar (Socket.io) |
+| `web` | 4400 | Next.js 16 application |
+| `ws` | 4401 | WebSocket sidecar (Socket.io) |
 | `indexer` | — | Multi-chain blockchain indexer |
 
-Open [http://localhost:3000](http://localhost:3000) — login with `admin` / `admin`.
+Open [http://localhost:4400](http://localhost:4400) — login with `admin` / `admin`.
+
+**Production**: [https://tracker.aitradepulse.com](https://tracker.aitradepulse.com)
 
 ### Local Development
 
@@ -76,8 +90,8 @@ npm run db:push
 npm run db:seed
 
 # Run
-npm run dev          # Next.js on :3000
-cd ws-server && npm run dev  # WebSocket on :3001
+npm run dev          # Next.js on :4400
+cd ws-server && npm run dev  # WebSocket on :4401
 cd indexer && npm run dev    # Blockchain indexer
 ```
 
@@ -90,7 +104,7 @@ cd indexer && npm run dev    # Blockchain indexer
 │                    NEXUS Platform                        │
 ├──────────────┬──────────────┬───────────────────────────┤
 │  Next.js 16  │  WS Sidecar  │    Blockchain Indexer     │
-│  (Port 3000) │  (Port 3001) │    (ETH/SOL/BTC/ARB/OP)  │
+│  (Port 4400) │  (Port 4401) │    (ETH/SOL/BTC/ARB/OP)  │
 ├──────────────┴──────────────┴───────────────────────────┤
 │                    Redis Pub/Sub                         │
 ├─────────────────────────────────────────────────────────┤
@@ -105,7 +119,7 @@ cd indexer && npm run dev    # Blockchain indexer
 - **Frontend**: Next.js 16, React 19, Tailwind CSS 4, Recharts, Socket.io-client
 - **Backend**: Next.js API Routes, Prisma 6 ORM, Zod validation
 - **Real-Time**: Socket.io WebSocket sidecar, Redis Pub/Sub event bus
-- **Blockchain**: Standard JSON-RPC subscriptions (`eth_subscribe`), Solana WebSocket API, Bitcoin REST polling
+- **Blockchain**: Standard JSON-RPC subscriptions (`eth_subscribe`), Solana WebSocket API, Bitcoin REST polling, Alchemy Enhanced APIs, DeFiLlama, Etherscan, Helius, Jupiter
 - **Database**: PostgreSQL 16, Redis 7
 - **Auth**: NextAuth.js with credentials provider
 - **Infrastructure**: Docker Compose, multi-stage builds
@@ -126,16 +140,30 @@ GET  /api/v1/smart-money       — Smart money signals and scores
 GET  /api/v1/predictions       — Prediction market data
 GET  /api/v1/alerts            — User alert configurations
 GET  /api/v1/wallets/:address  — Individual wallet analytics
+
+GET  /api/v1/defillama         — DeFiLlama data (protocols, yields, chains, stablecoins, DEX volumes)
+GET  /api/v1/data-sources      — Integration health & availability status
+
+# DeFiLlama actions (?action=...)
+#   protocols  — Top DeFi protocols by TVL
+#   yields     — Top yield pools (filter: ?chain=eth&stablecoin=true)
+#   chains     — Chain TVL breakdown
+#   chain-tvl  — Historical TVL for a chain (?chain=ethereum)
+#   stablecoins — Tracked stablecoins
+#   dex-volumes — DEX volume overview
+#   bridges    — Bridge volume overview
+#   fees       — Protocol fees overview
+#   health     — DeFiLlama API health check
 ```
 
 ### WebSocket Events
 
-Connect to `ws://localhost:3001` with Bearer token:
+Connect to `ws://localhost:4401` with Bearer token:
 
 ```javascript
 import { io } from "socket.io-client";
 
-const socket = io("http://localhost:3001", {
+const socket = io("http://localhost:4401", {
   auth: { token: "your-api-key" }
 });
 
@@ -228,6 +256,12 @@ All configuration via environment variables. Zero required for local development
 | `ETH_WS_URL` | `wss://ethereum-rpc.publicnode.com` | Ethereum WebSocket RPC |
 | `SOLANA_WS_URL` | `wss://api.mainnet-beta.solana.com` | Solana WebSocket RPC |
 | `LOG_LEVEL` | `info` | Indexer log verbosity |
+| `ALCHEMY_API_KEY` | _(none)_ | Alchemy enhanced APIs (token balances, transfers, NFTs) |
+| `HELIUS_API_KEY` | _(none)_ | Helius enhanced Solana (enriched txs, DAS API) |
+| `ETHERSCAN_API_KEY` | _(none)_ | Etherscan transaction history & gas prices |
+| `ARBISCAN_API_KEY` | _(none)_ | Arbitrum transaction history |
+| `BASESCAN_API_KEY` | _(none)_ | Base transaction history |
+| `OPTIMISM_ETHERSCAN_API_KEY` | _(none)_ | Optimism transaction history |
 
 Override any RPC endpoint to use your own node infrastructure:
 

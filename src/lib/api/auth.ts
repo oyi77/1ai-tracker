@@ -5,7 +5,10 @@ const API_KEYS = new Set(
 );
 
 export function validateApiKey(request: NextRequest): boolean {
-  if (API_KEYS.size === 0) return true; // No keys configured = open access (dev mode)
+  if (API_KEYS.size === 0) {
+    console.warn('[AUTH] No NEXUS_API_KEYS configured — denying access. Set NEXUS_API_KEYS env var.');
+    return false;
+  }
   const authHeader = request.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) return false;
   const key = authHeader.slice(7);

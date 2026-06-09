@@ -3,15 +3,17 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { authMiddleware } from "./auth";
 import { startSubscriber } from "./subscriber";
-
-const PORT = parseInt(process.env.WS_PORT || "3001", 10);
-
+const PORT = parseInt(process.env.WS_PORT || "4401", 10);
+const ALLOWED_ORIGINS = [
+  'https://tracker.aitradepulse.com',
+  'http://localhost:4400',
+  'http://localhost:3000',
+];
 const app = express();
 const httpServer = createServer(app);
-
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: ALLOWED_ORIGINS,
     methods: ["GET", "POST"],
   },
   pingInterval: 30000,

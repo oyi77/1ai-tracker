@@ -10,17 +10,24 @@ export const GET = withApiAuth(async (request: NextRequest) => {
     const { searchParams } = request.nextUrl;
     const userId = searchParams.get("userId");
     const isActive = searchParams.get("active");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1") || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "50") || 50));
 
     const where: Record<string, unknown> = {};
     if (userId) where.userId = userId;
     if (isActive !== null) where.isActive = isActive === "true";
 
-    const data = await prisma.alert.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
+    const [data, total] = await Promise.all([
+      prisma.alert.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      prisma.alert.count({ where }),
+    ]);
 
-    return apiSuccess(data, { pageSize: data.length, hasMore: false });
+    return apiSuccess(data, { total, page, pageSize, hasMore: page * pageSize < total });
   } catch (error) {
     console.error("GET /api/v1/alerts error:", error);
     return apiError("Internal server error", 500);

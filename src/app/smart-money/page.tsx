@@ -1,8 +1,36 @@
-import { PageHeader } from "@/components/domain/page-header";
-import { SmartMoneyFeed } from "@/components/smart-money/SmartMoneyFeed";
-import { smartMoneyEvents } from "@/lib/mock-data";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { PageHeader } from '@/components/domain/page-header';
+import { SmartMoneyFeed } from '@/components/smart-money/SmartMoneyFeed';
+import type { SmartMoneyEvent } from '@/lib/mock-data';
 
 export default function SmartMoneyPage() {
+  const [events, setEvents] = useState<SmartMoneyEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch('/api/smart-money', { signal: controller.signal });
+        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+        const json = await res.json();
+        setEvents(json.data ?? []);
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setError(err instanceof Error ? err.message : 'Failed to load smart money data');
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+    return () => controller.abort();
+  }, []);
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
@@ -17,7 +45,18 @@ export default function SmartMoneyPage() {
           <Stat label="Signals Today" value="38" />
         </div>
         <div className="mt-6">
-          <SmartMoneyFeed events={smartMoneyEvents} />
+          {error && (
+            <div className="mb-4 rounded-lg border border-danger/20 bg-danger/10 p-4 text-sm text-danger">
+              {error}
+            </div>
+          )}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-cyan border-t-transparent" />
+            </div>
+          ) : (
+            <SmartMoneyFeed events={events} />
+          )}
         </div>
       </div>
     </div>

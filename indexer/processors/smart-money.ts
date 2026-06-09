@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db";
 import { DecodedTransaction } from "./transaction";
 import { publishEvent } from "../publisher";
 
-const prisma = new PrismaClient();
 
 export interface SmartMoneyEvent {
   walletAddress: string;
