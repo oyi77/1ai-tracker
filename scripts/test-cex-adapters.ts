@@ -37,7 +37,7 @@ async function main() {
     try {
       console.log("  Pairs (limit 3)...");
       const pairs = await adapter.getPairs();
-      const sample = pairs.slice(0, 3).map(p => `${p.baseAsset || p.symbol || "?"}/${p.quoteAsset || "USDT"}`);
+      const sample = pairs.slice(0, 3).map(p => `${p.baseSymbol || p.symbol || "?"}/${p.quoteSymbol || "USDT"}`);
       console.log(`    ${pairs.length} pairs (sample: ${sample.join(", ")})`);
     } catch (e: any) {
       console.error(`    FAILED: ${e.message}`);
@@ -61,7 +61,7 @@ async function main() {
       const oi = await adapter.getOpenInterest("BTC");
       if (oi.length > 0) {
         const o = oi[0];
-        console.log(`    ${oi.length} OI — symbol=${o.symbol} oi=${o.openInterestUsd ? "$" + o.openInterestUsd.toLocaleString() : o.openInterest} time=${new Date(o.timestamp).toISOString()}`);
+        console.log(`    ${oi.length} OI — symbol=${o.symbol} oi=${o.openInterestUsd ? "$" + o.openInterestUsd.toLocaleString() : "N/A"} time=${new Date(o.timestamp).toISOString()}`);
       } else {
         console.log(`    0 OI entries (unsupported)`);
       }

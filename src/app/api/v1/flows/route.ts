@@ -26,18 +26,17 @@ export const GET = withApiAuth(async (request: NextRequest) => {
     const hasMore = transactions.length > limit;
     const sliced = hasMore ? transactions.slice(0, limit) : transactions;
 
-    // Aggregate flows by entity pairs
-    const flowMap = new Map<string, { from: string; to: string; totalUsd: number; count: number }>();
+    // Aggregate flows by wallet
+    const flowMap = new Map<string, { wallet: string; entity: string; totalUsd: number; count: number }>();
     for (const tx of sliced) {
-      const fromEntity = tx.wallet.entity?.name ?? tx.fromWallet.slice(0, 10);
-      const toEntity = tx.toWallet.slice(0, 10);
-      const key = `${fromEntity}->${toEntity}`;
-      const existing = flowMap.get(key);
+      const entity = tx.wallet.entity?.name ?? tx.wallet.address.slice(0, 10)
+      const key = tx.walletId
+      const existing = flowMap.get(key)
       if (existing) {
-        existing.totalUsd += tx.amountUsd;
-        existing.count++;
+        existing.totalUsd += tx.value
+        existing.count++
       } else {
-        flowMap.set(key, { from: fromEntity, to: toEntity, totalUsd: tx.amountUsd, count: 1 });
+        flowMap.set(key, { wallet: tx.wallet.address, entity, totalUsd: tx.value, count: 1 })
       }
     }
 
