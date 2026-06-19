@@ -241,7 +241,7 @@ Error responses:
 ## Project Structure
 
 ```
-1ai-tracker/
+nexus-terminal/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   │   ├── (dashboard)/        # Dashboard layout group

@@ -312,7 +312,7 @@ export class HyperliquidAdapter extends CexAdapter {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "User-Agent": "NEXUS-1ai-tracker/1.0",
+            "User-Agent": "NEXUS-nexus-terminal/1.0",
           },
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout(10000),

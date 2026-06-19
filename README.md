@@ -57,8 +57,8 @@ NEXUS is an **open-source crypto intelligence platform** that monitors blockchai
 One command starts everything — PostgreSQL, Redis, database seeding, Next.js app, WebSocket server, and blockchain indexer:
 
 ```bash
-git clone https://github.com/oyi77/1ai-tracker.git
-cd 1ai-tracker/nexus
+git clone https://github.com/oyi77/nexus-terminal.git
+cd nexus-terminal/nexus
 docker compose up --build
 ```
 

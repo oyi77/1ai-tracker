@@ -1,8 +1,8 @@
-# 1ai-tracker Python SDK
+# nexus-terminal Python SDK
 
 ## Install
 ```bash
-cd ~/projects/1ai-tracker/packages/sdk-python
+cd ~/projects/nexus-terminal/packages/sdk-python
 pip install -r requirements.txt
 ```
 

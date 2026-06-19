@@ -115,7 +115,7 @@ export abstract class CexAdapter {
           signal: AbortSignal.timeout(options?.timeout ?? 10000),
           headers: {
             Accept: "application/json",
-            "User-Agent": "NEXUS-1ai-tracker/1.0",
+            "User-Agent": "NEXUS-nexus-terminal/1.0",
           },
         });
 
