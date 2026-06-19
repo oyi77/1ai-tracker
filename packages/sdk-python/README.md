@@ -1,8 +1,8 @@
-# nexus-terminal Python SDK
+# 1ai-nexus Python SDK
 
 ## Install
 ```bash
-cd ~/projects/nexus-terminal/packages/sdk-python
+cd ~/projects/1ai-nexus/packages/sdk-python
 pip install -r requirements.txt
 ```
 

@@ -1,4 +1,4 @@
-# nexus-terminal Production Rollout Runbook
+# 1ai-nexus Production Rollout Runbook
 ## Week 1–6 Completion & Deployment Order
 
 Runtime toggles
