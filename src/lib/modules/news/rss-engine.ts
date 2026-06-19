@@ -1,13 +1,18 @@
 // ─────────────────────────────────────────────────────────────
-// Module: RSS Engine
+// Module: RSS Engine — Comprehensive Multi-Domain Feed Aggregator
 // sourceType: public-api
-// Coverage: 10+ crypto + macro RSS feeds aggregated
-// Background job: polls feeds, parses, deduplicates, stores
+// 60+ feeds: crypto, macro, regulatory, tradfi, tech, political,
+// social, science, energy, geopolitical, Indonesia
 // ─────────────────────────────────────────────────────────────
 
 import type { DataModule, FetchParams, ModuleResult, ModuleHealth } from '../types'
 import { TTL } from '../types'
 import { cachedFetch } from '../fetch-with-cache'
+
+export type FeedCategory =
+  | 'crypto' | 'macro' | 'regulatory' | 'tradfi'
+  | 'tech' | 'political' | 'social' | 'science'
+  | 'energy' | 'geopolitical' | 'indonesia'
 
 export interface RssItem {
   title: string
@@ -15,47 +20,114 @@ export interface RssItem {
   source: string
   publishedAt: string
   summary?: string
-  category: 'crypto' | 'macro' | 'regulatory' | 'tradfi'
+  category: FeedCategory
 }
 
-const FEEDS: Array<{ id: string; url: string; category: RssItem['category'] }> = [
-  { id: 'coindesk',   url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',      category: 'crypto' },
-  { id: 'cointelegraph', url: 'https://cointelegraph.com/rss',                    category: 'crypto' },
-  { id: 'decrypt',    url: 'https://decrypt.co/feed',                              category: 'crypto' },
-  { id: 'theblock',   url: 'https://www.theblock.co/rss.xml',                      category: 'crypto' },
-  { id: 'blockworks', url: 'https://blockworks.co/feed',                           category: 'crypto' },
-  { id: 'thedefiant', url: 'https://thedefiant.io/feed',                           category: 'crypto' },
-  { id: 'fed-press',  url: 'https://www.federalreserve.gov/feeds/press_all.xml',   category: 'macro' },
-  { id: 'sec-edgar',  url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=&dateb=&owner=include&count=20&search_text=&output=atom', category: 'regulatory' },
-  { id: 'bis',        url: 'https://www.bis.org/rss/home.htm',                     category: 'macro' },
-  { id: 'imf',        url: 'https://www.imf.org/en/News/RSS',                      category: 'macro' },
-  { id: 'treasury',   url: 'https://www.treasury.gov/resource-center/rss.xml',     category: 'macro' },
-  { id: 'marketwatch', url: 'https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines', category: 'tradfi' },
-  { id: 'cnbc',       url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069', category: 'tradfi' },
+const FEEDS: Array<{ id: string; url: string; category: FeedCategory }> = [
+  // ═══ CRYPTO ═══
+  { id: 'coindesk',       url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',          category: 'crypto' },
+  { id: 'cointelegraph',  url: 'https://cointelegraph.com/rss',                            category: 'crypto' },
+  { id: 'decrypt',        url: 'https://decrypt.co/feed',                                   category: 'crypto' },
+  { id: 'theblock',       url: 'https://www.theblock.co/rss.xml',                           category: 'crypto' },
+  { id: 'blockworks',     url: 'https://blockworks.co/feed',                                category: 'crypto' },
+  { id: 'thedefiant',     url: 'https://thedefiant.io/feed',                                category: 'crypto' },
+  { id: 'cryptoslate',    url: 'https://cryptoslate.com/feed/',                             category: 'crypto' },
+  { id: 'bitcoinmag',     url: 'https://bitcoinmagazine.com/feed',                         category: 'crypto' },
+  { id: 'dlnews',         url: 'https://www.dlnews.com/rss/',                               category: 'crypto' },
+
+  // ═══ MACRO & ECONOMICS ═══
+  { id: 'fed-press',      url: 'https://www.federalreserve.gov/feeds/press_all.xml',        category: 'macro' },
+  { id: 'bls',            url: 'https://www.bls.gov/feed/bls_latest.rss',                   category: 'macro' },
+  { id: 'bis',            url: 'https://www.bis.org/rss/home.htm',                          category: 'macro' },
+  { id: 'imf',            url: 'https://www.imf.org/en/News/RSS',                           category: 'macro' },
+  { id: 'treasury',       url: 'https://www.treasury.gov/resource-center/rss.xml',          category: 'macro' },
+  { id: 'ecb',            url: 'https://www.ecb.europa.eu/rss/press.html',                  category: 'macro' },
+  { id: 'bea',            url: 'https://www.bea.gov/news/rss.xml',                          category: 'macro' },
+
+  // ═══ REGULATORY ═══
+  { id: 'sec-edgar',      url: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=&dateb=&owner=include&count=20&output=atom', category: 'regulatory' },
+  { id: 'cftc',           url: 'https://www.cftc.gov/Newsroom/RSS',                         category: 'regulatory' },
+  { id: 'finra',          url: 'https://www.finra.org/rss',                                  category: 'regulatory' },
+  { id: 'occ',            url: 'https://www.occ.treas.gov/news-issuances/news-releases.rss', category: 'regulatory' },
+
+  // ═══ TRADITIONAL FINANCE ═══
+  { id: 'marketwatch',    url: 'https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines', category: 'tradfi' },
+  { id: 'cnbc-markets',   url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069', category: 'tradfi' },
+  { id: 'cnbc-world',     url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100727362', category: 'tradfi' },
+  { id: 'ft',             url: 'https://rss.ft.com/rss/home/us',                             category: 'tradfi' },
+  { id: 'wsj-markets',    url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',              category: 'tradfi' },
+  { id: 'wsj-world',      url: 'https://feeds.a.dj.com/rss/RSSWorldNews.xml',                category: 'tradfi' },
+  { id: 'bloomberg',      url: 'https://feeds.bloomberg.com/markets/news.rss',               category: 'tradfi' },
+  { id: 'reuters-biz',    url: 'https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best', category: 'tradfi' },
+  { id: 'investing',      url: 'https://www.investing.com/rss/news.rss',                     category: 'tradfi' },
+  { id: 'fool',           url: 'https://www.fool.com/feeds/index.aspx',                      category: 'tradfi' },
+
+  // ═══ TECHNOLOGY ═══
+  { id: 'techcrunch',     url: 'https://techcrunch.com/feed/',                               category: 'tech' },
+  { id: 'arstechnica',    url: 'https://feeds.arstechnica.com/arstechnica/index',            category: 'tech' },
+  { id: 'verge',          url: 'https://www.theverge.com/rss/index.xml',                     category: 'tech' },
+  { id: 'wired',          url: 'https://www.wired.com/feed/rss',                             category: 'tech' },
+  { id: 'hackernews',     url: 'https://hnrss.org/frontpage',                                category: 'tech' },
+  { id: 'github-trending',url: 'https://rsshub.app/github/trending/daily/any',               category: 'tech' },
+  { id: 'venturebeat',    url: 'https://venturebeat.com/feed/',                              category: 'tech' },
+  { id: 'register',       url: 'https://www.theregister.com/headlines.atom',                 category: 'tech' },
+  { id: 'zdnet',          url: 'https://www.zdnet.com/news/rss.xml',                         category: 'tech' },
+
+  // ═══ POLITICAL ═══
+  { id: 'politico',       url: 'https://rss.politico.com/politics-news.xml',                 category: 'political' },
+  { id: 'hill',           url: 'https://thehill.com/feed/',                                  category: 'political' },
+  { id: 'axios',          url: 'https://api.axios.com/feed/',                                category: 'political' },
+  { id: 'bbc-world',      url: 'https://feeds.bbci.co.uk/news/world/rss.xml',                category: 'political' },
+  { id: 'nyt-world',      url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',    category: 'political' },
+  { id: 'guardian-world',  url: 'https://www.theguardian.com/world/rss',                     category: 'political' },
+  { id: 'aljazeera',      url: 'https://www.aljazeera.com/xml/rss/all.xml',                  category: 'political' },
+
+  // ═══ GEOPOLITICAL ═══
+  { id: 'cfr',            url: 'https://www.cfr.org/rss',                                   category: 'geopolitical' },
+  { id: 'foreign-affairs', url: 'https://www.foreignaffairs.com/rss.xml',                    category: 'geopolitical' },
+  { id: 'chatham-house',  url: 'https://www.chathamhouse.org/rss.xml',                       category: 'geopolitical' },
+
+  // ═══ ENERGY & CLIMATE ═══
+  { id: 'oilprice',       url: 'https://oilprice.com/rss/main',                              category: 'energy' },
+  { id: 'reuters-energy', url: 'https://www.reutersagency.com/feed/?best-topics=energy',     category: 'energy' },
+  { id: 'iea',            url: 'https://www.iea.org/rss',                                    category: 'energy' },
+
+  // ═══ SCIENCE ═══
+  { id: 'nature',         url: 'https://www.nature.com/nature.rss',                          category: 'science' },
+  { id: 'science',        url: 'https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=science', category: 'science' },
+  { id: 'arxiv-cs',       url: 'https://rss.arxiv.org/rss/cs.AI',                            category: 'science' },
+  { id: 'arxiv-fin',      url: 'https://rss.arxiv.org/rss/q-fin',                            category: 'science' },
+
+  // ═══ SOCIAL & SENTIMENT ═══
+  { id: 'reddit-crypto',  url: 'https://www.reddit.com/r/CryptoCurrency/top.rss?t=day',     category: 'social' },
+  { id: 'reddit-stocks',  url: 'https://www.reddit.com/r/wallstreetbets/top.rss?t=day',     category: 'social' },
+  { id: 'reddit-tech',    url: 'https://www.reddit.com/r/technology/top.rss?t=day',          category: 'social' },
+
+  // ═══ INDONESIA ═══
+  { id: 'kompas-bisnis',  url: 'https://www.kompas.com/rss/bisnis',                          category: 'indonesia' },
+  { id: 'detik-finance',  url: 'https://finance.detik.com/rss',                              category: 'indonesia' },
+  { id: 'cnbc-indo',      url: 'https://www.cnbcindonesia.com/rss',                          category: 'indonesia' },
+  { id: 'bisnis-com',     url: 'https://www.bisnis.com/rss',                                 category: 'indonesia' },
 ]
 
-/** Parse RSS/Atom XML into items — minimal parser, no external deps */
-function parseRssItems(xml: string, sourceId: string): RssItem[] {
+function parseRssItems(xml: string, sourceId: string, category: FeedCategory): RssItem[] {
   const items: RssItem[] = []
-  // Match RSS <item> or Atom <entry>
   const itemRegex = /<(?:item|entry)[\s>]([\s\S]*?)<\/(?:item|entry)>/gi
   let match: RegExpExecArray | null
-
   while ((match = itemRegex.exec(xml)) !== null) {
     const block = match[1]
     const title = extractTag(block, 'title')
     const link = extractLink(block)
     const pubDate = extractTag(block, 'pubDate') || extractTag(block, 'published') || extractTag(block, 'updated')
     const description = extractTag(block, 'description') || extractTag(block, 'summary')
-
     if (title && link) {
       items.push({
-        title: cleanHtml(title),
+        title: cleanHtml(title).slice(0, 500),
         link,
         source: sourceId,
         publishedAt: pubDate || new Date().toISOString(),
         summary: description ? cleanHtml(description).slice(0, 500) : undefined,
-        category: FEEDS.find(f => f.id === sourceId)?.category ?? 'crypto',
+        category,
       })
     }
   }
@@ -74,10 +146,10 @@ function extractLink(xml: string): string {
 }
 
 function cleanHtml(s: string): string {
-  return s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
+  return s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim()
 }
 
-async function fetchRssFeed(feed: { id: string; url: string }): Promise<RssItem[]> {
+async function fetchFeed(feed: { id: string; url: string; category: FeedCategory }): Promise<RssItem[]> {
   try {
     const res = await fetch(feed.url, {
       headers: { Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml' },
@@ -85,24 +157,25 @@ async function fetchRssFeed(feed: { id: string; url: string }): Promise<RssItem[
     })
     if (!res.ok) return []
     const xml = await res.text()
-    return parseRssItems(xml, feed.id)
+    return parseRssItems(xml, feed.id, feed.category)
   } catch {
     return []
   }
 }
 
 async function fetchAllFeeds(params: FetchParams): Promise<RssItem[]> {
-  const category = params.category as string | undefined
-  const feeds = category
-    ? FEEDS.filter(f => f.category === category)
-    : FEEDS
+  const category = params.category as FeedCategory | undefined
+  const limit = (params.limit as number) ?? 100
+  const feeds = category ? FEEDS.filter(f => f.category === category) : FEEDS
 
-  const results = await Promise.allSettled(feeds.map(f => fetchRssFeed(f)))
+  const results = await Promise.allSettled(feeds.map(f => fetchFeed(f)))
   const items = results
     .filter((r): r is PromiseFulfilledResult<RssItem[]> => r.status === 'fulfilled')
     .flatMap(r => r.value)
 
-  return items.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  return items
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    .slice(0, limit)
 }
 
 const rssEngineModule: DataModule = {
@@ -111,7 +184,7 @@ const rssEngineModule: DataModule = {
   category: 'news',
   sourceType: 'public-api',
   provenance: {
-    describesItself: 'RSS aggregator — 10+ crypto, macro, regulatory, and tradfi feeds',
+    describesItself: 'Comprehensive RSS aggregator — 60+ feeds across 11 domains: crypto, macro, regulatory, tradfi, tech, political, social, science, energy, geopolitical, Indonesia',
     fragility: 'stable',
     lastVerified: '2026-06-19',
     toleratesAbsence: true,
@@ -121,14 +194,13 @@ const rssEngineModule: DataModule = {
 
   async healthCheck(): Promise<ModuleHealth> {
     try {
-      // Test one feed
-      const items = await fetchRssFeed(FEEDS[0])
+      const items = await fetchFeed(FEEDS[0])
       return {
         status: items.length > 0 ? 'active' : 'degraded',
         lastChecked: new Date(),
         lastSuccess: items.length > 0 ? new Date() : undefined,
         failureCount: items.length > 0 ? 0 : 1,
-        notes: `${items.length} items from ${FEEDS[0].id}`,
+        notes: `${FEEDS.length} feeds configured`,
       }
     } catch (e) {
       return { status: 'offline', lastChecked: new Date(), failureCount: 1, notes: String(e) }
@@ -146,4 +218,4 @@ const rssEngineModule: DataModule = {
 }
 
 export default rssEngineModule
-export { FEEDS, fetchRssFeed }
+export { FEEDS }
