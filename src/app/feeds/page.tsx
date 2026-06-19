@@ -1,16 +1,5 @@
-"use client";
-
-import { PageHeader } from "@/components/domain/page-header";
-import FeedPanel from "@/components/FeedPanel";
-
+"use client"
+import { TerminalShell } from "@/components/layout/TerminalShell"
 export default function FeedsPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Crypto News Feed"
-        description="Aggregated from 25+ curated sources with credibility scoring"
-      />
-      <FeedPanel />
-    </div>
-  );
+  return <TerminalShell><div className="p-4"><h1 className="text-sm font-mono font-bold text-accent-cyan mb-4">FEEDS</h1><p className="text-text-dim text-xs">Live news feed is available on the main terminal page and at /news.</p></div></TerminalShell>
 }

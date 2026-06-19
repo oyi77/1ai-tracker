@@ -1,16 +1,5 @@
-"use client";
-
-import { PageHeader } from "@/components/domain/page-header";
-import FearGreedPanel from "@/components/FearGreedPanel";
-
+"use client"
+import { TerminalShell } from "@/components/layout/TerminalShell"
 export default function FearGreedPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Fear & Greed Index"
-        description="Composite crypto sentiment from 6 weighted categories"
-      />
-      <FearGreedPanel />
-    </div>
-  );
+  return <TerminalShell><div className="p-4"><h1 className="text-sm font-mono font-bold text-accent-cyan mb-4">FEAR & GREED INDEX</h1><p className="text-text-dim text-xs">Fear & Greed data is available on the main terminal page and via /api/v1/market/sentiment.</p></div></TerminalShell>
 }
