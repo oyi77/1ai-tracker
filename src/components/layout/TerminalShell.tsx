@@ -2,6 +2,7 @@
 
 import { TickerStrip } from "./TickerStrip"
 import { LiveFeedPanel } from "./LiveFeedPanel"
+import { AiAssistantPanel } from "@/components/terminal/AiAssistantPanel"
 
 export function TerminalShell({ children }: { children: React.ReactNode }) {
   return (
@@ -51,17 +52,9 @@ export function TerminalShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
 
-        {/* Right: Sidebar / AI assistant placeholder */}
+        {/* Right: AI assistant panel */}
         <aside className="w-80 border-l border-border-dim bg-bg-panel flex flex-col shrink-0">
-          <div className="p-3 border-b border-border-dim">
-            <h3 className="text-xs font-mono text-accent-cyan">NEXUS AI ▸</h3>
-          </div>
-          <div className="flex-1 flex items-center justify-center p-4">
-            <div className="text-center text-text-dim text-xs">
-              <p className="mb-2">AI Assistant</p>
-              <p className="text-text-muted">Add ANTHROPIC_API_KEY in<br />Settings → Modules to enable</p>
-            </div>
-          </div>
+          <AiAssistantPanel />
         </aside>
       </div>
     </div>
