@@ -1,111 +1,190 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { TerminalShell } from "@/components/layout/TerminalShell"
+import { TrendingUp, TrendingDown, AlertTriangle, Droplets, Clock } from "lucide-react"
 
-interface TrendingToken {
+interface DiscoveredToken {
   name: string
   symbol: string
   address: string
   network: string
-  priceUsd: string
-  volume24h: string
-  change24h: string
-  liquidity: string
+  priceUsd: number
+  volume24h: number
+  liquidity: number
+  change24h: number
   age: string
+  rugScore: number
+  smartMoneyPct: number
+  badges: string[]
 }
 
-export default function TokenDiscoverPage() {
-  const [tokens, setTokens] = useState<TrendingToken[]>([])
-  const [loading, setLoading] = useState(true)
-  const [sort, setSort] = useState<'trending' | 'new' | 'volume'>('trending')
+type SortMode = 'trending' | 'new' | 'volume' | 'liquidity'
 
-  useEffect(() => {
+export default function TokenDiscoverPage() {
+  const [tokens, setTokens] = useState<DiscoveredToken[]>([])
+  const [loading, setLoading] = useState(true)
+  const [sort, setSort] = useState<SortMode>('trending')
+
+  const fetchTokens = useCallback(async () => {
     setLoading(true)
-    const action = sort === 'new' ? 'new' : 'trending'
-    fetch(`/api/v1/modules/fetch?module=geckoterminal&action=${action}&limit=30`)
-      .then(r => r.json())
-      .then(d => {
-        const items = (d.data ?? []).map((p: Record<string, unknown>) => {
-          const attrs = (p.attributes ?? {}) as Record<string, unknown>
-          const network = (p.relationships as Record<string, Record<string, Record<string, string>>>)?.network?.data?.id ?? 'unknown'
-          return {
-            name: attrs.name ?? 'Unknown',
-            symbol: (attrs.name as string)?.split(' / ')[0] ?? '?',
-            address: attrs.address ?? '',
-            network,
-            priceUsd: attrs.base_token_price_usd ?? '0',
-            volume24h: (attrs.volume_usd as Record<string, string>)?.h24 ?? '0',
-            change24h: (attrs.price_change_percentage as Record<string, string>)?.h24 ?? '0',
-            liquidity: attrs.reserve_in_usd ?? '0',
-            age: attrs.pool_created_at ?? '',
-          }
-        })
-        setTokens(items)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+    try {
+      const res = await fetch(`/api/v1/tokens/discover?sort=${sort}&limit=30`)
+      const data = await res.json()
+      setTokens(data.tokens ?? [])
+    } catch {
+      // Silent
+    } finally {
+      setLoading(false)
+    }
   }, [sort])
+
+  useEffect(() => { fetchTokens() }, [fetchTokens])
 
   return (
     <TerminalShell>
-      <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold font-mono text-accent-cyan">TOKEN DISCOVERY</h1>
-          <div className="flex gap-2">
-            {(['trending', 'new', 'volume'] as const).map(s => (
-              <button
-                key={s}
-                onClick={() => setSort(s)}
-                className={`px-2 py-0.5 rounded text-xs border font-mono transition-colors ${
-                  sort === s
-                    ? 'bg-border-active border-border-active text-text-primary'
-                    : 'bg-bg-panel border-border-dim text-text-dim hover:border-border-active'
-                }`}
-              >
-                {s.toUpperCase()}
-              </button>
-            ))}
+      <div className="h-full overflow-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-bg-deep z-10 px-4 py-3 border-b border-border-dim">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="text-sm font-mono font-bold text-accent-cyan">TOKEN DISCOVERY</h1>
+              <span className="text-[10px] text-text-muted">{tokens.length} tokens</span>
+            </div>
+            <div className="flex gap-1">
+              {([
+                { key: 'trending', label: '🔥 TRENDING' },
+                { key: 'new', label: '🆕 NEW' },
+                { key: 'volume', label: '📊 VOLUME' },
+                { key: 'liquidity', label: '💧 LIQUIDITY' },
+              ] as const).map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setSort(s.key)}
+                  className={`px-2 py-0.5 rounded text-[10px] border font-mono transition-colors ${
+                    sort === s.key
+                      ? 'bg-border-active border-border-active text-text-primary'
+                      : 'bg-bg-panel border-border-dim text-text-dim hover:border-border-active'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {loading ? (
-          <div className="text-text-dim text-xs">Loading trending tokens from GeckoTerminal...</div>
-        ) : (
-          <div className="bg-bg-panel border border-border-dim rounded-lg overflow-x-auto">
+        {/* Token Table */}
+        <div className="px-4 py-2">
+          {loading ? (
+            <div className="text-center py-20 text-text-dim text-xs">Scanning chains for tokens...</div>
+          ) : tokens.length === 0 ? (
+            <div className="text-center py-20 text-text-dim text-xs">No tokens found</div>
+          ) : (
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-text-muted border-b border-border-dim">
-                  <th className="text-left py-2 px-3 font-mono">TOKEN</th>
-                  <th className="text-left py-2 px-3 font-mono">NETWORK</th>
-                  <th className="text-right py-2 px-3 font-mono">PRICE</th>
-                  <th className="text-right py-2 px-3 font-mono">24H</th>
-                  <th className="text-right py-2 px-3 font-mono">VOL 24H</th>
-                  <th className="text-right py-2 px-3 font-mono">LIQ</th>
+                <tr className="text-text-muted text-[10px] uppercase">
+                  <th className="text-left py-2 px-2 font-mono">#</th>
+                  <th className="text-left py-2 px-2 font-mono">TOKEN</th>
+                  <th className="text-left py-2 px-2 font-mono">CHAIN</th>
+                  <th className="text-right py-2 px-2 font-mono">PRICE</th>
+                  <th className="text-right py-2 px-2 font-mono">24H</th>
+                  <th className="text-right py-2 px-2 font-mono">VOL 24H</th>
+                  <th className="text-right py-2 px-2 font-mono">LIQUIDITY</th>
+                  <th className="text-center py-2 px-2 font-mono">AGE</th>
+                  <th className="text-center py-2 px-2 font-mono">RUG</th>
+                  <th className="text-left py-2 px-2 font-mono">SIGNALS</th>
                 </tr>
               </thead>
               <tbody>
                 {tokens.map((t, i) => (
-                  <tr key={i} className="border-b border-border-dim/30 hover:bg-bg-elevated cursor-pointer">
-                    <td className="py-2 px-3">
-                      <p className="font-mono text-text-primary">{t.symbol}</p>
-                      <p className="text-text-muted text-[10px] truncate max-w-[200px]">{t.address}</p>
+                  <tr
+                    key={t.address + i}
+                    className="border-t border-border-dim/30 hover:bg-bg-elevated cursor-pointer transition-colors"
+                  >
+                    <td className="py-2 px-2 text-text-muted">{i + 1}</td>
+                    <td className="py-2 px-2">
+                      <div>
+                        <p className="font-mono text-text-primary text-[11px]">{t.symbol}</p>
+                        <p className="text-[9px] text-text-muted truncate max-w-[140px]">{t.address}</p>
+                      </div>
                     </td>
-                    <td className="py-2 px-3 text-accent-cyan">{t.network}</td>
-                    <td className="py-2 px-3 text-right font-mono">${Number(t.priceUsd).toFixed(6)}</td>
-                    <td className={`py-2 px-3 text-right font-mono ${Number(t.change24h) >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                      {Number(t.change24h) >= 0 ? '+' : ''}{Number(t.change24h).toFixed(1)}%
+                    <td className="py-2 px-2">
+                      <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded ${
+                        t.network === 'solana' ? 'bg-purple-900/30 text-purple-400' :
+                        t.network === 'eth' ? 'bg-blue-900/30 text-blue-400' :
+                        'bg-gray-800 text-gray-400'
+                      }`}>
+                        {t.network.toUpperCase()}
+                      </span>
                     </td>
-                    <td className="py-2 px-3 text-right font-mono">${formatNum(Number(t.volume24h))}</td>
-                    <td className="py-2 px-3 text-right font-mono">${formatNum(Number(t.liquidity))}</td>
+                    <td className="py-2 px-2 text-right font-mono">
+                      {t.priceUsd < 0.000001 ? t.priceUsd.toExponential(2) :
+                       t.priceUsd < 0.01 ? t.priceUsd.toFixed(6) :
+                       t.priceUsd < 1 ? t.priceUsd.toFixed(4) :
+                       `$${t.priceUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
+                    </td>
+                    <td className={`py-2 px-2 text-right font-mono ${t.change24h >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
+                      <span className="flex items-center justify-end gap-0.5">
+                        {t.change24h >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        {t.change24h >= 0 ? '+' : ''}{t.change24h.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-right font-mono">${formatNum(t.volume24h)}</td>
+                    <td className="py-2 px-2 text-right font-mono">
+                      <span className="flex items-center justify-end gap-1">
+                        <Droplets size={10} className="text-accent-cyan" />
+                        ${formatNum(t.liquidity)}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <span className="flex items-center justify-center gap-1 text-text-dim">
+                        <Clock size={10} />
+                        {t.age}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-center">
+                      <RugScoreBadge score={t.rugScore} />
+                    </td>
+                    <td className="py-2 px-2">
+                      <div className="flex flex-wrap gap-1">
+                        {t.badges.map((b, j) => (
+                          <span key={j} className="text-[9px] px-1 py-0.5 rounded bg-bg-elevated text-text-dim">
+                            {b}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </TerminalShell>
+  )
+}
+
+function RugScoreBadge({ score }: { score: number }) {
+  if (score >= 70) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-mono text-accent-red">
+        <AlertTriangle size={10} />
+        {score}
+      </span>
+    )
+  }
+  if (score >= 40) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-mono text-accent-amber">
+        <AlertTriangle size={10} />
+        {score}
+      </span>
+    )
+  }
+  return (
+    <span className="text-[10px] font-mono text-accent-green">{score}</span>
   )
 }
 
