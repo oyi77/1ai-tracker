@@ -4,9 +4,7 @@
 // sourceType: derived (no external call)
 // ─────────────────────────────────────────────────────────────
 
-// TODO: Persist ring buffer to PostgreSQL via Prisma when schema is ready.
-// Target model: CorrelationSnapshot { id, pair, r, pValue, sampleSize, createdAt }
-
+import { prisma } from '@/lib/db'
 // ─── Types ───────────────────────────────────────────────────
 
 export interface CorrelationResult {
@@ -34,6 +32,7 @@ interface SeriesPair {
 const MAX_HISTORY = 200
 const pairHistory: Map<string, SeriesPair> = new Map()
 const snapshotCache: Map<string, CorrelationSnapshot> = new Map()
+let initialised = false
 
 // ─── Pearson Correlation ─────────────────────────────────────
 
@@ -197,19 +196,71 @@ export function getCorrelations(): CorrelationSnapshot[] {
 }
 
 /**
+ * Warm the in-memory snapshotCache from recent Prisma rows (last 24 h).
+ * Safe to call multiple times — second+ calls are no-ops.
+ * Never throws: DB errors are swallowed so the engine stays functional.
+ */
+export async function initCorrelations(): Promise<void> {
+  if (initialised) return
+  initialised = true
+
+  try {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const rows = await prisma.correlationSnapshot.findMany({
+      where: { createdAt: { gte: cutoff } },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    // Keep only the most-recent row per pair label.
+    for (const row of rows) {
+      if (!snapshotCache.has(row.pair)) {
+        snapshotCache.set(row.pair, {
+          pair: row.pair,
+          r: row.r,
+          pValue: row.pValue,
+          sampleSize: row.sampleSize,
+          lastUpdated: row.createdAt,
+        })
+      }
+    }
+  } catch (err) {
+    console.error('[correlation-engine] initCorrelations failed:', err)
+  }
+}
+
+/**
  * Recalculate all predefined signal-pair correlations.
  * Feed time-series data through `feedPair()` first, then call this.
+ *
+ * Write-through: after updating the in-memory snapshotCache the new
+ * snapshots are persisted to Prisma. DB errors are logged but never
+ * propagate — the engine keeps working from memory alone.
  */
 export async function updateCorrelations(): Promise<void> {
+  await initCorrelations()
+
+  const now = new Date()
+  const newRows: { pair: string; r: number; pValue: number; sampleSize: number }[] = []
+
   for (const [key, pair] of pairHistory) {
     const result = calculateCorrelation(pair.series1, pair.series2)
+    const sampleSize = Math.min(pair.series1.length, pair.series2.length)
     snapshotCache.set(key, {
       pair: pair.label,
       r: result.r,
       pValue: result.pValue,
-      sampleSize: Math.min(pair.series1.length, pair.series2.length),
-      lastUpdated: new Date(),
+      sampleSize,
+      lastUpdated: now,
     })
+    newRows.push({ pair: pair.label, r: result.r, pValue: result.pValue, sampleSize })
+  }
+
+  if (newRows.length > 0) {
+    try {
+      await prisma.correlationSnapshot.createMany({ data: newRows })
+    } catch (err) {
+      console.error('[correlation-engine] Prisma write failed:', err)
+    }
   }
 }
 
@@ -253,6 +304,7 @@ export function feedPairBatch(
 export function resetCorrelations(): void {
   pairHistory.clear()
   snapshotCache.clear()
+  initialised = false
 }
 
 // ─── Pre-defined signal pair labels ──────────────────────────

@@ -3,21 +3,25 @@
 // Called once on app startup
 // ─────────────────────────────────────────────────────────────
 
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 import { startPriceSnapshotCron } from '@/lib/modules/derived/price-cron'
 import { getSnapshotCount, getSymbolCount } from '@/lib/modules/derived/price-store'
 
 let started = false
 
 export async function GET() {
-  if (!started) {
-    startPriceSnapshotCron()
-    started = true
-  }
+  try {
+    if (!started) {
+      startPriceSnapshotCron()
+      started = true
+    }
 
-  return NextResponse.json({
-    status: 'running',
-    snapshots: getSnapshotCount(),
-    symbols: getSymbolCount(),
-  })
+    return apiSuccess({
+      status: 'running',
+      snapshots: getSnapshotCount(),
+      symbols: getSymbolCount(),
+    })
+  } catch (err) {
+    return apiError((err as Error).message || 'Failed to start cron', 500)
+  }
 }

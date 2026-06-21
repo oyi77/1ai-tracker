@@ -18,7 +18,7 @@ interface Token {
   volume: number
   marketCap: number
   holders: number
-  riskScore: number
+  riskScore: number | null
   sparkline: number[]
   chain: string
   [key: string]: unknown
@@ -53,8 +53,8 @@ export default function TokensPage() {
             volume: p.quoteVolume24h as number,
             marketCap: 0,
             holders: 0,
-            riskScore: Math.floor(Math.random() * 100),
-            sparkline: Array.from({ length: 24 }, (_, i) => (p.price as number) * (1 + (Math.random() - 0.5) * 0.1)),
+            riskScore: null,
+            sparkline: [],
             chain: 'Multi',
           })
         }
@@ -74,8 +74,8 @@ export default function TokensPage() {
               volume: t.volume24h as number,
               marketCap: 0,
               holders: 0,
-              riskScore: Math.floor(Math.random() * 100),
-              sparkline: Array.from({ length: 24 }, () => Math.random() * 100),
+              riskScore: null,
+              sparkline: [],
               chain: 'Multi',
             })
           }
@@ -158,8 +158,8 @@ export default function TokensPage() {
       width: 50,
       align: 'right',
       render: (row) => (
-        <span className={`font-mono ${row.riskScore > 70 ? 'text-data-bear' : row.riskScore > 40 ? 'text-data-warn' : 'text-data-bull'}`}>
-          {row.riskScore}
+        <span className={`font-mono ${row.riskScore == null ? 'text-text-muted' : row.riskScore > 70 ? 'text-data-bear' : row.riskScore > 40 ? 'text-data-warn' : 'text-data-bull'}`}>
+          {row.riskScore != null ? row.riskScore : '—'}
         </span>
       ),
     },

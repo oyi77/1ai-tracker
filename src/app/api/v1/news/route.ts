@@ -2,7 +2,7 @@
 // GET /api/v1/news — Aggregated news feed from RSS + Reddit
 // ─────────────────────────────────────────────────────────────
 
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 import { registerAllModules } from '@/lib/modules'
 
 export async function GET(request: Request) {
@@ -31,8 +31,8 @@ export async function GET(request: Request) {
       category: item.category,
     }))
 
-    return NextResponse.json({ items, count: items.length, cached: result.cached })
+    return apiSuccess({ items, count: items.length, cached: result.cached })
   } catch {
-    return NextResponse.json({ items: [], count: 0 })
+    return apiError('Failed to fetch news', 502)
   }
 }

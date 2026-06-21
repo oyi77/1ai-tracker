@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/response'
 import { registerAllModules } from '@/lib/modules'
-
 export async function GET(request: Request) {
   const registry = registerAllModules()
   const { searchParams } = new URL(request.url)
@@ -70,23 +70,11 @@ export async function GET(request: Request) {
         stablecoin: p.stablecoin,
       }))
 
-    return NextResponse.json({
-      pools: sorted,
-      count: sorted.length,
-      totalAvailable: pools.length,
-      source: 'defillama',
-      timestamp: new Date().toISOString(),
-    }, {
+    return NextResponse.json({ data: { pools: sorted, count: sorted.length, totalAvailable: pools.length, source: 'defillama', timestamp: new Date().toISOString() }, meta: undefined, error: null }, {
       headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=120' },
     })
   } catch (err) {
     console.error('[defi/yields] Error:', err)
-    return NextResponse.json({
-      pools: [],
-      count: 0,
-      error: (err as Error).message,
-      source: 'defillama',
-      timestamp: new Date().toISOString(),
-    }, { status: 502 })
+    return apiError('[defi/yields] Failed to fetch yield data', 502)
   }
 }

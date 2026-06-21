@@ -3,7 +3,7 @@
 // Caches for 60s, aggregates with our market data
 // ─────────────────────────────────────────────────────────────
 
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 
 const VIMERO_FEED = 'https://trackai.adanghdyt.com/api/feed'
 let cache: { data: any; ts: number } | null = null
@@ -27,9 +27,9 @@ async function fetchVimeroFeed() {
 export async function GET() {
   try {
     const feed = await fetchVimeroFeed()
-    return NextResponse.json(feed)
+    return apiSuccess(feed)
   } catch (err) {
     console.error('[vimero] Error:', err)
-    return NextResponse.json({ error: String(err), items: [], top: [], count: 0 }, { status: 200 })
+    return apiError(String(err), 500)
   }
 }

@@ -33,7 +33,7 @@ interface ScannerRow {
   chain: string
   price: number
   change24h: number
-  ageMinutes: number
+  ageMinutes: number | null
   volume24h: number
   liquidity: number
   riskScore: number
@@ -63,15 +63,17 @@ function inferChain(symbol: string): string {
   return 'Multi'
 }
 
-function computeAge(listingTime?: number): number {
-  if (!listingTime || listingTime <= 0) return Math.floor(Math.random() * 1440)
+function computeAge(listingTime?: number): number | null {
+  if (!listingTime || listingTime <= 0) return null
   return Math.max(0, Math.floor((Date.now() - listingTime) / 60_000))
 }
 
-function computeRiskScore(row: { volume24h: number; liquidity: number; ageMinutes: number; change24h: number }): number {
+function computeRiskScore(row: { volume24h: number; liquidity: number; ageMinutes: number | null; change24h: number }): number {
   let score = 50
-  if (row.ageMinutes < 60) score += 20
-  else if (row.ageMinutes < 360) score += 10
+  if (row.ageMinutes != null) {
+    if (row.ageMinutes < 60) score += 20
+    else if (row.ageMinutes < 360) score += 10
+  }
   if (row.volume24h < 100_000) score += 15
   else if (row.volume24h < 1_000_000) score += 5
   else score -= 10
@@ -94,7 +96,8 @@ function riskBarColor(score: number): string {
   return 'bg-data-bear'
 }
 
-function formatAge(minutes: number): string {
+function formatAge(minutes: number | null): string {
+  if (minutes == null) return 'Unknown'
   if (minutes < 60) return `${minutes}m`
   if (minutes < 1440) return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
   return `${Math.floor(minutes / 1440)}d ${Math.floor((minutes % 1440) / 60)}h`
@@ -147,11 +150,7 @@ export default function ScannerPage() {
       const age = computeAge(p.listingTime as number)
       const liqEstimate = vol > 0 ? vol * 0.08 : 0
 
-      const sparkline = Array.from({ length: 30 }, (_, i) => {
-        const t = i / 29
-        const range = high - low || price * 0.01
-        return low + range * (0.3 + 0.4 * Math.sin(t * Math.PI * 2 + Math.random()) + 0.3 * t)
-      })
+      const sparkline: number[] = []
 
       map.set(sym, {
         token: sym.replace(/USDT$/, ''),
@@ -185,11 +184,7 @@ export default function ScannerPage() {
           const age = computeAge(t.listingTime as number)
           const liqEstimate = vol > 0 ? vol * 0.06 : 0
 
-          const sparkline = Array.from({ length: 30 }, (_, i) => {
-            const t2 = i / 29
-            const range = high - low || price * 0.01
-            return low + range * (0.3 + 0.4 * Math.sin(t2 * Math.PI * 2 + Math.random()) + 0.3 * t2)
-          })
+          const sparkline: number[] = []
 
           map.set(key, {
             token: key,
@@ -229,9 +224,9 @@ export default function ScannerPage() {
 
     // Time filter (simulate by filtering age)
     if (timeFilter === '5m') {
-      result = result.filter(r => r.ageMinutes <= 300)
+      result = result.filter(r => r.ageMinutes != null && r.ageMinutes <= 300)
     } else if (timeFilter === '1h') {
-      result = result.filter(r => r.ageMinutes <= 1440)
+      result = result.filter(r => r.ageMinutes != null && r.ageMinutes <= 1440)
     }
 
     // Chain filter
@@ -256,7 +251,7 @@ export default function ScannerPage() {
     const avgRisk = filtered.length > 0
       ? Math.round(filtered.reduce((s, r) => s + r.riskScore, 0) / filtered.length)
       : 0
-    const newPairs = filtered.filter(r => r.ageMinutes < 60).length
+    const newPairs = filtered.filter(r => r.ageMinutes != null && r.ageMinutes < 60).length
     const highRisk = filtered.filter(r => r.riskScore > 70).length
     return { totalVol, avgRisk, newPairs, highRisk }
   }, [filtered])
@@ -311,10 +306,10 @@ export default function ScannerPage() {
       width: 60,
       align: 'right',
       sortable: true,
-      accessor: r => r.ageMinutes,
+      accessor: r => r.ageMinutes ?? Infinity,
       render: r => (
-        <span className={`text-[10px] font-mono ${r.ageMinutes < 60 ? 'text-data-bull' : r.ageMinutes < 360 ? 'text-data-warn' : 'text-text-secondary'}`}>
-          {formatAge(r.ageMinutes)}
+        <span className={`text-[10px] font-mono ${r.ageMinutes != null && r.ageMinutes < 60 ? 'text-data-bull' : r.ageMinutes != null && r.ageMinutes < 360 ? 'text-data-warn' : 'text-text-secondary'}`}>
+          {r.ageMinutes != null ? formatAge(r.ageMinutes) : '—'}
         </span>
       ),
     },

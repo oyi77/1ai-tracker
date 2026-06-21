@@ -3,7 +3,7 @@
 // Expanded with cross-asset tickers via Yahoo Finance
 // ─────────────────────────────────────────────────────────────
 
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 import { registerAllModules } from '@/lib/modules'
 
 export async function GET() {
@@ -80,10 +80,10 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({ tickers })
+    return apiSuccess({ tickers })
   } catch (err) {
     console.error('[market/prices] Error:', err)
-    return NextResponse.json({ tickers: [] })
+    return apiError('Failed to fetch market prices', 502)
   }
 }
 

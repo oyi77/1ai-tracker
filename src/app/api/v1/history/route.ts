@@ -4,29 +4,39 @@
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server'
+import { apiError } from '@/lib/api/response'
 import { buildOhlcv, getSnapshots, getSnapshotCount, getSymbolCount } from '@/lib/modules/derived/price-store'
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const symbol = (searchParams.get('symbol') ?? 'BTC').toUpperCase()
-  const interval = searchParams.get('interval') ?? '1h'
-  const limit = Math.min(500, Math.max(10, Number(searchParams.get('limit') ?? 100)))
+  try {
+    const { searchParams } = new URL(request.url)
+    const symbol = (searchParams.get('symbol') ?? 'BTC').toUpperCase()
+    const interval = searchParams.get('interval') ?? '1h'
+    const limit = Math.min(500, Math.max(10, Number(searchParams.get('limit') ?? 100)))
 
-  const intervalMs: Record<string, number> = {
-    '1m': 60_000, '5m': 300_000, '15m': 900_000, '1h': 3_600_000,
-    '4h': 14_400_000, '1d': 86_400_000,
+    const intervalMs: Record<string, number> = {
+      '1m': 60_000, '5m': 300_000, '15m': 900_000, '1h': 3_600_000,
+      '4h': 14_400_000, '1d': 86_400_000,
+    }
+    const ms = intervalMs[interval] ?? 3_600_000
+
+    const candles = buildOhlcv(symbol, ms, limit)
+    const snapshots = getSnapshots(symbol)
+
+    return NextResponse.json({
+      data: {
+        symbol,
+        interval,
+        candles,
+        snapshotCount: snapshots.length,
+        totalSnapshots: getSnapshotCount(),
+        totalSymbols: getSymbolCount(),
+      },
+      error: null,
+    }, {
+      headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=10' },
+    })
+  } catch (err) {
+    return apiError((err as Error).message || 'Failed to fetch history', 500)
   }
-  const ms = intervalMs[interval] ?? 3_600_000
-
-  const candles = buildOhlcv(symbol, ms, limit)
-  const snapshots = getSnapshots(symbol)
-
-  return NextResponse.json({
-    symbol,
-    interval,
-    candles,
-    snapshotCount: snapshots.length,
-    totalSnapshots: getSnapshotCount(),
-    totalSymbols: getSymbolCount(),
-  })
 }

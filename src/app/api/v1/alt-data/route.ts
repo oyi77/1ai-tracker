@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 import { registerAllModules } from '@/lib/modules'
 
 async function safeFetch(registry: ReturnType<typeof registerAllModules>, id: string) {
@@ -34,16 +34,16 @@ export async function GET() {
       safeFetch(registry, 'hackernews'),
     ])
 
-    return NextResponse.json({
+    const response = apiSuccess({
       usgs, gdacs, google, weibo, zhihu, eastmoney,
       weather, eonet, reliefweb, flights, fema, boc, uk,
       hackernews: hn,
       timestamp: Date.now()
-    }, {
-      headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=600' },
     })
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+    return response
   } catch (err) {
     console.error('[api/v1/alt-data] Error:', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    return apiError(String(err), 500)
   }
 }

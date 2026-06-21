@@ -2,9 +2,8 @@
 // GET /api/v1/defi/tvl — DeFi TVL Dashboard
 // ─────────────────────────────────────────────────────────────
 
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 import { registerAllModules } from '@/lib/modules'
-
 export async function GET(request: Request) {
   const registry = registerAllModules()
   const { searchParams } = new URL(request.url)
@@ -32,9 +31,9 @@ export async function GET(request: Request) {
 
     const totalTvl = sliced.reduce((sum, p) => sum + (Number(p.tvl) || 0), 0)
 
-    return NextResponse.json({ protocols: sliced, totalTvl, count: sliced.length })
+    return apiSuccess({ protocols: sliced, totalTvl, count: sliced.length })
   } catch (err) {
     console.error('[defi/tvl] Error:', err)
-    return NextResponse.json({ protocols: [], totalTvl: 0, count: 0 })
+    return apiError('[defi/tvl] Failed to fetch TVL data', 502)
   }
 }

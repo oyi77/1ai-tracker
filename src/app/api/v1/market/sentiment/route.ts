@@ -2,7 +2,7 @@
 // GET /api/v1/market/sentiment — Fear & Greed + other sentiment
 // ─────────────────────────────────────────────────────────────
 
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 import { registerAllModules } from '@/lib/modules'
 
 export async function GET() {
@@ -13,12 +13,12 @@ export async function GET() {
     const data = result.data
     const latest = data?.[0]
 
-    return NextResponse.json({
+    return apiSuccess({
       fearGreed: latest?.value ?? null,
       classification: latest?.classification ?? 'Unknown',
       cached: result.cached,
     })
   } catch {
-    return NextResponse.json({ fearGreed: null, classification: 'Unknown' })
+    return apiError('Failed to fetch sentiment data', 502)
   }
 }

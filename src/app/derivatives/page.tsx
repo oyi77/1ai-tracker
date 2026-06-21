@@ -24,11 +24,11 @@ export default function DerivativesPage() {
   const pairs: Pair[] = (() => {
     const map = new Map<string, Pair>()
     for (const p of deriv?.data?.topPairs || []) {
-      map.set(p.symbol as string, { symbol: p.symbol as string, price: p.price as number, change24h: p.priceChange24h as number, volume24h: p.quoteVolume24h as number, openInterest: p.openInterest as number, fundingRate: p.fundingRate as number, high24h: p.high24h as number, low24h: p.low24h as number, sparkline: Array.from({ length: 24 }, () => (p.price as number) * (1 + (Math.random() - 0.5) * 0.05)) })
+      map.set(p.symbol as string, { symbol: p.symbol as string, price: p.price as number, change24h: p.priceChange24h as number, volume24h: p.quoteVolume24h as number, openInterest: p.openInterest as number, fundingRate: p.fundingRate as number, high24h: p.high24h as number, low24h: p.low24h as number, sparkline: [] })
     }
     for (const p of (hl?.data || []).slice(0, 30)) {
       const sym = p.symbol as string
-      if (!map.has(sym) && !sym.startsWith('@')) map.set(sym, { symbol: sym, price: p.price as number, change24h: 0, volume24h: 0, openInterest: 0, fundingRate: 0, high24h: 0, low24h: 0, sparkline: Array.from({ length: 24 }, () => (p.price as number) * (1 + (Math.random() - 0.5) * 0.05)) })
+      if (!map.has(sym) && !sym.startsWith('@')) map.set(sym, { symbol: sym, price: p.price as number, change24h: 0, volume24h: 0, openInterest: 0, fundingRate: 0, high24h: 0, low24h: 0, sparkline: [] })
     }
     return Array.from(map.values())
   })()

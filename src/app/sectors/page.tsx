@@ -10,7 +10,7 @@ import { Sparkline } from '@/components/primitives/Sparkline'
 import { useLiveFetch } from '@/lib/hooks/useLiveFetch'
 
 interface DefiResponse { chains: Array<{ name: string; tvl: number }> }
-interface Sector { name: string; tvl: number; change24h: number; change7d: number; dominance: number; sparkline: number[]; [k: string]: unknown }
+interface Sector { name: string; tvl: number; change24h: number | null; change7d: number | null; dominance: number; sparkline: number[]; [k: string]: unknown }
 
 export default function SectorsPage() {
   const { data, status, refresh } = useLiveFetch<DefiResponse>({ url: '/api/v1/defi/overview', interval: 300_000 })
@@ -18,13 +18,20 @@ export default function SectorsPage() {
   const sectors: Sector[] = (() => {
     const chains = data?.chains || []
     const totalTvl = chains.reduce((s, c) => s + (c.tvl || 0), 0)
-    return chains.slice(0, 30).map(c => ({ name: c.name, tvl: c.tvl, change24h: (Math.random() - 0.5) * 10, change7d: (Math.random() - 0.5) * 20, dominance: (c.tvl / totalTvl) * 100, sparkline: Array.from({ length: 24 }, () => Math.random() * 100) }))
+    return chains.slice(0, 30).map(c => ({
+      name: c.name,
+      tvl: c.tvl,
+      change24h: null,
+      change7d: null,
+      dominance: totalTvl > 0 ? (c.tvl / totalTvl) * 100 : 0,
+      sparkline: [],
+    }))
   })()
 
   const columns: Column<Sector>[] = [
     { key: 'name', header: 'Chain', width: 120, render: r => <span className="text-teal-vivid font-bold">{r.name}</span> },
     { key: 'tvl', header: 'TVL', width: 100, align: 'right', render: r => <PriceTag value={r.tvl} size="sm" /> },
-    { key: 'change24h', header: '24h%', width: 70, align: 'right', render: r => <DeltaBadge value={r.change24h} size="xs" /> },
+    { key: 'change24h', header: '24h%', width: 70, align: 'right', render: r => r.change24h != null ? <DeltaBadge value={r.change24h} size="xs" /> : <span className="text-text-muted text-[10px] font-mono">—</span> },
     { key: 'dominance', header: 'Dom', width: 60, align: 'right', render: r => <span className="text-text-primary">{r.dominance.toFixed(2)}%</span> },
     { key: 'sparkline', header: '7d', width: 60, render: r => <Sparkline data={r.sparkline} width={50} height={16} /> },
   ]

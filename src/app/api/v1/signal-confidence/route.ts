@@ -2,7 +2,7 @@
 // GET /api/v1/signal-confidence — Signal confidence scores
 // ─────────────────────────────────────────────────────────────
 
-import { NextResponse } from 'next/server'
+import { apiSuccess, apiError } from '@/lib/api/response'
 import {
   getAllConfidences,
   calculateConfidenceGrade,
@@ -20,15 +20,8 @@ export async function GET() {
       lastUpdated: c.lastUpdated.toISOString(),
     }))
 
-    return NextResponse.json({
-      data: {
-        signals: data,
-        count: data.length,
-      },
-      meta: null,
-      error: null,
-    })
+    return apiSuccess({ signals: data, count: data.length })
   } catch {
-    return NextResponse.json({ signals: [], count: 0 })
+    return apiError('[signal-confidence] Failed to compute confidence scores', 502)
   }
 }
