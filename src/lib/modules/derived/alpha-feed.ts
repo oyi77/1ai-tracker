@@ -124,6 +124,30 @@ export async function fetchAlphaSignals(limit = 50): Promise<AlphaSignal[]> {
         })
       }
     }
+
+    // Insider signals — fresh wallets with large txs
+    try {
+      const insiderRes = await fetch('http://localhost:4400/api/v1/insider').then(r => r.json())
+      if (insiderRes.data) {
+        for (const s of insiderRes.data.slice(0, 5)) {
+          allSignals.push({
+            id: `insider-${s.id}`,
+            type: 'smart_money' as const,
+            asset: s.largeTxToken || 'Unknown',
+            direction: 'bearish' as const, // Insider selling is bearish signal
+            strength: s.riskScore,
+            confidence: s.riskScore / 100,
+            headline: `🔍 INSIDER: Fresh wallet moved $${(s.largeTxAmount / 1000).toFixed(0)}K (${s.totalTxs} prior txs, age: ${s.walletAge})`,
+            explanation: s.suspicionReasons?.join('. ') || 'Fresh wallet with large transaction',
+            source: 'Insider Detector',
+            timestamp: new Date(s.detectedAt),
+            route: '/insider',
+          })
+        }
+      }
+    } catch {
+      // Insider API not available
+    }
   } catch {
     // API calls failed — use whatever we have
   }
