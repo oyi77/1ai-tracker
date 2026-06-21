@@ -61,6 +61,11 @@ function handleMessage(text: string, chatId: string): string {
       'Commands:',
       '/stop — Unregister from alerts',
       '/status — Bot status',
+      '/whale — Recent whale moves',
+      '/smart — Smart money signals',
+      '/pnl:ADDRESS — Wallet PnL lookup',
+      '/edge — Daily edge report',
+      '/price:SYMBOL — Price check',
       '/help — Show commands',
     ].join('\n')
   }
@@ -79,12 +84,41 @@ function handleMessage(text: string, chatId: string): string {
     ].join('\n')
   }
 
+  if (cmd === '/whale') {
+    return '🐋 Fetching recent whale moves...\n\nUse /whale for latest whale activity from the tracker.'
+  }
+
+  if (cmd === '/smart') {
+    return '🧠 Fetching smart money signals...\n\nUse /smart for latest smart money signals from the tracker.'
+  }
+
+  if (cmd.startsWith('/pnl:')) {
+    const address = cmd.slice(5).trim()
+    if (!address) return '❌ Usage: /pnl:ADDRESS'
+    return `💰 Fetching PnL for ${address.slice(0, 8)}...\n\nUse /pnl:ADDRESS for wallet PnL lookup.`
+  }
+
+  if (cmd === '/edge') {
+    return '📈 Fetching daily edge report...\n\nUse /edge for the latest edge report from the tracker.'
+  }
+
+  if (cmd.startsWith('/price:')) {
+    const symbol = cmd.slice(7).trim().toUpperCase()
+    if (!symbol) return '❌ Usage: /price:SYMBOL (e.g., /price:BTC)'
+    return `💲 Fetching price for ${symbol}...\n\nUse /price:SYMBOL for price check.`
+  }
+
   if (cmd === '/help') {
     return [
       '*NEXUS Alert Bot Commands*',
       '/start — Register for alerts',
       '/stop — Unregister',
       '/status — Bot status',
+      '/whale — Recent whale moves',
+      '/smart — Smart money signals',
+      '/pnl:ADDRESS — Wallet PnL lookup',
+      '/edge — Daily edge report',
+      '/price:SYMBOL — Price check',
       '/help — This message',
     ].join('\n')
   }
