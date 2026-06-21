@@ -197,20 +197,15 @@ async function main() {
   // Create transactions
   console.log("Creating transactions...");
   const decodedTypes = ["send", "receive", "swap", "bridge"];
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < 1000; i++) {
     const wallet = createdWallets[i % createdWallets.length];
     const token = createdTokens[i % createdTokens.length];
     const otherWallet = createdWallets[(i + 1) % createdWallets.length];
     await prisma.transaction.create({
       data: {
-        hash: `0x${(i + 1).toString(16).padStart(64, "0")}`,
-        fromWallet: i % 2 === 0 ? wallet.address : otherWallet.address,
-        toWallet: i % 2 === 0 ? otherWallet.address : wallet.address,
-        tokenId: token.id,
-        amountUsd: Math.random() * 1e6 + 100,
-        chain: wallet.chain,
+        txHash: `0x${(i + 1).toString(16).padStart(64, "0")}`,
+        value: Math.random() * 1e6 + 100,
         timestamp: new Date(Date.now() - Math.random() * 30 * 86400000),
-        decodedType: decodedTypes[i % decodedTypes.length],
         walletId: wallet.id,
       },
     });
@@ -221,12 +216,8 @@ async function main() {
   for (const m of ALL_MARKETS) {
     await prisma.predictionMarket.create({
       data: {
-        source: m.source,
-        externalId: m.externalId,
-        title: m.title,
+        symbol: m.category?.slice(0, 3).toUpperCase() || 'PM',
         category: m.category,
-        yesPrice: m.yesPrice,
-        noPrice: 1 - m.yesPrice,
         volume24h: m.volume24h,
         totalVolume: m.totalVolume,
         traderCount: m.traderCount,
@@ -238,15 +229,15 @@ async function main() {
   // Create prediction trades
   console.log("Creating prediction trades...");
   const markets = await prisma.predictionMarket.findMany();
-  for (let i = 0; i < 10000; i++) {
+  for (let i = 0; i < 1000; i++) {
     const market = markets[i % markets.length];
     await prisma.predictionTrade.create({
       data: {
-        marketId: market.id,
+        market: { connect: { id: market.id } },
         wallet: walletAddress(i + 1000),
         direction: Math.random() > 0.5 ? "YES" : "NO",
         shares: Math.random() * 1000 + 1,
-        price: market.yesPrice + (Math.random() - 0.5) * 0.1,
+        price: 0.5 + (Math.random() - 0.5) * 0.1,
         timestamp: new Date(Date.now() - Math.random() * 30 * 86400000),
       },
     });

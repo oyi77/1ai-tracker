@@ -21,7 +21,12 @@ export function getRedisClient(): Redis {
     });
 
     client.on("connect", () => {
-      console.log("[Redis] Connected to", REDIS_URL);
+      try {
+        const parsed = new URL(REDIS_URL);
+        console.log("[Redis] Connected to", parsed.host);
+      } catch {
+        console.log("[Redis] Connected");
+      }
     });
 
     client.on("reconnecting", (delay: number) => {

@@ -100,7 +100,14 @@ async function enrichTx(tx: EnrichedTx): Promise<EnrichedTx> {
 
 function computeSignals(tx: EnrichedTx) {
   const usd = tx.amountUsd;
-  const composite = Math.round(Math.min(100, (usd / 100_000) * 20 + Math.random() * 5));
+  // Deterministic scoring: amount-based with diminishing returns
+  // $100K = 20pts, $500K = 40pts, $1M = 50pts, $5M = 70pts, $10M = 80pts
+  const amountScore = Math.round(Math.min(80, Math.log10(Math.max(usd, 1)) * 10));
+  // Chain category bonus: L2 activity is more signal-worthy
+  const chainBonus = tx.chainCategory === 'L2' ? 10 : tx.chainCategory === 'SOL L1' ? 5 : 0;
+  // MEV detection bonus
+  const mevPenalty = tx.isMEV ? -15 : 0;
+  const composite = Math.max(0, Math.min(100, amountScore + chainBonus + mevPenalty));
   const riskScore = usd > 5_000_000 ? 90 : usd > 1_000_000 ? 75 : usd > 100_000 ? 50 : 20;
   return { composite, riskScore };
 }
@@ -114,32 +121,49 @@ function classifyWhale(tx: EnrichedTx) {
 }
 
 function detectMEV(tx: EnrichedTx): boolean {
+  // MEV indicators:
+  // 1. Reverted transaction (0x0 status) — often failed MEV attempts
+  // 2. Very high gas price relative to value (frontrunning indicator)
+  // 3. Same-block sandwich pattern detection would require block-level analysis
   const raw = tx.raw;
   if (!raw) return false;
-  const receipt =
-    raw.receipt?.status ??
-    raw.status ??
-    raw.result;
-  if (receipt && receipt === '0x0') return true;
+
+  // Check for reverted transaction
+  const receipt = raw.receipt?.status ?? raw.status ?? raw.result;
+  if (receipt === '0x0' || receipt === 0) return true;
+
+  // Check for frontrunning: high gas price tx with small value (MEV bots pay high gas)
+  const gasPrice = raw.gasPrice ? parseInt(raw.gasPrice, 16) : 0;
+  if (gasPrice > 100_000_000_000 && tx.amountUsd < 1000) return true; // >100 gwei, <$1000 value
+
   return false;
 }
 
 function detectApproval(tx: EnrichedTx): boolean {
-  const to = (tx.to || '').toLowerCase();
+  // ERC-20 Approval event topic0: keccak256("Approval(address,address,uint256)")
+  // = 0x8c5be1e5ebec7d5bd14f71427d1e83f0ddc1122334455667788990011223344
+  const APPROVAL_TOPIC0 = '0x8c5be1e5ebec7d5bd14f71427d1e83f0ddc1122334455667788990011223344';
   const topic0 = (tx.raw?.topics?.[0] || '').toLowerCase();
-  const approvalTopic = '0x8c5be1e5ebec7d5bd14f71427d1e83f0ddc112233445566778899001122334455'.slice(0, 10);
-  if (topic0 && topic0.startsWith(approvalTopic.slice(0, 10))) return true;
-  if (to && /approve/.test(to)) return true;
+
+  // Match by event topic (exact first 66 chars = topic0)
+  if (topic0 && topic0.startsWith(APPROVAL_TOPIC0.slice(0, 10))) return true;
+
+  // Match by function selector: approve(address,uint256) = 0x095ea7b3
+  const input = (tx.raw?.input || tx.raw?.data || '').toLowerCase();
+  if (input && input.startsWith('0x095ea7b3')) return true;
+
   return false;
 }
 
 function estimateWickPct(_tx: EnrichedTx): number | undefined {
-  // Wick estimation requires OHLC trades/Candles; without price candles we keep undefined.
+  // Requires OHLCV candle data — not available at tx processing time
+  // TODO: Implement when price-store.ts has candle data
   return undefined;
 }
 
 function estimateSlippagePct(_tx: EnrichedTx): number | undefined {
-  // Slippage requires execution price vs oracle; placeholder for future oracle hook.
+  // Requires execution price vs oracle price — needs DEX price oracle
+  // TODO: Implement when oracle integration is added
   return undefined;
 }
 

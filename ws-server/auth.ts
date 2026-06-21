@@ -22,8 +22,8 @@ export function authMiddleware(
     : authHeader;
 
   if (API_KEYS.length === 0) {
-    console.warn("[Auth] No NEXUS_API_KEYS configured — allowing all connections");
-    return next();
+    console.error("[Auth] CRITICAL: No NEXUS_API_KEYS configured — denying all connections. Set NEXUS_API_KEYS env var.");
+    return next(new Error("Server misconfigured: no API keys set"));
   }
 
   if (!API_KEYS.includes(token)) {

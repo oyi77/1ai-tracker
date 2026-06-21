@@ -1,14 +1,29 @@
 // ─────────────────────────────────────────────────────────────
 // Cached fetch with single-flight deduplication
-// Uses Redis for distributed single-flight when available,
-// falls back to in-memory Map for local dev
+// Two-layer cache: Redis (distributed, persists restart) + in-memory (fast local)
 // ─────────────────────────────────────────────────────────────
 
 import type { ModuleResult } from './types'
 
 const inflight = new Map<string, Promise<unknown>>()
-
 const memoryCache = new Map<string, { data: unknown; expires: number }>()
+
+// Lazy Redis import to avoid circular deps and allow graceful degradation
+let redisClient: import('ioredis').Redis | null = null
+let redisChecked = false
+
+function getRedis() {
+  if (redisChecked) return redisClient
+  redisChecked = true
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getRedisClient } = require('../redis')
+    redisClient = getRedisClient()
+  } catch {
+    redisClient = null
+  }
+  return redisClient
+}
 
 function cacheKey(moduleId: string, params: Record<string, unknown>): string {
   const sorted = Object.entries(params).sort(([a], [b]) => a.localeCompare(b))
@@ -36,8 +51,32 @@ function memorySet<T>(key: string, data: T, ttlMs: number) {
   }
 }
 
+async function redisGet<T>(key: string): Promise<T | undefined> {
+  const redis = getRedis()
+  if (!redis) return undefined
+  try {
+    const data = await redis.get(key)
+    if (!data) return undefined
+    return JSON.parse(data) as T
+  } catch {
+    return undefined
+  }
+}
+
+async function redisSet<T>(key: string, data: T, ttlMs: number): Promise<void> {
+  const redis = getRedis()
+  if (!redis) return
+  try {
+    await redis.set(key, JSON.stringify(data), 'PX', ttlMs)
+  } catch {
+    // Redis write failure — not critical, in-memory cache still works
+  }
+}
+
 /**
- * Fetch with caching and single-flight deduplication.
+ * Fetch with two-layer caching and single-flight deduplication.
+ * Layer 1: In-memory (fast, per-process)
+ * Layer 2: Redis (distributed, survives restart)
  * If 50 concurrent requests hit the same key, only 1 upstream call goes out.
  */
 export async function cachedFetch<T>(
@@ -48,10 +87,18 @@ export async function cachedFetch<T>(
 ): Promise<ModuleResult<T>> {
   const key = cacheKey(moduleId, params)
 
-  // Check memory cache
-  const cached = memoryGet<T>(key)
-  if (cached !== undefined) {
-    return { data: cached, source: moduleId, cached: true, timestamp: Date.now(), ttl: ttlMs }
+  // Layer 1: Check in-memory cache
+  const memCached = memoryGet<T>(key)
+  if (memCached !== undefined) {
+    return { data: memCached, source: moduleId, cached: true, timestamp: Date.now(), ttl: ttlMs }
+  }
+
+  // Layer 2: Check Redis cache
+  const redisCached = await redisGet<T>(key)
+  if (redisCached !== undefined) {
+    // Promote to memory cache
+    memorySet(key, redisCached, ttlMs)
+    return { data: redisCached, source: moduleId, cached: true, timestamp: Date.now(), ttl: ttlMs }
   }
 
   // Single-flight: if another request is already in-flight for this key, wait for it
@@ -67,7 +114,9 @@ export async function cachedFetch<T>(
 
   try {
     const data = await promise
+    // Write to both caches
     memorySet(key, data, ttlMs)
+    void redisSet(key, data, ttlMs) // Fire-and-forget Redis write
     return { data, source: moduleId, cached: false, timestamp: Date.now(), ttl: ttlMs }
   } finally {
     inflight.delete(key)
@@ -78,4 +127,6 @@ export async function cachedFetch<T>(
 export function _clearCaches() {
   memoryCache.clear()
   inflight.clear()
+  redisChecked = false
+  redisClient = null
 }

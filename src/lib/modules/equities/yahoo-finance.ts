@@ -4,9 +4,9 @@
  * upstreamProduct: Yahoo Finance
  * endpoint: query1.finance.yahoo.com / query2.finance.yahoo.com
  * discoveredVia: community-package
- * lastVerified: 2026-06-19
+ * lastVerified: 2026-06-20
  * UNOFFICIAL: this calls Yahoo Finance's internal JSON API, not their public API.
- *   It may break without notice if they change their dashboard.
+ *   Uses /v8/finance/chart for quotes (v7 quote returns empty from server IPs).
  *   fallbackFn: cached last-known-good
  */
 
@@ -27,7 +27,7 @@ async function yfFetch<T>(path: string): Promise<T> {
         signal: AbortSignal.timeout(10_000),
       })
       if (!res.ok) continue
-      const json = await res.json() as { chart?: { result?: unknown[] }; quoteSummary?: { result?: unknown[] } }
+      const json = await res.json() as T
       return json as T
     } catch {
       continue
@@ -36,16 +36,44 @@ async function yfFetch<T>(path: string): Promise<T> {
   throw new Error('Yahoo Finance: all endpoints failed')
 }
 
+/** Fetch a single quote via chart endpoint (v7 quote returns empty from server IPs) */
+async function chartQuote(symbol: string): Promise<Record<string, unknown> | null> {
+  try {
+    const data = await yfFetch<{ chart?: { result?: Array<{ meta?: Record<string, unknown> }> } }>(
+      `/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`
+    )
+    const meta = data.chart?.result?.[0]?.meta
+    if (!meta) return null
+    const price = meta.regularMarketPrice as number | undefined
+    const prevClose = meta.chartPreviousClose as number | undefined
+    const change = price != null && prevClose != null ? price - prevClose : 0
+    const changePercent = prevClose != null && prevClose !== 0 ? (change / prevClose) * 100 : 0
+    return {
+      symbol: meta.symbol ?? symbol,
+      regularMarketPrice: price,
+      regularMarketChange: change,
+      regularMarketChangePercent: changePercent,
+      chartPreviousClose: prevClose,
+      currency: meta.currency ?? 'USD',
+      marketState: meta.marketState ?? 'REGULAR',
+      shortName: meta.shortName ?? symbol,
+    }
+  } catch { return null }
+}
+
 async function fetchYahooFinance(params: FetchParams): Promise<unknown> {
   const action = (params.action as string) ?? 'quote'
 
   switch (action) {
     case 'quote': {
       const symbols = (params.symbols as string) ?? 'BTC-USD,ETH-USD,SOL-USD'
-      const data = await yfFetch<{ quoteResponse?: { result?: Array<Record<string, unknown>> } }>(
-        `/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`
-      )
-      return data.quoteResponse?.result ?? []
+      // Chart endpoint is more reliable from server IPs; fetch each symbol individually
+      const list = symbols.split(',').map(s => s.trim()).filter(Boolean)
+      const results = await Promise.allSettled(list.map(s => chartQuote(s)))
+      const quotes = results
+        .filter(r => r.status === 'fulfilled' && r.value !== null)
+        .map(r => (r as PromiseFulfilledResult<Record<string, unknown>>).value)
+      return quotes
     }
     case 'chart': {
       const symbol = (params.symbol as string) ?? 'BTC-USD'
@@ -65,10 +93,12 @@ async function fetchYahooFinance(params: FetchParams): Promise<unknown> {
     case 'commodities': {
       // Gold, Silver, Oil, Natural Gas
       const symbols = (params.symbols as string) ?? 'GC=F,SI=F,CL=F,NG=F'
-      const data = await yfFetch<{ quoteResponse?: { result?: Array<Record<string, unknown>> } }>(
-        `/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`
-      )
-      return data.quoteResponse?.result ?? []
+      const list = symbols.split(',').map(s => s.trim()).filter(Boolean)
+      const results = await Promise.allSettled(list.map(s => chartQuote(s)))
+      const quotes = results
+        .filter(r => r.status === 'fulfilled' && r.value !== null)
+        .map(r => (r as PromiseFulfilledResult<Record<string, unknown>>).value)
+      return quotes
     }
     default:
       throw new Error(`Yahoo Finance: unknown action ${action}`)
@@ -85,7 +115,7 @@ const yahooFinanceModule: DataModule = {
     upstreamProduct: 'Yahoo Finance Premium',
     discoveredVia: 'community-package',
     fragility: 'moderate',
-    lastVerified: '2026-06-19',
+    lastVerified: '2026-06-20',
     toleratesAbsence: true,
   },
 
@@ -93,7 +123,8 @@ const yahooFinanceModule: DataModule = {
 
   async healthCheck(): Promise<ModuleHealth> {
     try {
-      await yfFetch('/v7/finance/quote?symbols=AAPL')
+      const q = await chartQuote('AAPL')
+      if (!q) throw new Error('empty quote')
       return { status: 'active', lastChecked: new Date(), lastSuccess: new Date(), failureCount: 0 }
     } catch (e) {
       return { status: 'degraded', lastChecked: new Date(), failureCount: 1, notes: String(e) }
@@ -110,7 +141,6 @@ const yahooFinanceModule: DataModule = {
   },
 
   async fallbackFn<T>(_params: FetchParams): Promise<ModuleResult<T>> {
-    // Fallback: return cached data or empty
     return { data: [] as unknown as T, source: 'yahoo-finance (cached)', cached: true, timestamp: Date.now(), ttl: TTL.PRICE_DATA * TTL.RE_MULTIPLIER }
   },
 }

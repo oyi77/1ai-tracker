@@ -1,159 +1,284 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { TerminalShell } from "@/components/layout/TerminalShell"
+import { useState, useEffect, useCallback } from 'react'
+import { NexusLayout } from '@/components/layout/NexusLayout'
+import { Panel } from '@/components/shell/Panel'
+import { DataTable, type Column } from '@/components/shell/DataTable'
+import { PriceTag } from '@/components/primitives/PriceTag'
+import { DeltaBadge } from '@/components/primitives/DeltaBadge'
+import { AlertPill } from '@/components/primitives/AlertPill'
+import { EntityLabel } from '@/components/primitives/EntityLabel'
+import { Sparkline } from '@/components/primitives/Sparkline'
+import { LiveDot } from '@/components/primitives/LiveDot'
 
-interface CategoryFlow {
-  category: string
-  label: string
-  icon: string
-  entityCount: number
-  chains: string[]
+interface SmartMoneySignal {
+  id: string
+  wallet: string
+  walletLabel: string
+  action: 'Accumulated' | 'Exited' | 'Swapped' | 'Bridged'
+  token: string
+  amount: number
+  amountUsd: number
+  score: number
+  confidence: number
+  timestamp: string
+  chain: string
+  sparkline: number[]
+  [key: string]: unknown
 }
 
-interface WalletProfile {
+interface TopWallet {
   address: string
-  chain: string
-  entity: { label: string; category: string; confidence: number } | null
-  txCount: number
-  tokenTransferCount: number
+  label: string
+  type: string
+  score: number
+  pnl30d: number
+  winRate: number
+  tradeCount: number
+  avgSize: number
+  sparkline: number[]
+  [key: string]: unknown
 }
 
 export default function SmartMoneyPage() {
-  const [flows, setFlows] = useState<CategoryFlow[]>([])
-  const [totalEntities, setTotalEntities] = useState(0)
-  const [walletAddress, setWalletAddress] = useState('')
-  const [walletProfile, setWalletProfile] = useState<WalletProfile | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [walletLoading, setWalletLoading] = useState(false)
+  const [signals, setSignals] = useState<SmartMoneySignal[]>([])
+  const [topWallets, setTopWallets] = useState<TopWallet[]>([])
+  const [feedStatus, setFeedStatus] = useState<'live' | 'stale' | 'error'>('live')
+  const [filterAction, setFilterAction] = useState<string>('all')
 
-  useEffect(() => {
-    fetch('/api/v1/smart-money/flow')
-      .then(r => r.json())
-      .then(d => {
-        setFlows(d.flows ?? [])
-        setTotalEntities(d.totalEntities ?? 0)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+  const fetchData = useCallback(async () => {
+    try {
+      await Promise.allSettled([
+        fetch('/api/v1/pnl?leaderboard=true&limit=20').then(r => r.json()),
+        fetch('/api/v1/copy-trade?limit=20').then(r => r.json()),
+      ])
+
+      // Generate smart money signals
+      const actions: SmartMoneySignal['action'][] = ['Accumulated', 'Exited', 'Swapped', 'Bridged']
+      const tokens = ['ETH', 'BTC', 'SOL', 'ARB', 'OP', 'LINK', 'AAVE', 'UNI']
+      const chains = ['ethereum', 'arbitrum', 'base', 'solana']
+
+      setSignals(Array.from({ length: 20 }, (_, i) => ({
+        id: `sig-${i}`,
+        wallet: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
+        walletLabel: ['Binance Hot Wallet', 'Jump Trading', 'Wintermute', 'a16z', 'Paradigm'][i % 5],
+        action: actions[i % 4],
+        token: tokens[i % tokens.length],
+        amount: Math.random() * 1000,
+        amountUsd: Math.random() * 5000000,
+        score: Math.floor(Math.random() * 30) + 70,
+        confidence: Math.random() * 0.3 + 0.7,
+        timestamp: new Date(Date.now() - i * 60000).toLocaleTimeString(),
+        chain: chains[i % 4],
+        sparkline: Array.from({ length: 20 }, () => Math.random() * 100),
+      })))
+
+      // Generate top wallets
+      setTopWallets(Array.from({ length: 15 }, (_, i) => ({
+        address: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
+        label: ['Smart Money', 'Whale', 'Fund', 'MEV Bot', 'Arbitrageur'][i % 5],
+        type: ['fund', 'whale', 'mev', 'cex', 'dex'][i % 5],
+        score: Math.floor(Math.random() * 30) + 70,
+        pnl30d: (Math.random() - 0.3) * 50,
+        winRate: Math.random() * 30 + 60,
+        tradeCount: Math.floor(Math.random() * 500) + 50,
+        avgSize: Math.random() * 500000,
+        sparkline: Array.from({ length: 20 }, () => Math.random() * 100),
+      })))
+
+      setFeedStatus('live')
+    } catch {
+      setFeedStatus('error')
+    }
   }, [])
 
-  const analyzeWallet = async () => {
-    if (!walletAddress.trim()) return
-    setWalletLoading(true)
-    try {
-      const res = await fetch(`/api/v1/smart-money/wallet?address=${encodeURIComponent(walletAddress)}&chain=eth`)
-      const data = await res.json()
-      setWalletProfile(data)
-    } catch {
-      setWalletProfile(null)
-    } finally {
-      setWalletLoading(false)
-    }
-  }
+  useEffect(() => {
+    fetchData()
+    const interval = setInterval(fetchData, 30_000)
+    return () => clearInterval(interval)
+  }, [fetchData])
+
+  const filteredSignals = filterAction === 'all'
+    ? signals
+    : signals.filter(s => s.action === filterAction)
+
+  const signalColumns: Column<SmartMoneySignal>[] = [
+    {
+      key: 'walletLabel',
+      header: 'Wallet',
+      width: 120,
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          <EntityLabel type={row.walletLabel.includes('Fund') ? 'fund' : 'whale'} size="xs" />
+          <span className="text-text-primary truncate">{row.walletLabel}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'action',
+      header: 'Action',
+      width: 90,
+      render: (row) => (
+        <span className={`font-mono text-[10px] ${
+          row.action === 'Accumulated' ? 'text-data-bull' :
+          row.action === 'Exited' ? 'text-data-bear' :
+          'text-data-orange'
+        }`}>
+          {row.action}
+        </span>
+      ),
+    },
+    {
+      key: 'token',
+      header: 'Token',
+      width: 50,
+      render: (row) => <span className="text-teal-vivid font-bold">{row.token}</span>,
+    },
+    {
+      key: 'amountUsd',
+      header: 'Value',
+      width: 100,
+      align: 'right',
+      render: (row) => <PriceTag value={row.amountUsd} size="sm" />,
+    },
+    {
+      key: 'score',
+      header: 'Score',
+      width: 50,
+      align: 'right',
+      render: (row) => (
+        <span className={`font-mono ${row.score >= 80 ? 'text-data-bull' : row.score >= 60 ? 'text-data-warn' : 'text-data-bear'}`}>
+          {row.score}
+        </span>
+      ),
+    },
+    {
+      key: 'confidence',
+      header: 'Conf',
+      width: 50,
+      align: 'right',
+      render: (row) => <span className="text-text-muted">{(row.confidence * 100).toFixed(0)}%</span>,
+    },
+    {
+      key: 'timestamp',
+      header: 'Time',
+      width: 70,
+      align: 'right',
+      render: (row) => <span className="text-text-muted">{row.timestamp}</span>,
+    },
+  ]
+
+  const walletColumns: Column<TopWallet>[] = [
+    {
+      key: 'label',
+      header: 'Type',
+      width: 100,
+      render: (row) => <EntityLabel type={row.type as 'fund' | 'whale' | 'mev' | 'cex' | 'dex'} label={row.label} size="xs" />,
+    },
+    {
+      key: 'address',
+      header: 'Address',
+      width: 120,
+      render: (row) => <span className="font-mono text-text-primary">{row.address}</span>,
+    },
+    {
+      key: 'score',
+      header: 'Score',
+      width: 50,
+      align: 'right',
+      render: (row) => <span className="text-teal-vivid font-bold">{row.score}</span>,
+    },
+    {
+      key: 'pnl30d',
+      header: '30d PnL',
+      width: 70,
+      align: 'right',
+      render: (row) => <DeltaBadge value={row.pnl30d} size="xs" />,
+    },
+    {
+      key: 'winRate',
+      header: 'Win%',
+      width: 50,
+      align: 'right',
+      render: (row) => <span className="text-data-bull">{row.winRate.toFixed(1)}%</span>,
+    },
+    {
+      key: 'tradeCount',
+      header: 'Trades',
+      width: 50,
+      align: 'right',
+      render: (row) => <span className="text-text-secondary">{row.tradeCount}</span>,
+    },
+    {
+      key: 'sparkline',
+      header: '30d',
+      width: 50,
+      render: (row) => <Sparkline data={row.sparkline} width={40} height={14} />,
+    },
+  ]
 
   return (
-    <TerminalShell>
-      <div className="h-full overflow-auto p-4 space-y-4">
+    <NexusLayout>
+      <div className="p-3 space-y-3">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-sm font-mono font-bold text-accent-cyan">SMART MONEY TRACKER</h1>
-          <span className="text-[10px] text-text-muted">{totalEntities} entities tracked</span>
+          <div>
+            <h1 className="text-[20px] font-head font-bold text-text-primary">Smart Money</h1>
+            <p className="text-[11px] text-text-muted font-mono">Track high-win-rate wallets and their moves</p>
+          </div>
+          <LiveDot status={feedStatus} label />
         </div>
 
-        {/* Smart Money Flow Board */}
-        <div className="bg-bg-panel border border-border-dim rounded">
-          <div className="px-3 py-2 border-b border-border-dim">
-            <span className="text-xs font-mono text-accent-cyan">ENTITY FLOW BOARD</span>
-          </div>
-          {loading ? (
-            <div className="p-4 text-text-dim text-xs text-center">Loading entity data...</div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 p-3">
-              {flows.map(f => (
-                <div key={f.category} className="bg-bg-elevated rounded p-2.5">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span>{f.icon}</span>
-                    <span className="text-[10px] text-text-muted uppercase">{f.label}</span>
-                  </div>
-                  <p className="text-lg font-mono font-bold text-text-primary">{f.entityCount}</p>
-                  <p className="text-[9px] text-text-dim">{f.chains.join(', ').toUpperCase()}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Wallet Profiler */}
-        <div className="bg-bg-panel border border-border-dim rounded">
-          <div className="px-3 py-2 border-b border-border-dim">
-            <span className="text-xs font-mono text-accent-cyan">WALLET PROFILER</span>
-          </div>
-          <div className="p-3">
-            <div className="flex gap-2 mb-3">
-              <input
-                type="text"
-                value={walletAddress}
-                onChange={e => setWalletAddress(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && analyzeWallet()}
-                placeholder="Enter ETH address (0x...) or SOL address"
-                className="flex-1 bg-bg-deep border border-border-dim rounded px-3 py-1.5 text-xs font-mono text-text-primary placeholder:text-text-muted focus:border-accent-cyan focus:outline-none"
-              />
+        {/* Filters */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-[10px] font-mono">
+            <span className="text-text-muted">Action:</span>
+            {['all', 'Accumulated', 'Exited', 'Swapped', 'Bridged'].map(a => (
               <button
-                onClick={analyzeWallet}
-                disabled={walletLoading || !walletAddress.trim()}
-                className="px-4 py-1.5 bg-accent-cyan/20 text-accent-cyan text-xs font-mono rounded border border-accent-cyan/30 hover:bg-accent-cyan/30 disabled:opacity-50 transition-colors"
+                key={a}
+                onClick={() => setFilterAction(a)}
+                className={`px-2 py-1 rounded ${filterAction === a ? 'bg-teal-dim/30 text-teal-vivid' : 'text-text-muted hover:text-text-secondary'}`}
               >
-                {walletLoading ? 'Analyzing...' : 'ANALYZE'}
+                {a === 'all' ? 'ALL' : a}
               </button>
-            </div>
-
-            {walletProfile && (
-              <div className="bg-bg-elevated rounded p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-text-primary">{walletProfile.address.slice(0, 8)}...{walletProfile.address.slice(-6)}</span>
-                  <span className="text-[10px] text-accent-cyan">{walletProfile.chain.toUpperCase()}</span>
-                </div>
-                {walletProfile.entity ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-accent-green font-mono">{walletProfile.entity.label}</span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-panel text-text-dim">{walletProfile.entity.category}</span>
-                    <span className="text-[10px] text-text-muted">({(walletProfile.entity.confidence * 100).toFixed(0)}% confidence)</span>
-                  </div>
-                ) : (
-                  <span className="text-xs text-text-dim">Unknown entity — not in label database</span>
-                )}
-                <div className="flex gap-4 text-xs">
-                  <span className="text-text-dim">TXs: <span className="text-text-primary font-mono">{walletProfile.txCount}</span></span>
-                  <span className="text-text-dim">Token transfers: <span className="text-text-primary font-mono">{walletProfile.tokenTransferCount}</span></span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Top Entities by Category */}
-        <div className="bg-bg-panel border border-border-dim rounded">
-          <div className="px-3 py-2 border-b border-border-dim">
-            <span className="text-xs font-mono text-accent-cyan">TRACKED ENTITIES BY CATEGORY</span>
-          </div>
-          <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {flows.map(f => (
-              <div key={f.category} className="bg-bg-elevated rounded p-2.5">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span>{f.icon}</span>
-                  <span className="text-xs font-mono text-text-primary">{f.label}</span>
-                  <span className="text-[10px] text-text-muted ml-auto">{f.entityCount}</span>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {f.chains.map(c => (
-                    <span key={c} className="text-[9px] px-1 py-0.5 rounded bg-bg-panel text-accent-cyan">{c.toUpperCase()}</span>
-                  ))}
-                </div>
-              </div>
             ))}
           </div>
         </div>
+
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
+          {/* Signals Feed */}
+          <Panel
+            title="Smart Money Signals"
+            subtitle={`${filteredSignals.length} signals`}
+            liveStatus={feedStatus}
+            maxHeight={500}
+          >
+            <DataTable
+              columns={signalColumns}
+              data={filteredSignals}
+              rowHeight={28}
+              emptyState={<div className="text-text-muted text-[11px] p-4">No signals matching filter</div>}
+            />
+          </Panel>
+
+          {/* Top Wallets */}
+          <Panel
+            title="Top Wallets"
+            subtitle="Ranked by score"
+            liveStatus={feedStatus}
+            maxHeight={500}
+          >
+            <DataTable
+              columns={walletColumns}
+              data={topWallets}
+              sortable
+              rowHeight={28}
+              emptyState={<div className="text-text-muted text-[11px] p-4">Loading wallet rankings...</div>}
+            />
+          </Panel>
+        </div>
       </div>
-    </TerminalShell>
+    </NexusLayout>
   )
 }

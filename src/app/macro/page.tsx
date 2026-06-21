@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { TerminalShell } from "@/components/layout/TerminalShell"
+import { NexusLayout } from "@/components/layout/NexusLayout"
 
 interface FredData {
   seriesId: string
@@ -59,7 +59,7 @@ export default function MacroPage() {
   useEffect(() => { fetchData() }, [fetchData])
 
   return (
-    <TerminalShell>
+    <NexusLayout>
       <div className="p-6 space-y-6">
         <h1 className="text-xl font-bold font-mono text-accent-cyan">MACRO DASHBOARD</h1>
 
@@ -106,6 +106,6 @@ export default function MacroPage() {
           })}
         </div>
       </div>
-    </TerminalShell>
+    </NexusLayout>
   )
 }

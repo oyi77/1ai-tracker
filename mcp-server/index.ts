@@ -225,10 +225,40 @@ async function handleMcpRequest(body: Record<string, unknown>): Promise<Record<s
   return { jsonrpc: '2.0', id, error: { code: -32601, message: `Method not found: ${method}` } }
 }
 
+// ─── Auth + CORS ─────────────────────────────────────────────
+
+const MCP_API_KEYS = (process.env.NEXUS_API_KEYS || '')
+  .split(',')
+  .map((k) => k.trim())
+  .filter(Boolean)
+
+const ALLOWED_ORIGINS = [
+  'https://tracker.aitradepulse.com',
+  'http://localhost:4400',
+  'http://localhost:3000',
+]
+
+function authenticateRequest(req: http.IncomingMessage): boolean {
+  // Health and SSE endpoints are public
+  if (req.url === '/health') return true
+
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) return false
+
+  const token = authHeader.slice(7)
+  if (MCP_API_KEYS.length === 0) {
+    console.error('[MCP] CRITICAL: No NEXUS_API_KEYS configured — denying all requests.')
+    return false
+  }
+  return MCP_API_KEYS.includes(token)
+}
+
 // HTTP server for SSE transport
 const server = http.createServer(async (req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  const origin = req.headers.origin
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
@@ -241,6 +271,13 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ status: 'ok', tools: TOOLS.length }))
+    return
+  }
+
+  // Authenticate all non-health requests
+  if (!authenticateRequest(req)) {
+    res.writeHead(401, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'Missing or invalid API key. Use Authorization: Bearer <key>' }))
     return
   }
 

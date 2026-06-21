@@ -1,126 +1,71 @@
-"use client";
+import Link from 'next/link'
 
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { usePathname } from 'next/navigation'
 import {
-  LayoutDashboard,
-  Coins,
-  GitBranch,
-  Bell,
-  Store,
-  Wallet,
-  Image as ImageIcon,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Zap,
-  Building2,
-  Database,
-  BarChart3,
-  Rss,
-  Gauge,
-  Grid3X3,
-  CircleDollarSign,
-  LineChart,
-  Briefcase,
-} from "lucide-react";
+  LayoutDashboard, Coins, Building2, Zap, TrendingUp, Activity, Radio,
+  Bell, Eye, Globe, BarChart3, Shield, ChevronLeft, ChevronRight,
+} from 'lucide-react'
 
-const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Terminal", href: "/terminal", icon: LineChart },
-  { label: "Tokens", href: "/tokens", icon: Coins },
-  { label: "Sectors", href: "/sectors", icon: Grid3X3 },
-  { label: "DeFi", href: "/defi", icon: TrendingUp },
-  { label: "Stablecoins", href: "/stablecoins", icon: CircleDollarSign },
-  { label: "Fear & Greed", href: "/fear-greed", icon: Gauge },
-  { label: "Entities", href: "/entities", icon: Building2 },
-  { label: "Smart Money", href: "/smart-money", icon: Zap },
-  { label: "News Feed", href: "/feeds", icon: Rss },
-  { label: "Predictions", href: "/predictions", icon: BarChart3 },
-  { label: "NFT Intel", href: "/nft", icon: ImageIcon },
-  { label: "Cross-Chain Flows", href: "/flows", icon: GitBranch },
-  { label: "Alerts", href: "/alerts", icon: Bell },
-  { label: "Marketplace", href: "/marketplace", icon: Store },
-  { label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { label: "Data Sources", href: "/data-sources", icon: Database },
-];
+const NAV_ITEMS = [
+  { label: 'Dashboard',    href: '/dashboard',      icon: LayoutDashboard },
+  { label: 'Tokens',       href: '/tokens',          icon: Coins },
+  { label: 'Entities',     href: '/entities',         icon: Building2 },
+  { label: 'Smart Money',  href: '/smart-money',      icon: Zap },
+  { label: 'Derivatives',  href: '/derivatives',      icon: TrendingUp },
+  { label: 'DEX Monitor',  href: '/dex',              icon: Activity },
+  { label: 'Flows',        href: '/flows',            icon: Radio },
+  { label: 'Alerts',       href: '/alerts',           icon: Bell },
+  { label: 'OSINT',        href: '/compare',          icon: Eye },
+  { label: 'Macro',        href: '/macro',            icon: Globe },
+  { label: 'PnL Tracker',  href: '/pnl',              icon: BarChart3 },
+  { label: 'Status',       href: '/status',           icon: Shield },
+]
 
 interface SidebarProps {
-  collapsed: boolean;
-  onToggle: () => void;
+  collapsed?: boolean
+  onToggle?: () => void
 }
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const pathname = usePathname();
+export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
+  const pathname = usePathname()
 
   return (
-    <aside
-      className={cn(
-        "flex h-screen flex-col border-r border-white/5 bg-bg-surface transition-all duration-300",
-        collapsed ? "w-16" : "w-56"
-      )}
+    <nav
+      className="flex flex-col border-r border-bg-border bg-bg-panel shrink-0 overflow-y-auto scrollbar-thin transition-all duration-200"
+      style={{ width: collapsed ? 48 : 200 }}
     >
-      <div className="flex h-14 items-center justify-between border-b border-white/5 px-3">
-        {!collapsed && (
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-cyan/10">
-              <Wallet className="h-4 w-4 text-accent-cyan" />
-            </div>
-            <span className="text-sm font-bold tracking-tight text-text-primary">
-              NEXUS
-            </span>
-          </Link>
-        )}
-        <button
-          onClick={onToggle}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-text-muted hover:bg-bg-elevated hover:text-text-primary transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
-      </div>
-
-      <nav className="flex-1 space-y-1 p-2">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+      {/* Nav Items */}
+      <div className="flex-1 py-1">
+        {NAV_ITEMS.map(item => {
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+          const Icon = item.icon
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-accent-cyan/10 text-accent-cyan"
-                  : "text-text-muted hover:bg-bg-elevated hover:text-text-primary"
-              )}
+              className={`flex items-center gap-2.5 px-3 py-1.5 text-[12px] font-medium transition-colors
+                ${isActive
+                  ? 'bg-teal-dim/30 text-teal-vivid border-r-2 border-teal-vivid'
+                  : 'text-text-secondary hover:bg-bg-raised hover:text-text-primary'
+                }`}
               title={collapsed ? item.label : undefined}
             >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              <Icon size={14} className="shrink-0" />
+              {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
-          );
+          )
         })}
-      </nav>
-
-      <div className="border-t border-white/5 p-3">
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-accent-cyan/20" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-text-primary truncate">
-                0x1a2b...3c4d
-              </p>
-              <p className="text-[10px] text-text-muted">Connected</p>
-            </div>
-          </div>
-        )}
       </div>
-    </aside>
-  );
+
+      {/* Collapse Toggle */}
+      {onToggle && (
+        <button
+          onClick={onToggle}
+          className="flex items-center justify-center py-2 border-t border-bg-border hover:bg-bg-raised transition-colors"
+        >
+          {collapsed ? <ChevronRight size={14} className="text-text-muted" /> : <ChevronLeft size={14} className="text-text-muted" />}
+        </button>
+      )}
+    </nav>
+  )
 }

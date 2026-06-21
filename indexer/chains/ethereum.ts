@@ -4,6 +4,23 @@ import { decodeTransaction, storeTransaction } from "../processors/transaction";
 import { detectSmartMoneyActivity } from "../processors/smart-money";
 import { publishEvent } from "../publisher";
 
+// Reconnect backoff state per chain
+const reconnectAttempts = new Map<string, number>();
+const MAX_RECONNECT_DELAY = 60_000; // 60 seconds max
+const BASE_RECONNECT_DELAY = 1_000; // 1 second base
+
+function getReconnectDelay(chain: string): number {
+  const attempts = reconnectAttempts.get(chain) ?? 0;
+  reconnectAttempts.set(chain, attempts + 1);
+  const delay = Math.min(BASE_RECONNECT_DELAY * Math.pow(2, attempts), MAX_RECONNECT_DELAY);
+  const jitter = delay * 0.3 * Math.random();
+  return Math.round(delay + jitter);
+}
+
+function resetReconnectAttempts(chain: string) {
+  reconnectAttempts.set(chain, 0);
+}
+
 
 // Free public WebSocket RPC endpoints (no API key needed)
 const CHAINS = ["eth", "arb", "base", "op"] as const;
@@ -36,6 +53,7 @@ function connectChain(chain: Chain) {
 
   ws.on("open", async () => {
     console.log(`[ethereum:${chain}] connected`);
+    resetReconnectAttempts(chain);
 
     // Get tracked wallet addresses
     const wallets = await prisma.wallet.findMany({
@@ -129,7 +147,8 @@ function connectChain(chain: Chain) {
   });
 
   ws.on("close", () => {
-    console.log(`[ethereum:${chain}] disconnected, reconnecting in 5s...`);
-    setTimeout(() => connectChain(chain), 5000);
+    const delay = getReconnectDelay(chain);
+    console.log(`[ethereum:${chain}] disconnected, reconnecting in ${Math.round(delay / 1000)}s...`);
+    setTimeout(() => connectChain(chain), delay);
   });
 }

@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────
 // Sentiment Scoring Engine
 // Scores news articles using keyword-based NLP (no external API)
-// ponytail: keyword scoring, upgrade to LLM-based when Anthropic key available
+// Upgraded: funNLP-inspired sentiment lexicons, negations, modifiers
 // ─────────────────────────────────────────────────────────────
 
 export interface SentimentScore {
@@ -18,6 +18,8 @@ const BULLISH_KEYWORDS = [
   'revenue increase', 'profit', 'outperform', 'beat expectations', 'positive',
   'recovery', 'rebound', 'uptrend', 'support holding', 'demand increasing',
   'supply squeeze', 'halving', 'deflationary', 'burning', 'staking increase',
+  'innovation', 'lucrative', 'breakthrough', 'expansion', 'optimism', 'stellar',
+  'promising', 'buy rating', 'overweight', 'target price raised', 'dividends'
 ]
 
 const BEARISH_KEYWORDS = [
@@ -27,7 +29,12 @@ const BEARISH_KEYWORDS = [
   'bankruptcy', 'insolvency', 'liquidation', 'margin call', 'fear', 'panic',
   'capitulation', 'death cross', 'support broken', 'resistance rejection',
   'whale selling', 'exchange outflow', 'funding negative', 'contango',
+  'lawsuit', 'subpoena', 'layoffs', 'recession', 'inflation', 'default',
+  'missed expectations', 'loss', 'underperform', 'sell rating'
 ]
+
+const NEGATIONS = ['not', "isn't", "aren't", "wasn't", "weren't", 'no', 'never', 'barely', 'hardly', 'lack of']
+const MULTIPLIERS = ['very', 'highly', 'extremely', 'massive', 'huge', 'significant', 'historic', 'unprecedented']
 
 const ASSET_KEYWORDS: Record<string, string[]> = {
   'BTC': ['bitcoin', 'btc', 'satoshi', 'halving', 'digital gold'],
@@ -49,35 +56,64 @@ const ASSET_KEYWORDS: Record<string, string[]> = {
 
 export function scoreSentiment(text: string): SentimentScore {
   const lower = text.toLowerCase()
+  const words = lower.split(/\W+/)
   const signals: string[] = []
-  let bullCount = 0
-  let bearCount = 0
+  
+  let rawScore = 0
+  let matchedCount = 0
 
-  for (const kw of BULLISH_KEYWORDS) {
-    if (lower.includes(kw)) {
-      bullCount++
-      signals.push(`+${kw}`)
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i]
+    if (!word) continue
+    
+    // Simple window check for n-grams (up to 3 words)
+    const window2 = i < words.length - 1 ? `${word} ${words[i+1]}` : ''
+    const window3 = i < words.length - 2 ? `${word} ${words[i+1]} ${words[i+2]}` : ''
+    
+    let match: string | null = null
+    let polarity = 0
+    
+    if (window3 && BULLISH_KEYWORDS.includes(window3)) { match = window3; polarity = 1 }
+    else if (window3 && BEARISH_KEYWORDS.includes(window3)) { match = window3; polarity = -1 }
+    else if (window2 && BULLISH_KEYWORDS.includes(window2)) { match = window2; polarity = 1 }
+    else if (window2 && BEARISH_KEYWORDS.includes(window2)) { match = window2; polarity = -1 }
+    else if (BULLISH_KEYWORDS.includes(word)) { match = word; polarity = 1 }
+    else if (BEARISH_KEYWORDS.includes(word)) { match = word; polarity = -1 }
+    
+    if (match) {
+      let isNegated = false
+      let hasMultiplier = false
+      
+      // Check previous 2 words for negation or multiplier
+      for (let j = Math.max(0, i - 2); j < i; j++) {
+        if (NEGATIONS.includes(words[j])) isNegated = !isNegated
+        if (MULTIPLIERS.includes(words[j])) hasMultiplier = true
+      }
+      
+      let weight = polarity
+      if (isNegated) weight *= -0.5 // Negation dampens and flips
+      if (hasMultiplier) weight *= 1.5
+      
+      rawScore += weight
+      matchedCount++
+      signals.push(`${weight > 0 ? '+' : '-'}${match}${isNegated ? '(negated)' : ''}`)
+      
+      // Skip matched n-grams
+      if (match === window3) i += 2
+      else if (match === window2) i += 1
     }
   }
 
-  for (const kw of BEARISH_KEYWORDS) {
-    if (lower.includes(kw)) {
-      bearCount++
-      signals.push(`-${kw}`)
-    }
-  }
+  if (matchedCount === 0) return { score: 0, label: 'neutral', confidence: 0.1, signals: [] }
 
-  const total = bullCount + bearCount
-  if (total === 0) return { score: 0, label: 'neutral', confidence: 0.1, signals: [] }
-
-  const score = (bullCount - bearCount) / total
-  const confidence = Math.min(1, total * 0.15) // More keywords = more confidence
+  const score = Math.max(-1, Math.min(1, rawScore / (matchedCount * 0.8)))
+  const confidence = Math.min(1, matchedCount * 0.2) 
 
   return {
     score,
     label: score > 0.1 ? 'bullish' : score < -0.1 ? 'bearish' : 'neutral',
     confidence,
-    signals: signals.slice(0, 10), // Cap at 10 signals
+    signals: signals.slice(0, 10),
   }
 }
 

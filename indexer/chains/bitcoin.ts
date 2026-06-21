@@ -1,9 +1,33 @@
 import { prisma } from "../db";
 import { publishEvent } from "../publisher";
 
-
 const BLOCKSTREAM_API = "https://blockstream.info/api";
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
+
+// Cached BTC price (refreshed every 5 minutes)
+let cachedBtcPrice = 0;
+let lastPriceFetch = 0;
+const PRICE_CACHE_MS = 5 * 60 * 1000;
+
+async function getBtcPrice(): Promise<number> {
+  const now = Date.now();
+  if (cachedBtcPrice > 0 && now - lastPriceFetch < PRICE_CACHE_MS) {
+    return cachedBtcPrice;
+  }
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+    if (res.ok) {
+      const data = await res.json() as { bitcoin?: { usd?: number } };
+      if (data.bitcoin?.usd) {
+        cachedBtcPrice = data.bitcoin.usd;
+        lastPriceFetch = now;
+      }
+    }
+  } catch {
+    // Use cached price if available
+  }
+  return cachedBtcPrice;
+}
 
 export async function startBitcoinListener() {
   console.log("[bitcoin] starting polling (every 30s)");
@@ -21,8 +45,11 @@ async function pollBitcoin() {
     if (wallets.length === 0) {
       console.log("[bitcoin] no wallets to track");
     } else {
-      for (const wallet of wallets) {
-        await checkWallet(wallet.address);
+      // Poll wallets in parallel with concurrency limit
+      const CONCURRENCY = 10;
+      for (let i = 0; i < wallets.length; i += CONCURRENCY) {
+        const batch = wallets.slice(i, i + CONCURRENCY);
+        await Promise.allSettled(batch.map((w) => checkWallet(w.address)));
       }
     }
 
@@ -78,13 +105,17 @@ async function checkWallet(address: string) {
         .reduce((sum, v) => sum + v.value, 0);
 
       const isReceive = totalOut > totalIn;
+      const amountBtc = Math.abs(totalOut - totalIn) / 1e8;
+      const btcPrice = await getBtcPrice();
 
       await publishEvent("nexus:trades", {
         chain: "btc",
         hash: tx.txid,
         address,
         direction: isReceive ? "receive" : "send",
-        amountBtc: Math.abs(totalOut - totalIn) / 1e8,
+        amountBtc,
+        amountUsd: btcPrice > 0 ? amountBtc * btcPrice : 0,
+        priceUsd: btcPrice,
         timestamp: tx.status.block_time ? new Date(tx.status.block_time * 1000).toISOString() : new Date().toISOString(),
       });
     }

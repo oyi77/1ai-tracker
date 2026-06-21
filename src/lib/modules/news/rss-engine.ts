@@ -108,6 +108,105 @@ const FEEDS: Array<{ id: string; url: string; category: FeedCategory }> = [
   { id: 'detik-finance',  url: 'https://finance.detik.com/rss',                              category: 'indonesia' },
   { id: 'cnbc-indo',      url: 'https://www.cnbcindonesia.com/rss',                          category: 'indonesia' },
   { id: 'bisnis-com',     url: 'https://www.bisnis.com/rss',                                 category: 'indonesia' },
+  // ═══ NEWSNOW AGGREGATOR ═══
+  { id: 'newsnow-tech',   url: 'https://www.newsnow.co.uk/h/Technology/RSS',                 category: 'tech' },
+  { id: 'newsnow-politics',url: 'https://www.newsnow.co.uk/h/World+News/RSS',              category: 'political' },
+  { id: 'newsnow-finance',url: 'https://www.newsnow.co.uk/h/Business+&+Finance/RSS',       category: 'tradfi' },
+  { id: 'newsnow-crypto', url: 'https://www.newsnow.co.uk/h/Business+&+Finance/Cryptocurrencies/RSS', category: 'crypto' },
+
+  // ═══ MORE CRYPTO ═══
+  { id: 'binance-blog',   url: 'https://www.binance.com/en/blog/rss',                        category: 'crypto' },
+  { id: 'kraken-blog',    url: 'https://blog.kraken.com/feed',                               category: 'crypto' },
+  { id: 'messari',        url: 'https://messari.io/rss',                                     category: 'crypto' },
+  { id: 'bankless',       url: 'https://www.bankless.com/rss',                               category: 'crypto' },
+  { id: 'rekt-news',      url: 'https://rekt.news/feed',                                     category: 'crypto' },
+  { id: 'chainalysis',    url: 'https://www.chainalysis.com/blog/feed',                      category: 'crypto' },
+  { id: 'glassnode',      url: 'https://insights.glassnode.com/feed',                        category: 'crypto' },
+  { id: 'coinmetrics',    url: 'https://coinmetrics.substack.com/feed',                      category: 'crypto' },
+  { id: 'dune-analytics', url: 'https://dune.com/blog/rss.xml',                              category: 'crypto' },
+
+  // ═══ MORE MACRO ═══
+  { id: 'oecd',           url: 'https://www.oecd.org/newsroom/rss',                          category: 'macro' },
+  { id: 'worldbank-news', url: 'https://www.worldbank.org/en/news/rss',                      category: 'macro' },
+  { id: 'adb-news',       url: 'https://www.adb.org/rss/news',                               category: 'macro' },
+  { id: 'boj',            url: 'https://www.boj.or.jp/en/rss/announcements.xml',             category: 'macro' },
+  { id: 'pbo',            url: 'https://www.pbo-dpb.ca/en/rss/reports',                      category: 'macro' },
+  { id: 'cbo',            url: 'https://www.cbo.gov/rss',                                    category: 'macro' },
+
+  // ═══ MORE FINANCE ═══
+  { id: 'nasdaq',         url: 'https://www.nasdaq.com/feed/rss-outfeed',                    category: 'tradfi' },
+  { id: 'morningstar',    url: 'https://www.morningstar.com/rss/news',                       category: 'tradfi' },
+  { id: 'seekingalpha',   url: 'https://seekingalpha.com/feed.xml',                          category: 'tradfi' },
+  { id: 'barrons',        url: 'https://www.barrons.com/rss',                                category: 'tradfi' },
+  { id: 'zerohedge',      url: 'https://www.zerohedge.com/rss.xml',                          category: 'tradfi' },
+  { id: 'wolfstreet',     url: 'https://wolfstreet.com/feed',                                category: 'tradfi' },
+  { id: 'calculatedrisk', url: 'https://www.calculatedriskblog.com/feeds/posts/default',     category: 'tradfi' },
+  { id: 'economist',      url: 'https://www.economist.com/feeds/print-sections/73/business.xml', category: 'tradfi' },
+  { id: 'forexlive',      url: 'https://www.forexlive.com/feed',                             category: 'tradfi' },
+
+  // ═══ AI / ML ═══
+  { id: 'openai',         url: 'https://openai.com/blog/rss.xml',                            category: 'tech' },
+  { id: 'google-ai',      url: 'https://blog.google/technology/ai/rss',                      category: 'tech' },
+  { id: 'meta-ai',        url: 'https://ai.meta.com/blog/rss',                               category: 'tech' },
+  { id: 'anthropic',      url: 'https://www.anthropic.com/feed.xml',                         category: 'tech' },
+  { id: 'huggingface',    url: 'https://huggingface.co/blog/feed.xml',                       category: 'tech' },
+  { id: 'mit-tech',       url: 'https://www.technologyreview.com/feed',                      category: 'tech' },
+  { id: 'ieee-spectrum',  url: 'https://spectrum.ieee.org/rss/fulltext',                     category: 'tech' },
+
+  // ═══ STARTUP / VC ═══
+  { id: 'ycombinator',    url: 'https://news.ycombinator.com/rss',                           category: 'tech' },
+  { id: 'producthunt',    url: 'https://www.producthunt.com/feed',                           category: 'tech' },
+  { id: 'sifted',         url: 'https://sifted.eu/feed',                                     category: 'tech' },
+  { id: 'techinasia',     url: 'https://www.techinasia.com/feed',                            category: 'tech' },
+  { id: 'dealroom',       url: 'https://dealroom.co/feed',                                   category: 'tech' },
+
+  // ═══ MORE INDONESIA ═══
+  { id: 'kontan',         url: 'https://www.kontan.co.id/rss',                               category: 'indonesia' },
+  { id: 'tempo-bisnis',   url: 'https://www.tempo.co/rss/bisnis',                            category: 'indonesia' },
+  { id: 'liputan6-bisnis',url: 'https://www.liputan6.com/feeds/bisnis',                      category: 'indonesia' },
+  { id: 'okezone',        url: 'https://economy.okezone.com/rss',                            category: 'indonesia' },
+  { id: 'idx-rss',        url: 'https://www.idx.co.id/rss/berita',                           category: 'indonesia' },
+  { id: 'antara-ekonomi', url: 'https://www.antaranews.com/rss/ekonomi',                     category: 'indonesia' },
+
+  // ═══ REAL ESTATE ═══
+  { id: 'realtor-com',    url: 'https://www.realtor.com/news/rss',                           category: 'tradfi' },
+  { id: 'zillow',         url: 'https://www.zillow.com/blog/feed',                           category: 'tradfi' },
+  { id: 'cre-news',       url: 'https://www.costar.com/rss/news',                            category: 'tradfi' },
+
+  // ═══ COMMODITIES ═══
+  { id: 'reuters-commod', url: 'https://www.reutersagency.com/feed/?best-topics=commodities',category: 'energy' },
+  { id: 'mining-com',     url: 'https://www.mining.com/rss',                                 category: 'energy' },
+  { id: 'spglobal-commod',url: 'https://www.spglobal.com/commodityinsights/en/rss/news',     category: 'energy' },
+  { id: 'gold-news',      url: 'https://www.kitco.com/rss',                                  category: 'energy' },
+
+  // ═══ MORE GEOPOLITICAL ═══
+  { id: 'warontherocks',   url: 'https://warontherocks.com/feed',                            category: 'geopolitical' },
+  { id: 'stratfor',       url: 'https://worldview.stratfor.com/rss',                         category: 'geopolitical' },
+  { id: 'janes',          url: 'https://www.janes.com/rss',                                  category: 'geopolitical' },
+  { id: 'atlantic-council',url: 'https://www.atlanticcouncil.org/feed',                      category: 'geopolitical' },
+  { id: 'csis',           url: 'https://www.csis.org/rss',                                   category: 'geopolitical' },
+  { id: 'rferl',          url: 'https://www.rferl.org/rss',                                   category: 'geopolitical' },
+
+  // ═══ MORE SCIENCE ═══
+  { id: 'newscientist',   url: 'https://www.newscientist.com/feed/home',                     category: 'science' },
+  { id: 'pnas',           url: 'https://www.pnas.org/rss/rss_most_recent.xml',               category: 'science' },
+  { id: 'arxiv-bio',      url: 'https://rss.arxiv.org/rss/q-bio',                            category: 'science' },
+  { id: 'nasa-image',     url: 'https://www.nasa.gov/rss/dyn/imageoftheday.rss',             category: 'science' },
+
+  // ═══ MORE SOCIAL ═══
+  { id: 'reddit-ai',      url: 'https://www.reddit.com/r/artificial/top.rss?t=day',          category: 'social' },
+  { id: 'reddit-econ',    url: 'https://www.reddit.com/r/economics/top.rss?t=day',           category: 'social' },
+  { id: 'reddit-world',   url: 'https://www.reddit.com/r/worldnews/top.rss?t=day',           category: 'social' },
+  { id: 'medium',         url: 'https://medium.com/feed/tag/artificial-intelligence',        category: 'social' },
+  { id: 'substack-top',   url: 'https://substack.com/feed',                                  category: 'social' },
+
+  // ═══ MORE REGULATORY ═══
+  { id: 'ecb-banking',    url: 'https://www.bankingsupervision.europa.eu/rss/press.xml',     category: 'regulatory' },
+  { id: 'fsb',            url: 'https://www.fsb.org/rss',                                    category: 'regulatory' },
+  { id: 'bis-central',    url: 'https://www.bis.org/press/rss.xml',                          category: 'regulatory' },
+  { id: 'fca',            url: 'https://www.fca.org.uk/rss/news',                            category: 'regulatory' },
+  { id: 'finma',          url: 'https://www.finma.ch/en/rss/news',                           category: 'regulatory' },
+  { id: 'esma',           url: 'https://www.esma.europa.eu/rss/press-releases',              category: 'regulatory' },
 ]
 
 function parseRssItems(xml: string, sourceId: string, category: FeedCategory): RssItem[] {
@@ -146,14 +245,22 @@ function extractLink(xml: string): string {
 }
 
 function cleanHtml(s: string): string {
-  return s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim()
+  return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim()
 }
 
 async function fetchFeed(feed: { id: string; url: string; category: FeedCategory }): Promise<RssItem[]> {
   try {
     const res = await fetch(feed.url, {
       headers: { Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml' },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(6_000),
     })
     if (!res.ok) return []
     const xml = await res.text()
@@ -163,17 +270,29 @@ async function fetchFeed(feed: { id: string; url: string; category: FeedCategory
   }
 }
 
+// Sample max 40 feeds per cycle to keep response time predictable
+const MAX_FEEDS_PER_CYCLE = 40
+
 async function fetchAllFeeds(params: FetchParams): Promise<RssItem[]> {
   const category = params.category as FeedCategory | undefined
   const limit = (params.limit as number) ?? 100
   const feeds = category ? FEEDS.filter(f => f.category === category) : FEEDS
 
-  const results = await Promise.allSettled(feeds.map(f => fetchFeed(f)))
-  const items = results
-    .filter((r): r is PromiseFulfilledResult<RssItem[]> => r.status === 'fulfilled')
-    .flatMap(r => r.value)
+  // Sample first N feeds — keeps response time predictable
+  const sample = feeds.slice(0, Math.min(feeds.length, MAX_FEEDS_PER_CYCLE))
 
-  return items
+  // Concurrency: 20 simultaneous fetches
+  const CONCURRENCY = 20
+  const results: RssItem[] = []
+  for (let i = 0; i < sample.length; i += CONCURRENCY) {
+    const batch = sample.slice(i, i + CONCURRENCY)
+    const batchResults = await Promise.allSettled(batch.map(f => fetchFeed(f)))
+    for (const r of batchResults) {
+      if (r.status === 'fulfilled') results.push(...r.value)
+    }
+  }
+
+  return results
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, limit)
 }

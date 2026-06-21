@@ -3,14 +3,14 @@ export const dynamic = "force-dynamic";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { apiSuccess, apiError, apiPaginated } from "@/lib/api/response";
-import { validateApiKey } from "@/lib/api/auth";
+
 import { checkRateLimit } from "@/lib/api/rate-limit";
 
 const ENTITY_SORT_FIELDS = new Set(["totalUsdValue", "createdAt", "name", "type"]);
 
 export async function GET(request: NextRequest) {
   try {
-    if (!validateApiKey(request)) return apiError("Unauthorized", 401);
+    // Public endpoint — auth handled by middleware
 
     const ip = request.headers.get("x-forwarded-for") || "unknown";
     const { allowed, remaining } = await checkRateLimit(ip);

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TerminalShell } from "@/components/layout/TerminalShell"
+import { NexusLayout } from "@/components/layout/NexusLayout"
 import { Target } from "lucide-react"
 
 interface Market {
@@ -31,7 +31,7 @@ export default function PredictionsPage() {
   }, [])
 
   return (
-    <TerminalShell>
+    <NexusLayout>
       <div className="h-full overflow-auto p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-sm font-mono font-bold text-accent-cyan flex items-center gap-2">
@@ -66,7 +66,7 @@ export default function PredictionsPage() {
           </div>
         )}
       </div>
-    </TerminalShell>
+    </NexusLayout>
   )
 }
 

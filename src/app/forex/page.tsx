@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TerminalShell } from "@/components/layout/TerminalShell"
+import { NexusLayout } from "@/components/layout/NexusLayout"
 
 export default function ForexPage() {
   const [rates, setRates] = useState<Record<string, number> | null>(null)
@@ -19,7 +19,7 @@ export default function ForexPage() {
   const majorPairs = ['EUR', 'GBP', 'JPY', 'CHF', 'CNY', 'AUD', 'CAD', 'NZD', 'SGD', 'HKD']
 
   return (
-    <TerminalShell>
+    <NexusLayout>
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold font-mono text-accent-cyan">FOREX RATES</h1>
@@ -64,6 +64,6 @@ export default function ForexPage() {
           </p>
         </div>
       </div>
-    </TerminalShell>
+    </NexusLayout>
   )
 }

@@ -47,9 +47,7 @@ describe('cachedFetch', () => {
     const fetcher = async () => {
       callCount++
       // Simulate async work
-      const { promise, resolve } = Promise.withResolvers<void>()
-      setTimeout(resolve, 50)
-      await promise
+      await new Promise<void>((resolve) => setTimeout(resolve, 50))
       return { result: callCount }
     }
 

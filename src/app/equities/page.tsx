@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TerminalShell } from "@/components/layout/TerminalShell"
+import { NexusLayout } from "@/components/layout/NexusLayout"
 
 const CRYPTO_ADJACENT = ['MSTR', 'COIN', 'MARA', 'RIOT', 'CLSK', 'HOOD', 'ARKK']
 const INDICES = ['^GSPC', '^IXIC', '^DJI', '^VIX']
@@ -26,7 +26,7 @@ export default function EquitiesPage() {
   }, [])
 
   return (
-    <TerminalShell>
+    <NexusLayout>
       <div className="p-6 space-y-6">
         <h1 className="text-xl font-bold font-mono text-accent-cyan">EQUITIES — CRYPTO-ADJACENT</h1>
 
@@ -85,6 +85,6 @@ export default function EquitiesPage() {
           )}
         </div>
       </div>
-    </TerminalShell>
+    </NexusLayout>
   )
 }

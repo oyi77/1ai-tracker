@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { TerminalShell } from "@/components/layout/TerminalShell"
+import { NexusLayout } from "@/components/layout/NexusLayout"
 import { Layers, TrendingUp, TrendingDown, Search } from "lucide-react"
 
 interface Protocol {
@@ -43,7 +43,7 @@ export default function DeFiPage() {
   )
 
   return (
-    <TerminalShell>
+    <NexusLayout>
       <div className="h-full overflow-auto">
         <div className="sticky top-0 bg-bg-deep z-10 px-4 py-3 border-b border-border-dim">
           <div className="flex items-center justify-between mb-2">
@@ -122,7 +122,7 @@ export default function DeFiPage() {
           )}
         </div>
       </div>
-    </TerminalShell>
+    </NexusLayout>
   )
 }
 

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -7,9 +7,10 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const ibmPlexMono = IBM_Plex_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 const spaceGrotesk = Space_Grotesk({
@@ -25,8 +26,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "NEXUS Terminal — Crypto & Finance Intelligence",
-  description: "AI-powered terminal for crypto, DeFi, macro, and finance intelligence. 45 data modules, zero API keys.",
+  title: "◈ NEXUS — Intelligence Terminal",
+  description: "AI-powered intelligence terminal for news, markets, macro, and alternative data. 58+ data modules, zero API keys.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -34,9 +35,8 @@ export const metadata: Metadata = {
     title: "NEXUS",
   },
   openGraph: {
-    title: "NEXUS Terminal",
-    description: "AI-powered crypto & finance intelligence terminal",
-    type: "website",
+    title: "◈ NEXUS",
+    description: "AI-powered intelligence scanning terminal",
   },
 }
 
@@ -47,8 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} dark h-full antialiased`}
+      className={`${inter.variable} ${ibmPlexMono.variable} ${spaceGrotesk.variable} dark h-full antialiased`}
     >
       <head>
         <link rel="icon" href="/icon-512.svg" type="image/svg+xml" />
@@ -56,7 +55,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
-      <body className="min-h-full flex flex-col bg-bg-deep text-text-primary font-sans">
+      <body className="min-h-full flex flex-col bg-bg-base text-text-primary font-sans">
         {children}
         <script
           dangerouslySetInnerHTML={{

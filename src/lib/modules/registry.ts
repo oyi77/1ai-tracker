@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import type { DataModule, DataCategory, FetchParams, ModuleResult } from './types'
-import { recordSuccess, recordFailure, getAllHealth } from './health'
+import { recordSuccess, recordFailure, getAllHealth, isModuleDegraded } from './health'
 
 class ModuleRegistry {
   private modules = new Map<string, DataModule>()
@@ -61,6 +61,18 @@ class ModuleRegistry {
     const mod = this.modules.get(moduleId)
     if (!mod) throw new Error(`Module not found: ${moduleId}`)
     if (!mod.isEnabled()) throw new Error(`Module disabled: ${moduleId}`)
+
+    // Circuit breaker: skip degraded modules and go straight to fallback
+    if (isModuleDegraded(moduleId)) {
+      if (mod.fallbackFn) {
+        try {
+          const fallbackResult = await mod.fallbackFn<T>(params)
+          return { ...fallbackResult, source: `${fallbackResult.source} (degraded-fallback)` }
+        } catch {
+          // Fallback also failed — try primary as last resort
+        }
+      }
+    }
 
     try {
       const result = await mod.fetch<T>(params)

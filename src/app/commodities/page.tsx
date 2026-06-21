@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { TerminalShell } from "@/components/layout/TerminalShell"
+import { NexusLayout } from "@/components/layout/NexusLayout"
 
 const COMMODITIES = [
   { symbol: 'GC=F', name: 'Gold', unit: '$/oz' },
@@ -30,7 +30,7 @@ export default function CommoditiesPage() {
   }, [])
 
   return (
-    <TerminalShell>
+    <NexusLayout>
       <div className="p-6 space-y-6">
         <h1 className="text-xl font-bold font-mono text-accent-cyan">COMMODITIES</h1>
 
@@ -67,6 +67,6 @@ export default function CommoditiesPage() {
           </p>
         </div>
       </div>
-    </TerminalShell>
+    </NexusLayout>
   )
 }

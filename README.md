@@ -97,6 +97,50 @@ cd indexer && npm run dev    # Blockchain indexer
 
 ---
 
+## Self-Host Guide
+
+### Minimum Requirements
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| CPU | 2 cores | 4 cores |
+| RAM | 4GB | 8GB |
+| Disk | 20GB | 50GB |
+| OS | Linux (Ubuntu 22.04+) | Any Docker-compatible |
+| Docker | 20.10+ | Latest |
+| Docker Compose | 2.0+ | Latest |
+
+### Step-by-Step Deployment
+
+```bash
+git clone https://github.com/oyi77/1ai-nexus.git
+cd 1ai-nexus/nexus
+cp .env.example .env
+sed -i "s/NEXTAUTH_SECRET=.*/NEXTAUTH_SECRET=$(openssl rand -hex 32)/" .env
+sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 16)/" .env
+sed -i "s/NEXUS_API_KEYS=.*/NEXUS_API_KEYS=$(openssl rand -hex 32)/" .env
+docker compose up -d --build
+curl http://localhost:4400/api/v1/status
+```
+
+### Optional: Telegram Alerts
+
+```bash
+# Create bot via @BotFather, then:
+echo "TELEGRAM_BOT_TOKEN=your-token" >> .env
+docker compose restart web
+```
+
+### Backup
+
+```bash
+docker compose exec postgres pg_dump -U nexus nexus > backup_$(date +%Y%m%d).sql
+```
+
+### Cost: ~$5/month (VPS only, all APIs free)
+
+---
+
 ## Architecture
 
 ```
