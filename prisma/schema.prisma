@@ -120,13 +120,19 @@ model PredictionTrade {
 }
 
 model Alert {
-  id          String   @id @default(cuid())
-  userId      String
-  triggerType String
-  conditions  Json
-  isActive    Boolean  @default(true)
-  lastFired   DateTime?
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String
+  triggerType   String
+  conditions    Json
+  templateId    String?
+  name          String?
+  condition     String?
+  webhookUrl    String?
+  webhookSecret String?
+  isActive      Boolean  @default(true)
+  lastFired     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([userId, isActive])
 }
@@ -286,8 +292,8 @@ model BotTrade {
   exitPrice Float?
   stake     Float
   outcome   String
-  profitUsd Float   @default(0)
-  pips      Float   @default(0)
+  profitUsd Float    @default(0)
+  pips      Float    @default(0)
   strategy  String?
   source    String?
   openTime  DateTime
@@ -299,8 +305,6 @@ model BotTrade {
   @@index([outcome])
   @@index([openTime(sort: Desc)])
 }
-
-// ─── NEXUS Module System Models ─────────────────────────────
 
 model NewsArticle {
   id          String   @id @default(cuid())
@@ -378,101 +382,25 @@ model UserApiKey {
 
 model EntityLabel {
   id         String   @id @default(cuid())
-  address    String
+  address    String   @unique
   chain      String
   label      String
   category   String
-  confidence Float    @default(0.5)
-  source     String   @default("seeded")
-  updatedAt  DateTime @updatedAt
-
-  @@unique([address, chain])
-  @@index([chain])
-}
-
-model Workspace {
-  id         String   @id @default(cuid())
-  userId     String   @default("default")
-  name       String
-  layoutJson Json
-  isDefault  Boolean  @default(false)
+  source     String?
+  confidence Float?
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 
-  @@index([userId])
+  @@index([chain])
+  @@index([category])
 }
 
-model PrivateLabel {
+model CorrelationSnapshot {
   id        String   @id @default(cuid())
-  userId    String   @default("default")
-  address   String
-  label     String
-  category  String   @default("custom")
+  pair      String
+  r         Float
+  pValue    Float
+  sampleSize Int
   createdAt DateTime @default(now())
 
-  @@unique([userId, address])
-  @@index([address])
-}
-
-model GapSignal {
-  id              String   @id @default(cuid())
-  pairLabel       String
-  venueA          String
-  venueB          String
-  priceA          Float
-  priceB          Float
-  spreadPct       Float
-  zScoreVs30dMean Float    @default(0)
-  assetClass      String   @default("crypto")
-  detectedAt      DateTime @default(now())
-
-  @@index([detectedAt(sort: Desc)])
-  @@index([zScoreVs30dMean(sort: Desc)])
-}
-
-model WeatherSignal {
-  id                   String   @id @default(cuid())
-  region               String
-  metric               String
-  zScoreVsHistorical   Float
-  affectedCommodities  String[]
-  affectedTickers      String[]
-  capturedAt           DateTime @default(now())
-
-  @@index([capturedAt(sort: Desc)])
-  @@index([region])
-}
-
-model NewsItem {
-  id              String   @id @default(cuid())
-  source          String
-  country         String   @default("global")
-  language        String   @default("en")
-  headline        String
-  summary         String?
-  sentimentScore  Float?
-  entities        Json?
-  publishedAt     DateTime
-  url             String
-  tier            Int      @default(0)
-  localOnlyScore  Float    @default(0)
-  createdAt       DateTime @default(now())
-
-  @@index([publishedAt(sort: Desc)])
-  @@index([country])
-  @@index([source])
-}
-
-model MacroSeries {
-  id        String   @id @default(cuid())
-  seriesId  String
-  country   String   @default("US")
-  date      DateTime
-  value     Float
-  unit      String?
-  source    String
-  createdAt DateTime @default(now())
-
-  @@unique([seriesId, date])
-  @@index([seriesId, date(sort: Desc)])
+  @@index([pair, createdAt])
 }
