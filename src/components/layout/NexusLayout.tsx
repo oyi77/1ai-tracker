@@ -1,18 +1,18 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Coins, Building2, Zap, Bell,
   ChevronLeft, ChevronRight, Search, Globe,
   TrendingUp, BarChart3, Activity, Shield, Radio, Eye,
-  Thermometer,
+  Thermometer, Menu, X,
 } from 'lucide-react'
 import { LiveDot } from '../primitives/LiveDot'
 import { CommandBar } from './CommandBar'
 import { NotificationTray } from './NotificationTray'
-
+import { PwaInstallPrompt } from './PwaInstallPrompt'
 const NAV_ITEMS = [
   { label: '⚡ Alpha Feed',  href: '/alpha',          icon: Zap },
   { label: 'Dashboard',    href: '/dashboard',      icon: LayoutDashboard },
@@ -42,6 +42,7 @@ interface NexusLayoutProps {
 
 export function NexusLayout({ children }: NexusLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [time, setTime] = useState('')
   const [tickers, setTickers] = useState<Array<{ symbol: string; price: string; change: string; positive: boolean }>>([])
   const [fgi, setFgi] = useState<number | null>(null)
@@ -65,17 +66,31 @@ export function NexusLayout({ children }: NexusLayoutProps) {
     return () => { clearInterval(id); clearInterval(tickerId) }
   }, [])
 
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
+
   return (
     <div className="h-screen flex flex-col bg-bg-base text-text-primary overflow-hidden">
       {/* ── TopBar (48px) ── */}
       <header className="flex items-center justify-between px-3 border-b border-bg-border bg-bg-panel shrink-0" style={{ height: 48 }}>
-        {/* Left: Logo + Search */}
+        {/* Left: Mobile menu + Logo + Search */}
         <div className="flex items-center gap-3">
+          <button
+            className="lg:hidden p-1.5 rounded hover:bg-bg-raised transition-colors text-text-muted"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
           <Link href="/" className="flex items-center gap-2">
             <span className="text-teal-vivid font-bold text-[15px] font-mono tracking-tight">NEXUS</span>
             <span className="text-[9px] text-text-muted font-mono hidden sm:inline">v2.0</span>
           </Link>
-          <CommandBar />
+          <div className="hidden md:block">
+            <CommandBar />
+          </div>
         </div>
 
         {/* Center: Global Ticker — Live Data */}
@@ -98,10 +113,23 @@ export function NexusLayout({ children }: NexusLayoutProps) {
       </header>
 
       {/* ── Main Area ── */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* ── SideNav (220px / 48px collapsed) ── */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* ── Mobile Overlay ── */}
+        {mobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* ── SideNav — Desktop: fixed sidebar, Mobile: slide-out drawer ── */}
         <nav
-          className="flex flex-col border-r border-bg-border bg-bg-panel shrink-0 overflow-y-auto scrollbar-thin transition-all duration-200"
+          className={`
+            flex flex-col border-r border-bg-border bg-bg-panel shrink-0 overflow-y-auto scrollbar-thin transition-all duration-200 z-50
+            lg:relative lg:translate-x-0
+            fixed inset-y-0 left-0 top-12
+            ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          `}
           style={{ width: collapsed ? 48 : 200 }}
         >
           {/* Nav Items */}
@@ -113,6 +141,7 @@ export function NexusLayout({ children }: NexusLayoutProps) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-2.5 px-3 py-1.5 text-[12px] font-medium transition-colors
                     ${isActive
                       ? 'bg-teal-dim/30 text-teal-vivid border-r-2 border-teal-vivid'
@@ -127,10 +156,10 @@ export function NexusLayout({ children }: NexusLayoutProps) {
             })}
           </div>
 
-          {/* Collapse Toggle */}
+          {/* Collapse Toggle — desktop only */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="flex items-center justify-center py-2 border-t border-bg-border hover:bg-bg-raised transition-colors"
+            className="hidden lg:flex items-center justify-center py-2 border-t border-bg-border hover:bg-bg-raised transition-colors"
           >
             {collapsed ? <ChevronRight size={14} className="text-text-muted" /> : <ChevronLeft size={14} className="text-text-muted" />}
           </button>
@@ -141,6 +170,7 @@ export function NexusLayout({ children }: NexusLayoutProps) {
           {children}
         </main>
       </div>
+      <PwaInstallPrompt />
     </div>
   )
 }

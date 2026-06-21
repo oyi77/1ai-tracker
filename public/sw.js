@@ -1,28 +1,63 @@
 // NEXUS Service Worker — PWA + offline shell
-const CACHE_NAME = 'nexus-v1'
-const STATIC_ASSETS = ['/', '/manifest.json']
+const CACHE_NAME = 'nexus-v2'
+const STATIC_ASSETS = [
+  '/',
+  '/manifest.json',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-512.svg',
+]
 
+// Install: cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(STATIC_ASSETS))
+      .then(() => self.skipWaiting())
   )
-  self.skipWaiting()
 })
 
+// Activate: clean old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
+// Fetch: network-first for pages, cache-first for assets
 self.addEventListener('fetch', (event) => {
   const { request } = event
-  // Only cache GET requests, skip API calls
-  if (request.method !== 'GET' || request.url.includes('/api/')) return
+  const url = new URL(request.url)
 
+  // Skip non-GET and API calls
+  if (request.method !== 'GET') return
+  if (url.pathname.startsWith('/api/')) return
+
+  // Static assets: cache-first
+  if (
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.match(/\.(png|svg|ico|woff2?)$/)
+  ) {
+    event.respondWith(
+      caches.match(request).then(cached => {
+        if (cached) return cached
+        return fetch(request).then(response => {
+          if (response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then(cache => cache.put(request, clone))
+          }
+          return response
+        })
+      })
+    )
+    return
+  }
+
+  // Pages: network-first, fallback to cache
   event.respondWith(
     fetch(request)
       .then(response => {
@@ -32,6 +67,6 @@ self.addEventListener('fetch', (event) => {
         }
         return response
       })
-      .catch(() => caches.match(request))
+      .catch(() => caches.match(request).then(cached => cached || caches.match('/')))
   )
 })

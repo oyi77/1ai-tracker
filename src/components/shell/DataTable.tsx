@@ -112,7 +112,7 @@ export function DataTable<T extends Record<string, unknown>>({
       style={{ maxHeight: maxHeight || undefined }}
       onScroll={handleScroll}
     >
-      <table className="w-full border-collapse" style={{ minHeight: virtualScroll ? totalHeight : undefined }}>
+      <table className="w-full border-collapse min-w-[600px] md:min-w-0" style={{ minHeight: virtualScroll ? totalHeight : undefined }}>
         <thead className={stickyHeader ? 'sticky top-0 z-10' : ''}>
           <tr className="bg-bg-raised border-b border-bg-border">
             {columns.map(col => (
