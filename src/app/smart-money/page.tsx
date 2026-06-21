@@ -48,43 +48,46 @@ export default function SmartMoneyPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      await Promise.allSettled([
-        fetch('/api/v1/pnl?leaderboard=true&limit=20').then(r => r.json()),
-        fetch('/api/v1/copy-trade?limit=20').then(r => r.json()),
+      const [smRes, copyTradeRes] = await Promise.allSettled([
+        fetch('/api/v1/smart-money?pageSize=20').then(r => r.json()),
+        fetch('/api/v1/copy-trade?limit=10').then(r => r.json()),
       ])
 
-      // Generate smart money signals
-      const actions: SmartMoneySignal['action'][] = ['Accumulated', 'Exited', 'Swapped', 'Bridged']
-      const tokens = ['ETH', 'BTC', 'SOL', 'ARB', 'OP', 'LINK', 'AAVE', 'UNI']
-      const chains = ['ethereum', 'arbitrum', 'base', 'solana']
+      // Real smart money wallets from DB
+      if (smRes.status === 'fulfilled' && smRes.value?.data) {
+        setTopWallets(smRes.value.data.map((w: Record<string, unknown>, i: number) => {
+          const wallet = w.wallet as Record<string, unknown> || {}
+          return {
+            address: (wallet.address as string || `wallet-${i}`).slice(0, 20),
+            label: (wallet.labels as string[])?.[0] || w.category as string || 'Smart Money',
+            type: (w.category as string || 'unknown').toLowerCase(),
+            score: w.score as number || 0,
+            pnl30d: 0,
+            winRate: 0,
+            tradeCount: 0,
+            avgSize: 0,
+            sparkline: Array.from({ length: 20 }, (_, j) => 50 + Math.sin(j + i) * 20),
+          }
+        }))
+      }
 
-      setSignals(Array.from({ length: 20 }, (_, i) => ({
-        id: `sig-${i}`,
-        wallet: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
-        walletLabel: ['Binance Hot Wallet', 'Jump Trading', 'Wintermute', 'a16z', 'Paradigm'][i % 5],
-        action: actions[i % 4],
-        token: tokens[i % tokens.length],
-        amount: Math.random() * 1000,
-        amountUsd: Math.random() * 5000000,
-        score: Math.floor(Math.random() * 30) + 70,
-        confidence: Math.random() * 0.3 + 0.7,
-        timestamp: new Date(Date.now() - i * 60000).toLocaleTimeString(),
-        chain: chains[i % 4],
-        sparkline: Array.from({ length: 20 }, () => Math.random() * 100),
-      })))
-
-      // Generate top wallets
-      setTopWallets(Array.from({ length: 15 }, (_, i) => ({
-        address: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
-        label: ['Smart Money', 'Whale', 'Fund', 'MEV Bot', 'Arbitrageur'][i % 5],
-        type: ['fund', 'whale', 'mev', 'cex', 'dex'][i % 5],
-        score: Math.floor(Math.random() * 30) + 70,
-        pnl30d: (Math.random() - 0.3) * 50,
-        winRate: Math.random() * 30 + 60,
-        tradeCount: Math.floor(Math.random() * 500) + 50,
-        avgSize: Math.random() * 500000,
-        sparkline: Array.from({ length: 20 }, () => Math.random() * 100),
-      })))
+      // Real copy trade signals
+      if (copyTradeRes.status === 'fulfilled' && copyTradeRes.value?.data) {
+        setSignals(copyTradeRes.value.data.map((s: Record<string, unknown>, i: number) => ({
+          id: s.id as string || `sig-${i}`,
+          wallet: (s.walletAddress as string || '').slice(0, 20),
+          walletLabel: s.walletLabel as string || 'Unknown',
+          action: (s.action as string || 'swap').charAt(0).toUpperCase() + (s.action as string || 'swap').slice(1) as SmartMoneySignal['action'],
+          token: s.tokenIn as string || 'UNKNOWN',
+          amount: 0,
+          amountUsd: s.amountUsd as number || 0,
+          score: Math.round((s.confidence as number || 0) * 100),
+          confidence: s.confidence as number || 0,
+          timestamp: new Date(s.timestamp as string).toLocaleTimeString(),
+          chain: 'multi',
+          sparkline: Array.from({ length: 20 }, (_, j) => 50 + Math.sin(j + i) * 15),
+        })))
+      }
 
       setFeedStatus('live')
     } catch {

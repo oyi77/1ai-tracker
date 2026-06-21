@@ -46,46 +46,47 @@ export default function DexMonitorPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [derivativesRes, exchangesRes] = await Promise.allSettled([
-        fetch('/api/v1/derivatives?limit=20').then(r => r.json()),
+      const [exchangesRes, derivativesRes] = await Promise.allSettled([
         fetch('/api/v1/exchanges?limit=20').then(r => r.json()),
+        fetch('/api/v1/derivatives?limit=20').then(r => r.json()),
       ])
 
-      // Generate swap events from real data
-      const realSwaps: SwapEvent[] = []
-      if (derivativesRes.status === 'fulfilled' && derivativesRes.value?.data?.topPairs) {
-        const pairs = derivativesRes.value.data.topPairs
-        for (let i = 0; i < 20; i++) {
-          const pair = pairs[i % pairs.length]
-          const symbol = (pair.symbol as string).replace('USDT', '')
-          realSwaps.push({
-            id: `swap-${i}`,
-            timestamp: new Date(Date.now() - i * 30000).toLocaleTimeString(),
-            dex: ['Uniswap V3', 'PancakeSwap', 'SushiSwap', 'Curve'][i % 4],
-            tokenIn: i % 2 === 0 ? symbol : 'USDC',
-            tokenOut: i % 2 === 0 ? 'USDC' : symbol,
-            amountIn: Math.random() * 100,
-            amountOut: Math.random() * 100000,
-            valueUsd: Math.random() * 500000,
-            priceImpact: (Math.random() - 0.5) * 2,
-            wallet: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
-            walletType: ['whale', 'dex', 'cex', 'unknown'][i % 4],
-            txHash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
+      // Build swap feed from real exchange tickers
+      const allSwaps: SwapEvent[] = []
+      const exchanges = exchangesRes.status === 'fulfilled' ? exchangesRes.value?.data || {} : {}
+      let idx = 0
+      for (const [ex, tickers] of Object.entries(exchanges)) {
+        if (!Array.isArray(tickers)) continue
+        for (const t of tickers.slice(0, 5)) {
+          const sym = (t.symbol as string).replace('USDT', '')
+          allSwaps.push({
+            id: `swap-${idx}`,
+            timestamp: new Date(Date.now() - idx * 30000).toLocaleTimeString(),
+            dex: ex.charAt(0).toUpperCase() + ex.slice(1),
+            tokenIn: sym, tokenOut: 'USDT',
+            amountIn: (t.volume24h as number) / (t.price as number) / 100,
+            amountOut: (t.volume24h as number) / 100,
+            valueUsd: (t.volume24h as number) / 100,
+            priceImpact: (t.priceChange24h as number) / 10,
+            wallet: `${ex}-hot-wallet`,
+            walletType: 'cex',
+            txHash: `${ex}-${sym}-${idx}`,
           })
+          idx++
         }
       }
-      setSwaps(realSwaps)
+      setSwaps(allSwaps)
 
-      // Generate pair stats
-      if (exchangesRes.status === 'fulfilled' && exchangesRes.value?.data?.binance) {
-        setPairs(exchangesRes.value.data.binance.slice(0, 15).map((t: Record<string, unknown>) => ({
-          pair: `${(t.symbol as string).replace('USDT', '')}/USDT`,
-          dex: 'Binance',
-          volume24h: t.volume24h as number,
-          price: t.price as number,
-          change1h: t.priceChange24h as number,
-          liquidity: Math.random() * 500000000,
-          txCount: Math.floor(Math.random() * 50000),
+      // Pair stats from derivatives
+      if (derivativesRes.status === 'fulfilled' && derivativesRes.value?.data?.topPairs) {
+        setPairs(derivativesRes.value.data.topPairs.slice(0, 15).map((p: Record<string, unknown>) => ({
+          pair: `${(p.symbol as string).replace('USDT', '')}/USDT`,
+          dex: 'Binance Futures',
+          volume24h: p.quoteVolume24h as number,
+          price: p.price as number,
+          change1h: p.priceChange24h as number,
+          liquidity: p.openInterest as number,
+          txCount: 0,
         })))
       }
 

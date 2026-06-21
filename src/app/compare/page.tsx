@@ -1,157 +1,42 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { DataTable, type Column } from '@/components/shell/DataTable'
 import { PriceTag } from '@/components/primitives/PriceTag'
 import { DeltaBadge } from '@/components/primitives/DeltaBadge'
 import { LiveDot } from '@/components/primitives/LiveDot'
+import { useLiveFetch } from '@/lib/hooks/useLiveFetch'
 
-interface MarketAsset {
-  name: string
-  symbol: string
-  price: number
-  change: number
-  category: string
-  [key: string]: unknown
-}
+interface MarketResponse { tickers: Array<{ symbol: string; price: string; change: string; positive: boolean }> }
+interface MacroResponse { data: { indicators: Array<{ id: string; name: string; latestValue: number; changePercent: number }> } }
+interface Asset { name: string; symbol: string; price: number; change: number; category: string; [k: string]: unknown }
 
 export default function ComparePage() {
-  const [assets, setAssets] = useState<MarketAsset[]>([])
-  const [feedStatus, setFeedStatus] = useState<'live' | 'stale' | 'error'>('live')
+  const { data: market, status } = useLiveFetch<MarketResponse>({ url: '/api/v1/market/prices', interval: 60_000 })
+  const { data: macro } = useLiveFetch<MacroResponse>({ url: '/api/v1/macro', interval: 300_000 })
 
-  const fetchMarket = useCallback(async () => {
-    try {
-      const [marketRes, macroRes] = await Promise.allSettled([
-        fetch('/api/v1/market/prices').then(r => r.json()),
-        fetch('/api/v1/macro').then(r => r.json()),
-      ])
-
-      const allAssets: MarketAsset[] = []
-
-      // Market tickers
-      if (marketRes.status === 'fulfilled' && marketRes.value?.tickers) {
-        for (const t of marketRes.value.tickers) {
-          const changeStr = (t.change as string || '').replace('%', '').replace('+', '')
-          allAssets.push({
-            name: t.symbol as string,
-            symbol: t.symbol as string,
-            price: parseFloat((t.price as string || '0').replace(/[$,]/g, '')),
-            change: parseFloat(changeStr) || 0,
-            category: ['BTC', 'ETH', 'SOL'].includes(t.symbol) ? 'Crypto' : 'Traditional',
-          })
-        }
-      }
-
-      // Macro indicators
-      if (macroRes.status === 'fulfilled' && macroRes.value?.data?.indicators) {
-        for (const ind of macroRes.value.data.indicators) {
-          allAssets.push({
-            name: ind.name as string,
-            symbol: ind.id as string,
-            price: ind.latestValue as number,
-            change: ind.changePercent as number || 0,
-            category: 'Macro',
-          })
-        }
-      }
-
-      setAssets(allAssets)
-      setFeedStatus('live')
-    } catch {
-      setFeedStatus('error')
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchMarket()
-    const interval = setInterval(fetchMarket, 60_000)
-    return () => clearInterval(interval)
-  }, [fetchMarket])
-
-  const columns: Column<MarketAsset>[] = [
-    {
-      key: 'category',
-      header: 'Category',
-      width: 80,
-      render: (row) => (
-        <span className={`text-[10px] font-mono ${
-          row.category === 'Crypto' ? 'text-teal-vivid' :
-          row.category === 'Macro' ? 'text-data-purple' :
-          'text-data-info'
-        }`}>
-          {row.category}
-        </span>
-      ),
-    },
-    {
-      key: 'name',
-      header: 'Asset',
-      width: 150,
-      render: (row) => <span className="text-text-primary font-medium">{row.name}</span>,
-    },
-    {
-      key: 'price',
-      header: 'Value',
-      width: 100,
-      align: 'right',
-      render: (row) => <PriceTag value={row.price} size="sm" />,
-    },
-    {
-      key: 'change',
-      header: 'Change',
-      width: 70,
-      align: 'right',
-      render: (row) => <DeltaBadge value={row.change} size="xs" />,
-    },
+  const assets: Asset[] = [
+    ...(market?.tickers || []).map(t => ({ name: t.symbol, symbol: t.symbol, price: parseFloat((t.price || '0').replace(/[$,]/g, '')), change: parseFloat((t.change || '0').replace(/%+/g, '')), category: ['BTC', 'ETH', 'SOL'].includes(t.symbol) ? 'Crypto' : 'Traditional' })),
+    ...(macro?.data?.indicators || []).map(i => ({ name: i.name, symbol: i.id, price: i.latestValue, change: i.changePercent || 0, category: 'Macro' })),
   ]
 
-  const cryptoAssets = assets.filter(a => a.category === 'Crypto')
-  const macroAssets = assets.filter(a => a.category === 'Macro')
-  const tradAssets = assets.filter(a => a.category === 'Traditional')
+  const columns: Column<Asset>[] = [
+    { key: 'category', header: 'Cat', width: 60, render: r => <span className={`text-[10px] font-mono ${r.category === 'Crypto' ? 'text-teal-vivid' : r.category === 'Macro' ? 'text-data-purple' : 'text-data-info'}`}>{r.category}</span> },
+    { key: 'name', header: 'Asset', width: 150, render: r => <span className="text-text-primary font-medium">{r.name}</span> },
+    { key: 'price', header: 'Value', width: 100, align: 'right', render: r => <PriceTag value={r.price} size="sm" /> },
+    { key: 'change', header: 'Change', width: 70, align: 'right', render: r => <DeltaBadge value={r.change} size="xs" /> },
+  ]
 
   return (
     <NexusLayout>
       <div className="p-3 space-y-3">
-        {/* Header */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[20px] font-head font-bold text-text-primary">Cross-Market Comparison</h1>
-            <p className="text-[11px] text-text-muted font-mono">Crypto, forex, commodities, and macro indicators</p>
-          </div>
-          <LiveDot status={feedStatus} label />
+          <div><h1 className="text-[20px] font-head font-bold text-text-primary">Cross-Market</h1><p className="text-[11px] text-text-muted font-mono">Crypto, forex, commodities, macro</p></div>
+          <LiveDot status={status} label />
         </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-1">
-          {[
-            { label: 'Crypto', count: cryptoAssets.length, color: 'text-teal-vivid' },
-            { label: 'Traditional', count: tradAssets.length, color: 'text-data-info' },
-            { label: 'Macro', count: macroAssets.length, color: 'text-data-purple' },
-          ].map((cat, i) => (
-            <div key={i} className="bg-bg-panel border border-bg-border px-3 py-2">
-              <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">{cat.label}</div>
-              <div className={`text-[16px] font-head font-bold tabular-nums ${cat.color}`}>{cat.count} assets</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Market Table */}
-        <Panel
-          title="Market Overview"
-          subtitle="All tracked assets"
-          liveStatus={feedStatus}
-          onRefresh={fetchMarket}
-          maxHeight={600}
-        >
-          <DataTable
-            columns={columns}
-            data={assets}
-            sortable
-            rowHeight={28}
-            emptyState={<div className="text-text-muted text-[11px] p-4">Loading market data...</div>}
-          />
+        <Panel title="Market Overview" subtitle={`${assets.length} assets`} liveStatus={status} maxHeight={600}>
+          <DataTable columns={columns} data={assets} sortable rowHeight={28} emptyState={<div className="text-text-muted text-[11px] p-4">Loading...</div>} />
         </Panel>
       </div>
     </NexusLayout>

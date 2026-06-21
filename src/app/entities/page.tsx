@@ -45,16 +45,16 @@ export default function EntitiesPage() {
           id: e.id as string || String(i),
           name: e.name as string || 'Unknown',
           type: e.type as string || 'unknown',
-          address: `0x${(i * 1000000).toString(16).padStart(40, '0')}`,
+          address: `entity-${i}`,
           chain: Array.isArray(e.chains) ? (e.chains as string[])[0] || 'ethereum' : 'ethereum',
-          balance: Math.random() * 1000,
-          balanceUsd: (e.totalUsdValue as number) || Math.random() * 1000000,
-          txCount: Math.floor(Math.random() * 5000),
+          balance: 0,
+          balanceUsd: (e.totalUsdValue as number) || 0,
+          txCount: 0,
           firstSeen: '2024-01-15',
-          lastActive: '2h ago',
+          lastActive: 'recent',
           labels: [e.type as string, e.verified ? 'Verified' : 'Unverified'],
-          pnl7d: (Math.random() - 0.5) * 20,
-          sparkline: Array.from({ length: 20 }, () => Math.random() * 100),
+          pnl7d: 0,
+          sparkline: Array.from({ length: 20 }, (_, j) => 50 + Math.sin(j) * 10),
         })))
       }
       setFeedStatus('live')
