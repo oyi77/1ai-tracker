@@ -18,15 +18,3 @@ export const sizes = {
   'hero':     '40px',   // landing / hero only
 } as const
 
-export const weights = {
-  normal:   400,
-  medium:   500,
-  semibold: 600,
-  bold:     700,
-} as const
-
-export const lineHeights = {
-  tight:  1.2,
-  normal: 1.5,
-  loose:  1.75,
-} as const

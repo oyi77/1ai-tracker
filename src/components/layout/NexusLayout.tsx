@@ -32,7 +32,8 @@ interface NexusLayoutProps {
 export function NexusLayout({ children }: NexusLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [time, setTime] = useState('')
-  const [wsStatus, setWsStatus] = useState<'live' | 'stale' | 'error'>('live')
+  const [tickers, setTickers] = useState<Array<{ symbol: string; price: string; change: string; positive: boolean }>>([])
+  const [fgi, setFgi] = useState<number | null>(null)
   const pathname = usePathname()
 
   useEffect(() => {
@@ -42,7 +43,15 @@ export function NexusLayout({ children }: NexusLayoutProps) {
     }
     tick()
     const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
+
+    const fetchTickers = () => {
+      fetch('/api/v1/market/prices').then(r => r.json()).then(d => { if (d.tickers) setTickers(d.tickers) }).catch(() => {})
+      fetch('/api/v1/fear-greed').then(r => r.json()).then(d => { if (d.data?.composite?.score) setFgi(d.data.composite.score) }).catch(() => {})
+    }
+    fetchTickers()
+    const tickerId = setInterval(fetchTickers, 30_000)
+
+    return () => { clearInterval(id); clearInterval(tickerId) }
   }, [])
 
   return (
@@ -57,31 +66,23 @@ export function NexusLayout({ children }: NexusLayoutProps) {
           </Link>
           <div className="hidden md:flex items-center gap-1 px-2 py-1 rounded bg-bg-raised border border-bg-border">
             <Search size={12} className="text-text-muted" />
-            <input
-              type="text"
-              placeholder="Search address, token, tx…"
-              className="bg-transparent text-[11px] font-mono text-text-primary placeholder:text-text-muted outline-none w-48"
-            />
-            <kbd className="text-[9px] text-text-muted bg-bg-base px-1 rounded">⌘K</kbd>
+            <input type="text" placeholder="Search address, token, tx…" className="bg-transparent text-[11px] font-mono text-text-primary placeholder:text-text-muted outline-none w-48" />
           </div>
         </div>
 
-        {/* Center: Global Ticker */}
+        {/* Center: Global Ticker — Live Data */}
         <div className="hidden lg:flex items-center gap-4 text-[11px] font-mono">
-          <span className="text-text-muted">BTC <span className="text-data-bull">$64,190</span></span>
-          <span className="text-text-muted">ETH <span className="text-data-bull">$1,733</span></span>
-          <span className="text-text-muted">SOL <span className="text-data-bull">$73.36</span></span>
-          <span className="text-text-muted">DOM <span className="text-text-primary">54.2%</span></span>
-          <span className="text-text-muted">FGI <span className="text-data-warn">47</span></span>
+          {tickers.slice(0, 4).map((t, i) => (
+            <span key={i} className="text-text-muted">{t.symbol} <span className={t.positive ? 'text-data-bull' : 'text-data-bear'}>{t.price}</span></span>
+          ))}
+          {fgi !== null && <span className="text-text-muted">FGI <span className="text-data-warn">{fgi}</span></span>}
         </div>
 
         {/* Right: Status + Actions */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-[10px] font-mono">
-            <LiveDot status={wsStatus} size={5} />
-            <span className="text-text-muted hidden sm:inline">
-              {wsStatus === 'live' ? 'LIVE' : wsStatus.toUpperCase()}
-            </span>
+            <LiveDot status="live" size={5} />
+            <span className="text-text-muted hidden sm:inline">LIVE</span>
           </div>
           <span className="text-[11px] font-mono text-text-secondary tabular-nums">{time}</span>
           <button className="p-1.5 rounded hover:bg-bg-raised transition-colors">

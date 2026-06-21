@@ -31,8 +31,6 @@ export const colors = {
   // Text hierarchy
   text: {
     primary:   '#E8ECF0', // 12.3:1 on bg.base, 13.8:1 on bg.panel
-    secondary: '#8B95A1', // 5.2:1 on bg.base, 5.8:1 on bg.panel
-    muted:     '#4A525C', // 2.8:1 on bg.base — decorative only, pair with tooltip
     inverse:   '#050608', // on vivid/bull backgrounds
   },
 } as const
