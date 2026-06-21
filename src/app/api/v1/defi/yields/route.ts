@@ -14,10 +14,39 @@ export async function GET(request: Request) {
 
   try {
     const result = await registry.fetchOne('defillama', { action: 'yields' })
-    const raw = result.data as any; let pools: any[] = Array.isArray(raw) ? raw : (raw?.data ?? raw ?? [])
+    const raw = result.data as any
+
+    // Handle various response formats from DeFiLlama
+    let pools: any[] = []
+    if (Array.isArray(raw)) {
+      pools = raw
+    } else if (raw?.data && Array.isArray(raw.data)) {
+      pools = raw.data
+    } else if (raw?.pools && Array.isArray(raw.pools)) {
+      pools = raw.pools
+    } else if (raw && typeof raw === 'object') {
+      // Try to extract any array from the response
+      const values = Object.values(raw)
+      const arrayValue = values.find(v => Array.isArray(v))
+      if (arrayValue) {
+        pools = arrayValue as any[]
+      }
+    }
+
+    // Log if no pools found for debugging
+    if (pools.length === 0) {
+      console.warn('[defi/yields] No pools found in response:', {
+        type: typeof raw,
+        isArray: Array.isArray(raw),
+        keys: raw ? Object.keys(raw).slice(0, 10) : [],
+        sample: JSON.stringify(raw).slice(0, 200),
+      })
+    }
 
     if (chain) {
-      pools = pools.filter((p: Record<string, unknown>) => (p.chain as string)?.toLowerCase() === chain.toLowerCase())
+      pools = pools.filter((p: Record<string, unknown>) => 
+        (p.chain as string)?.toLowerCase() === chain.toLowerCase()
+      )
     }
     if (stablecoinOnly) {
       pools = pools.filter((p: Record<string, unknown>) => p.stablecoin === true)
@@ -25,7 +54,9 @@ export async function GET(request: Request) {
 
     const sorted = pools
       .filter((p: Record<string, unknown>) => typeof p.apy === 'number' && p.apy > 0)
-      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.apy as number) - (a.apy as number))
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => 
+        (b.apy as number) - (a.apy as number)
+      )
       .slice(0, limit)
       .map((p: Record<string, unknown>) => ({
         pool: p.pool,
@@ -39,9 +70,23 @@ export async function GET(request: Request) {
         stablecoin: p.stablecoin,
       }))
 
-    return NextResponse.json({ pools: sorted, count: sorted.length })
+    return NextResponse.json({
+      pools: sorted,
+      count: sorted.length,
+      totalAvailable: pools.length,
+      source: 'defillama',
+      timestamp: new Date().toISOString(),
+    }, {
+      headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=120' },
+    })
   } catch (err) {
     console.error('[defi/yields] Error:', err)
-    return NextResponse.json({ pools: [], count: 0 })
+    return NextResponse.json({
+      pools: [],
+      count: 0,
+      error: (err as Error).message,
+      source: 'defillama',
+      timestamp: new Date().toISOString(),
+    }, { status: 502 })
   }
 }
