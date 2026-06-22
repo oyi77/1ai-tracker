@@ -29,5 +29,5 @@ const TEMPLATES: AlertTemplate[] = [
 ]
 
 export async function GET() {
-  return NextResponse.json({ templates: TEMPLATES, count: TEMPLATES.length })
+  return NextResponse.json({ data: { templates: TEMPLATES, count: TEMPLATES.length }, error: null })
 }

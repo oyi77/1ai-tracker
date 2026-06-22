@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const chain = searchParams.get('chain') ?? 'eth'
 
   if (!address) {
-    return NextResponse.json({ error: 'address required' }, { status: 400 })
+    return NextResponse.json({ data: null, error: 'address required' }, { status: 400 })
   }
 
   const registry = registerAllModules()
@@ -43,17 +43,16 @@ export async function GET(request: Request) {
     : []
 
   return NextResponse.json({
-    address,
-    chain,
-    entity: entityLabel ? {
-      label: entityLabel.label,
-      category: entityLabel.category,
-      confidence: entityLabel.confidence,
-    } : null,
-    txCount: txHistory.length,
-    tokenTransferCount: tokenTransfers.length,
-    recentTxs: txHistory.slice(0, 5),
-    recentTokenTransfers: tokenTransfers.slice(0, 5),
+    data: {
+      address,
+      chain,
+      entity: entityLabel ? { label: entityLabel.label, category: entityLabel.category, confidence: entityLabel.confidence } : null,
+      txCount: txHistory.length,
+      tokenTransferCount: tokenTransfers.length,
+      recentTxs: txHistory.slice(0, 5),
+      recentTokenTransfers: tokenTransfers.slice(0, 5),
+    },
+    error: null,
   }, {
     headers: { 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
   })

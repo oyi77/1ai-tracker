@@ -46,11 +46,9 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
-    symbol,
-    interval,
-    candles,
-    indicators: indicatorResults,
-    snapshotCount: getSnapshotCount(),
-    totalSymbols: getSymbolCount(),
+    data: { symbol, interval, candles, indicators: indicatorResults, snapshotCount: getSnapshotCount(), totalSymbols: getSymbolCount() },
+    error: null,
+  }, {
+    headers: { 'Cache-Control': 'public, max-age=5, stale-while-revalidate=10' },
   })
 }

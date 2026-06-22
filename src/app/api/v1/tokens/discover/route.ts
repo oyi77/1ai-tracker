@@ -86,12 +86,12 @@ export async function GET(request: Request) {
     else if (sort === 'liquidity') tokens.sort((a, b) => b.liquidity - a.liquidity)
     else tokens.sort((a, b) => b.volume24h - a.volume24h) // trending = volume
 
-    return NextResponse.json({ tokens, count: tokens.length }, {
+    return NextResponse.json({ data: { tokens, count: tokens.length }, error: null }, {
       headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' },
     })
   } catch (err) {
     console.error('[tokens/discover] Error:', err)
-    return NextResponse.json({ tokens: [], count: 0 })
+    return NextResponse.json({ data: { tokens: [], count: 0 }, error: null })
   }
 }
 
