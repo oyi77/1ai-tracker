@@ -27,7 +27,9 @@ async function fetchVimeroFeed() {
 export async function GET() {
   try {
     const feed = await fetchVimeroFeed()
-    return apiSuccess(feed)
+    const r = apiSuccess(feed)
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+    return r
   } catch (err) {
     console.error('[vimero] Error:', err)
     return apiError(String(err), 500)

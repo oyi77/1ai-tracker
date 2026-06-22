@@ -16,12 +16,14 @@ export async function GET(request: NextRequest) {
     switch (source) {
       case "geckoterminal": {
         const pools = await geckoterminal.getFormattedTrending(limit);
-        return apiSuccess(pools, { total: pools.length });
+        const r = apiSuccess(pools, { total: pools.length });
+        r.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+        return r;
       }
 
       case "coinpaprika": {
         const tickers = await coinpaprika.getTickers(limit);
-        return apiSuccess(
+        const r = apiSuccess(
           tickers.map((t) => ({
             name: t.name,
             symbol: t.symbol,
@@ -34,11 +36,15 @@ export async function GET(request: NextRequest) {
           })),
           { total: tickers.length }
         );
+        r.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+        return r;
       }
 
       case "new-pools": {
         const pools = await geckoterminal.getNewPools(network, limit);
-        return apiSuccess(pools, { total: pools.length });
+        const r = apiSuccess(pools, { total: pools.length });
+        r.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+        return r;
       }
 
       default:

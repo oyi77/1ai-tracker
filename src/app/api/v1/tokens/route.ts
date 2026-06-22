@@ -39,7 +39,9 @@ export async function GET(request: NextRequest) {
       prisma.token.count({ where }),
     ]);
 
-    return apiPaginated(tokens, total, page, pageSize);
+    const r = apiPaginated(tokens, total, page, pageSize);
+    r.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
+    return r;
   } catch (error) {
     console.error("GET /api/v1/tokens error:", error);
     return apiError("Internal server error", 500);

@@ -14,53 +14,71 @@ export async function GET(request: NextRequest) {
     switch (action) {
       case "protocols": {
         const data = await defillama.getTopDeFiProtocols(chain, limit);
-        return apiSuccess(data, { total: data.length });
+        const r = apiSuccess(data, { total: data.length });
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "yields": {
         const stablecoinOnly = searchParams.get("stablecoin") === "true";
         const data = await defillama.getTopYieldPools(chain, stablecoinOnly, limit);
-        return apiSuccess(data, { total: data.length });
+        const r = apiSuccess(data, { total: data.length });
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "chains": {
         const data = await defillama.getChainsTvl();
-        return apiSuccess(data);
+        const r = apiSuccess(data);
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "chain-tvl": {
         if (!chain) return apiError("chain parameter required", 400);
         const data = await defillama.getChainTvl(chain);
-        return apiSuccess(data);
+        const r = apiSuccess(data);
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "stablecoins": {
         const data = await defillama.getStablecoins();
-        return apiSuccess(data.peggedAssets.slice(0, limit));
+        const r = apiSuccess(data.peggedAssets.slice(0, limit));
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "dex-volumes": {
         const data = chain
           ? await defillama.getDexVolumeByChain(chain)
           : await defillama.getDexVolumes();
-        return apiSuccess(data);
+        const r = apiSuccess(data);
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "bridges": {
         const data = chain
           ? await defillama.getBridgeVolumeByChain(chain)
           : await defillama.getBridgeOverview();
-        return apiSuccess(data);
+        const r = apiSuccess(data);
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "fees": {
         const data = await defillama.getFeesOverview();
-        return apiSuccess(data);
+        const r = apiSuccess(data);
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       case "health": {
         const data = await defillama.healthCheck();
-        return apiSuccess(data);
+        const r = apiSuccess(data);
+        r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+        return r;
       }
 
       default:

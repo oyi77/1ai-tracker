@@ -80,7 +80,9 @@ export async function GET() {
       }
     }
 
-    return apiSuccess({ tickers })
+    const r = apiSuccess({ tickers })
+    r.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
+    return r
   } catch (err) {
     console.error('[market/prices] Error:', err)
     return apiError('Failed to fetch market prices', 502)

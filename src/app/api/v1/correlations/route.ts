@@ -8,7 +8,9 @@ export async function GET(_request: NextRequest) {
   try {
     await updateCorrelations();
     const correlations = getCorrelations();
-    return apiSuccess(correlations);
+    const r = apiSuccess(correlations);
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    return r;
   } catch (error) {
     console.error("GET /api/v1/correlations error:", error);
     return apiError("Internal server error", 500);

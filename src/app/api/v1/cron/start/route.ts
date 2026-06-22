@@ -16,11 +16,13 @@ export async function GET() {
       started = true
     }
 
-    return apiSuccess({
+    const r = apiSuccess({
       status: 'running',
       snapshots: getSnapshotCount(),
       symbols: getSymbolCount(),
     })
+    r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+    return r
   } catch (err) {
     return apiError((err as Error).message || 'Failed to start cron', 500)
   }

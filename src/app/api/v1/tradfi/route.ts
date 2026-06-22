@@ -32,7 +32,9 @@ export async function GET(request: NextRequest) {
         const q = searchParams.get('q')
         if (!q) return apiError('Missing required param: q', 400)
         const results = await searchCompany(q)
-        return apiSuccess(results)
+        const r = apiSuccess(results)
+        r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+        return r
       }
 
       // ── SEC EDGAR: company facts (XBRL) ──────────────
@@ -40,13 +42,15 @@ export async function GET(request: NextRequest) {
         const cik = searchParams.get('cik')
         if (!cik) return apiError('Missing required param: cik', 400)
         const facts = await getCompanyFacts(cik)
-        return apiSuccess({
+        const r = apiSuccess({
           cik: facts.cik,
           entityName: facts.entityName,
           // Return a summary — full facts payload is very large
           availableSchemas: Object.keys(facts.facts),
           usGaapSample: Object.keys(facts.facts['us-gaap'] ?? {}).slice(0, 30),
         })
+        r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+        return r
       }
 
       // ── SEC EDGAR: recent filings ────────────────────
@@ -54,7 +58,9 @@ export async function GET(request: NextRequest) {
         const cik = searchParams.get('cik')
         if (!cik) return apiError('Missing required param: cik', 400)
         const filings = await getRecentFilings(cik)
-        return apiSuccess(filings)
+        const r = apiSuccess(filings)
+        r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+        return r
       }
 
       // ── FRED: series data ────────────────────────────
@@ -63,7 +69,9 @@ export async function GET(request: NextRequest) {
         if (!series) return apiError('Missing required param: series', 400)
         const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '10') || 10))
         const data = await getFredSeriesData(series, limit)
-        return apiSuccess(data)
+        const r = apiSuccess(data)
+        r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+        return r
       }
 
       // ── FRED: latest value ───────────────────────────
@@ -71,12 +79,16 @@ export async function GET(request: NextRequest) {
         const series = searchParams.get('series')
         if (!series) return apiError('Missing required param: series', 400)
         const latest = await getFredLatestValue(series)
-        return apiSuccess({ series, latest })
+        const r = apiSuccess({ series, latest })
+        r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+        return r
       }
 
       // ── FRED: available series ───────────────────────
       case 'fred-meta': {
-        return apiSuccess(getFredSeriesMeta())
+        const r = apiSuccess(getFredSeriesMeta())
+        r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+        return r
       }
 
       default:

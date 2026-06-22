@@ -29,11 +29,13 @@ export async function GET() {
 
     const recent = getRecentSignals(30)
 
-    return apiSuccess({
+    const r = apiSuccess({
       signals: recent,
       newSignals: newSignals.length,
       count: recent.length,
     })
+    r.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60')
+    return r
   } catch (err) {
     console.error('[api/v1/signals] Error:', err)
     return apiError(String(err), 500)

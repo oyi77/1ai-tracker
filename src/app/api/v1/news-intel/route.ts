@@ -19,12 +19,21 @@ export async function GET(request: NextRequest) {
 
   try {
     switch (action) {
-      case 'gdelt':
-        return await handleGdelt(searchParams)
-      case 'rss':
-        return handleRss(searchParams)
-      case 'local-exclusive':
-        return await handleLocalExclusive(searchParams)
+      case 'gdelt': {
+        const r = await handleGdelt(searchParams)
+        r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
+        return r
+      }
+      case 'rss': {
+        const r = handleRss(searchParams)
+        r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
+        return r
+      }
+      case 'local-exclusive': {
+        const r = await handleLocalExclusive(searchParams)
+        r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
+        return r
+      }
       default:
         return apiError(`Unknown action: ${action}. Use gdelt, rss, or local-exclusive.`, 400)
     }

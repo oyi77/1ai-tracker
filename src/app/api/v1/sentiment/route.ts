@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server'
 import { registerAllModules } from '@/lib/modules'
 import { scoreSentiment, detectAssets } from '@/lib/modules/derived/sentiment-engine'
+import { cacheHeaders } from '@/lib/api/response'
 
 export async function GET(request: Request) {
   const registry = registerAllModules()
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
       }))
       .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
 
-    return NextResponse.json({
+    return cacheHeaders(NextResponse.json({
       items: items.slice(0, limit),
       aggregate: {
         score: avgScore,
@@ -72,8 +73,8 @@ export async function GET(request: Request) {
       },
       assetSentiment: assetScores,
       count: items.length,
-    })
+    }), 60)
   } catch {
-    return NextResponse.json({ items: [], aggregate: { score: 0, label: 'neutral' }, count: 0 })
+    return cacheHeaders(NextResponse.json({ items: [], aggregate: { score: 0, label: 'neutral' }, count: 0 }), 60)
   }
 }

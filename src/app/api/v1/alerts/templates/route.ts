@@ -29,5 +29,5 @@ const TEMPLATES: AlertTemplate[] = [
 ]
 
 export async function GET() {
-  return NextResponse.json({ data: { templates: TEMPLATES, count: TEMPLATES.length }, error: null })
+  return NextResponse.json({ data: { templates: TEMPLATES, count: TEMPLATES.length }, error: null }, { headers: { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=7200' } })
 }

@@ -3,7 +3,7 @@
 // DEX volume, stablecoins, bridges, fees, yields in one call
 // ─────────────────────────────────────────────────────────────
 
-import { apiSuccess, apiError } from '@/lib/api/response'
+import { apiSuccess, apiError, cacheHeaders } from '@/lib/api/response'
 import { registerAllModules } from '@/lib/modules'
 
 export async function GET() {
@@ -27,8 +27,8 @@ export async function GET() {
 
   const allFailed = [tvlRes, dexRes, stableRes, feeRes, yieldRes].every(r => r.status === 'rejected')
   if (allFailed) {
-    return apiError('[defi/overview] All upstream fetches failed', 502)
+  return cacheHeaders(apiError('[defi/overview] All upstream fetches failed', 502), 120)
   }
 
-  return apiSuccess(data)
+  return cacheHeaders(apiSuccess(data), 120)
 }

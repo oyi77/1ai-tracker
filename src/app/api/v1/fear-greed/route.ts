@@ -107,7 +107,9 @@ export async function GET(_request: NextRequest) {
   try {
     const now = Date.now();
     if (cachedData && now - cacheTimestamp < CACHE_TTL_MS) {
-      return apiSuccess(cachedData);
+      const r = apiSuccess(cachedData);
+      r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+      return r
     }
 
     // Fetch all sources in parallel
@@ -201,7 +203,9 @@ export async function GET(_request: NextRequest) {
     cachedData = result;
     cacheTimestamp = now;
 
-    return apiSuccess(result);
+    const r = apiSuccess(result);
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    return r
   } catch (error) {
     console.error("GET /api/v1/fear-greed error:", error);
     return apiError("Failed to compute Fear & Greed index", 502);

@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cacheHeaders } from "@/lib/api/response";
 
 export async function GET(
   request: NextRequest,
@@ -27,12 +28,12 @@ export async function GET(
     });
 
     if (!wallet) {
-      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
+    return cacheHeaders(NextResponse.json({ error: "Wallet not found" }, { status: 404 }), 60);
     }
 
-    return NextResponse.json({ data: wallet });
+    return cacheHeaders(NextResponse.json({ data: wallet }), 60);
   } catch (error) {
     console.error("GET /api/v1/wallets/[address] error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return cacheHeaders(NextResponse.json({ error: "Internal server error" }, { status: 500 }), 60);
   }
 }

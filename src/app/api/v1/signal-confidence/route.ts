@@ -20,7 +20,9 @@ export async function GET() {
       lastUpdated: c.lastUpdated.toISOString(),
     }))
 
-    return apiSuccess({ signals: data, count: data.length })
+    const r = apiSuccess({ signals: data, count: data.length })
+    r.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60')
+    return r
   } catch {
     return apiError('[signal-confidence] Failed to compute confidence scores', 502)
   }

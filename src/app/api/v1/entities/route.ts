@@ -44,7 +44,9 @@ export async function GET(request: NextRequest) {
       prisma.entity.count({ where }),
     ]);
 
-    return apiPaginated(entities, total, page, pageSize);
+    const r = apiPaginated(entities, total, page, pageSize);
+    r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    return r;
   } catch (error) {
     console.error("GET /api/v1/entities error:", error);
     return apiError("Internal server error", 500);

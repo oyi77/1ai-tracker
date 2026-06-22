@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
       prisma.predictionMarket.count({ where }),
     ]);
 
-    return apiPaginated(markets, total, page, pageSize);
+    const r = apiPaginated(markets, total, page, pageSize);
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    return r;
   } catch (error) {
     console.error("GET /api/v1/predictions error:", error);
     return apiError("Internal server error", 500);

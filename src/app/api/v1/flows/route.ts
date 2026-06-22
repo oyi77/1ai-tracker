@@ -42,7 +42,9 @@ export const GET = withApiAuth(async (request: NextRequest) => {
 
     const flows = Array.from(flowMap.values()).sort((a, b) => b.totalUsd - a.totalUsd);
 
-    return apiSuccess(flows, { pageSize: flows.length, hasMore });
+    const r = apiSuccess(flows, { pageSize: flows.length, hasMore })
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+    return r
   } catch (error) {
     console.error("GET /api/v1/flows error:", error);
     return apiError("Internal server error", 500);

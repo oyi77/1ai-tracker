@@ -54,10 +54,12 @@ export async function GET() {
     const slightDepegCount = stablecoins.filter((c) => c.pegStatus === "SLIGHT DEPEG").length;
     const healthStatus = depeggedCount > 0 ? "WARNING" : slightDepegCount > 0 ? "CAUTION" : "HEALTHY";
 
-    return apiSuccess({
+    const r = apiSuccess({
       stablecoins,
       summary: { totalMarketCap, totalVolume24h, coinCount: stablecoins.length, depeggedCount: depeggedCount + slightDepegCount, healthStatus },
-    });
+    })
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+    return r
   } catch (error) {
     console.error("GET /api/v1/stablecoins error:", error);
     return apiError("Failed to fetch stablecoin data", 502);

@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server'
 import { registerAllModules } from '@/lib/modules'
+import { cacheHeaders } from '@/lib/api/response'
 
 export async function GET(request: Request) {
   const registry = registerAllModules()
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   const moduleId = searchParams.get('module')
 
   if (!moduleId) {
-    return NextResponse.json({ error: 'module parameter required' }, { status: 400 })
+  return cacheHeaders(NextResponse.json({ error: 'module parameter required' }, { status: 400 }), 60)
   }
 
   const params: Record<string, string> = {}
@@ -22,14 +23,14 @@ export async function GET(request: Request) {
 
   try {
     const result = await registry.fetchOne(moduleId, params)
-    return NextResponse.json({
+    return cacheHeaders(NextResponse.json({
       data: result.data,
       source: result.source,
       cached: result.cached,
       timestamp: result.timestamp,
-    })
+    }), 60)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return cacheHeaders(NextResponse.json({ error: message }, { status: 500 }), 60)
   }
 }

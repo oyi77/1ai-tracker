@@ -27,27 +27,28 @@ export async function GET(request: NextRequest) {
   const region = searchParams.get('region')
 
   try {
+    let r;
     if (action === 'anomalies') {
-      return await handleAnomalies(searchParams)
+      r = await handleAnomalies(searchParams)
+    } else if (region) {
+      r = await handleRegion(region)
+    } else {
+      // Default: list available regions
+      r = apiSuccess({
+        availableRegions: getAvailableRegions(),
+        presets: Object.entries(REGION_PRESETS).map(([key, p]) => ({
+          key,
+          name: p.name,
+          lat: p.lat,
+          lon: p.lon,
+          description: p.description,
+          commodities: p.commodities,
+        })),
+        usage: 'GET ?region=sumatra | ?action=anomalies | ?action=anomalies&region=sumatra',
+      })
     }
-
-    if (region) {
-      return await handleRegion(region)
-    }
-
-    // Default: list available regions
-    return apiSuccess({
-      availableRegions: getAvailableRegions(),
-      presets: Object.entries(REGION_PRESETS).map(([key, p]) => ({
-        key,
-        name: p.name,
-        lat: p.lat,
-        lon: p.lon,
-        description: p.description,
-        commodities: p.commodities,
-      })),
-      usage: 'GET ?region=sumatra | ?action=anomalies | ?action=anomalies&region=sumatra',
-    })
+    r.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    return r;
   } catch (err) {
     return apiError(`Weather signals error: ${(err as Error).message}`, 500)
   }

@@ -9,7 +9,7 @@ export async function GET() {
   const registry = registerAllModules()
   const statuses = registry.getModuleStatus()
 
-  return NextResponse.json({
+  const r = NextResponse.json({
     count: statuses.length,
     modules: statuses.map(m => ({
       id: m.id,
@@ -24,4 +24,6 @@ export async function GET() {
       notes: m.notes,
     })),
   })
+  r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+  return r
 }

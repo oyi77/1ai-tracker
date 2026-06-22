@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { withApiAuth } from "@/lib/api/with-api-auth";
-import { apiSuccess, apiError } from "@/lib/api/response";
+import { apiSuccess, apiError, cacheHeaders } from "@/lib/api/response";
 
 export const GET = withApiAuth(async (request: NextRequest) => {
   try {
@@ -27,10 +27,10 @@ export const GET = withApiAuth(async (request: NextRequest) => {
       prisma.alert.count({ where }),
     ]);
 
-    return apiSuccess(data, { total, page, pageSize, hasMore: page * pageSize < total });
+    return cacheHeaders(apiSuccess(data, { total, page, pageSize, hasMore: page * pageSize < total }), 10);
   } catch (error) {
     console.error("GET /api/v1/alerts error:", error);
-    return apiError("Internal server error", 500);
+    return cacheHeaders(apiError("Internal server error", 500), 10);
   }
 });
 

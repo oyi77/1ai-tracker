@@ -32,3 +32,7 @@ export function apiPaginated<T>(
     error: null,
   });
 }
+export function cacheHeaders<T>(response: NextResponse<T>, maxAge: number): NextResponse<T> {
+  response.headers.set("Cache-Control", `public, max-age=${maxAge}, stale-while-revalidate=${maxAge * 2}`);
+  return response;
+}

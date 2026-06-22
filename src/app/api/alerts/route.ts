@@ -27,12 +27,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { userId = "default", triggerType, conditions } = body;
+  try {
+    const body = await request.json()
+    const { userId = "default", triggerType, conditions } = body
 
-  const alert = await prisma.alert.create({
-    data: { userId, triggerType, conditions },
-  });
+    if (!triggerType || typeof triggerType !== 'string') {
+      return NextResponse.json({ data: null, error: 'triggerType is required' }, { status: 400 })
+    }
 
-  return NextResponse.json({ data: alert }, { status: 201 });
+    const alert = await prisma.alert.create({
+      data: { userId, triggerType, conditions },
+    })
+
+    return NextResponse.json({ data: alert, error: null }, { status: 201 })
+  } catch (err) {
+    console.error('[alerts] POST Error:', err)
+    return NextResponse.json({ data: null, error: (err as Error).message }, { status: 500 })
+  }
 }

@@ -13,11 +13,13 @@ export async function GET() {
     const data = result.data
     const latest = data?.[0]
 
-    return apiSuccess({
+    const r = apiSuccess({
       fearGreed: latest?.value ?? null,
       classification: latest?.classification ?? 'Unknown',
       cached: result.cached,
     })
+    r.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60')
+    return r
   } catch {
     return apiError('Failed to fetch sentiment data', 502)
   }

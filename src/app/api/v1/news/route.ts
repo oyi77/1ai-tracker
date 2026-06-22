@@ -31,7 +31,9 @@ export async function GET(request: Request) {
       category: item.category,
     }))
 
-    return apiSuccess({ items, count: items.length, cached: result.cached })
+    const r = apiSuccess({ items, count: items.length, cached: result.cached })
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+    return r
   } catch {
     return apiError('Failed to fetch news', 502)
   }

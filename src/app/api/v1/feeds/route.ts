@@ -164,9 +164,11 @@ export async function GET(request: NextRequest) {
       response.stats = getFeedStats();
     }
 
-    return apiSuccess(response, {
+    const r = apiSuccess(response, {
       total: articles.length,
     });
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    return r;
   } catch (error) {
     console.error("GET /api/v1/feeds error:", error);
     return apiError("Failed to fetch RSS feeds", 502);

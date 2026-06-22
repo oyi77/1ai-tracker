@@ -1,5 +1,5 @@
 import { type NextRequest } from "next/server";
-import { apiSuccess, apiError } from "@/lib/api/response";
+import { apiSuccess, apiError, cacheHeaders } from "@/lib/api/response";
 import { getFredSeries, FRED_SERIES, type FredObservation } from "@/lib/fred-client";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,7 @@ interface MacroIndicator {
   unit: string;
   trend: "up" | "down" | "flat";
 }
+
 
 interface MacroResponse {
   indicators: MacroIndicator[];
@@ -89,13 +90,13 @@ export async function GET(request: NextRequest) {
 
     // Return cached if fresh
     if (cachedData && Date.now() - cacheTimestamp < CACHE_TTL_MS) {
-      if (category === "all") return apiSuccess(cachedData);
-      return apiSuccess({
+      if (category === "all") return cacheHeaders(apiSuccess(cachedData), 3600);
+      return cacheHeaders(apiSuccess({
         ...cachedData,
         indicators: cachedData.indicators.filter(
           (i) => i.category === category || category === "all",
         ),
-      });
+      }), 3600);
     }
 
     // If no FRED API key, return latest known data as fallback
@@ -138,7 +139,7 @@ export async function GET(request: NextRequest) {
       };
       cachedData = fallback;
       cacheTimestamp = Date.now();
-      return apiSuccess(fallback);
+      return cacheHeaders(apiSuccess(fallback), 3600);
     }
 
     // Determine which series to fetch
@@ -196,15 +197,15 @@ export async function GET(request: NextRequest) {
     cachedData = response;
     cacheTimestamp = Date.now();
 
-    if (category === "all") return apiSuccess(response);
-    return apiSuccess({
+    if (category === "all") return cacheHeaders(apiSuccess(response), 3600);
+    return cacheHeaders(apiSuccess({
       ...response,
       indicators: response.indicators.filter(
         (i) => i.category === category || category === "all",
       ),
-    });
+    }), 3600);
   } catch (error) {
     console.error("GET /api/v1/macro error:", error);
-    return apiError("Failed to fetch data", 502);
+    return cacheHeaders(apiError("Failed to fetch data", 502), 3600);
   }
 }

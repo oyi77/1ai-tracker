@@ -39,7 +39,9 @@ export async function GET(request: NextRequest) {
       prisma.smartMoneyWallet.count({ where }),
     ]);
 
-    return apiPaginated(wallets, total, page, pageSize);
+    const r = apiPaginated(wallets, total, page, pageSize)
+    r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
+    return r
   } catch (error) {
     console.error("GET /api/v1/smart-money error:", error);
     return apiError("Internal server error", 500);
