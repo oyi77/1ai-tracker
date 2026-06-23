@@ -9,15 +9,20 @@ interface WalletPnl {
   chain: string
   totalPnl: number
   winRate: number
-  tradeCount: number
+  totalTrades: number
   avgTradeSize: number
   bestTrade: number
   worstTrade: number
+  entityName?: string
+  entityType?: string
+  entityTvl?: number
+  smartMoneyScore?: number
 }
 
-function formatPnl(value: number): string {
+function formatUsd(value: number): string {
   const abs = Math.abs(value)
-  if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000_000).toFixed(2)}M`
+  if (abs >= 1_000_000_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000_000_000).toFixed(2)}B`
+  if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000_000).toFixed(1)}M`
   if (abs >= 1_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000).toFixed(1)}K`
   return `${value < 0 ? '-' : ''}$${abs.toFixed(2)}`
 }
@@ -25,6 +30,14 @@ function formatPnl(value: number): string {
 function formatAddress(addr: string): string {
   if (addr.length <= 12) return addr
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+}
+
+const typeColors: Record<string, string> = {
+  exchange: 'bg-accent-amber/20 text-accent-amber',
+  fund: 'bg-purple-400/20 text-purple-400',
+  whale: 'bg-data-bull/20 text-data-bull',
+  protocol: 'bg-teal-vivid/20 text-teal-vivid',
+  bridge: 'bg-data-bear/20 text-data-bear',
 }
 
 export default function PnlPage() {
@@ -39,21 +52,31 @@ export default function PnlPage() {
   const fetchLeaderboard = useCallback(async () => {
     try {
       const res = await fetch('/api/v1/pnl?leaderboard=true&limit=50')
-      const json = await res.json()
-      const payload = (json && typeof json === 'object' && 'data' in json && 'error' in json) ? json.data : json
-      setWallets(payload?.wallets ?? [])
+      const data = await res.json()
+      const items = data.data?.wallets ?? []
+      setWallets(items.map((w: Record<string, unknown>) => ({
+        address: String(w.address ?? ''),
+        chain: String(w.chain ?? 'ETHEREUM'),
+        totalPnl: Number(w.totalPnl ?? 0),
+        winRate: Number(w.winRate ?? 0),
+        totalTrades: Number(w.totalTrades ?? 0),
+        avgTradeSize: Number(w.avgTradeSize ?? 0),
+        bestTrade: Number(w.bestTrade ?? 0),
+        worstTrade: Number(w.worstTrade ?? 0),
+        entityName: w.entityName ? String(w.entityName) : undefined,
+        entityType: w.entityType ? String(w.entityType) : undefined,
+        entityTvl: w.entityTvl ? Number(w.entityTvl) : undefined,
+        smartMoneyScore: w.smartMoneyScore ? Number(w.smartMoneyScore) : undefined,
+      })))
     } catch {
-      // Silent
+      // silent
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    const invoke = () => fetchLeaderboard()
-    invoke()
-    const id = setInterval(fetchLeaderboard, 5 * 60_000) // refresh every 5 min
-    return () => clearInterval(id)
+    fetchLeaderboard()
   }, [fetchLeaderboard])
 
   const lookupWallet = async () => {
@@ -62,7 +85,7 @@ export default function PnlPage() {
     try {
       const res = await fetch(`/api/v1/pnl?address=${encodeURIComponent(lookupAddr)}&chain=${lookupChain}`)
       const data = await res.json()
-      setSingleWallet(data.data ?? null)
+      setSingleWallet(data.data?.pnl ?? null)
     } catch {
       setSingleWallet(null)
     } finally {
@@ -73,143 +96,153 @@ export default function PnlPage() {
   const filtered = wallets.filter(w =>
     !search ||
     w.address.toLowerCase().includes(search.toLowerCase()) ||
-    w.chain.toLowerCase().includes(search.toLowerCase())
+    w.chain.toLowerCase().includes(search.toLowerCase()) ||
+    (w.entityName ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
   return (
     <NexusLayout>
-      <div className="h-full overflow-auto p-4 space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-sm font-mono font-bold text-accent-cyan">WALLET PnL TRACKER</h1>
-          <span className="text-[10px] text-text-muted">{wallets.length} wallets tracked</span>
+      <div className="h-full overflow-auto p-4 space-y-4 max-w-6xl mx-auto">
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-[20px] font-head font-bold text-text-primary">💰 Smart Money Wallet Tracker</h1>
+            <p className="text-[11px] text-text-muted font-mono mt-1">Top wallets ranked by Smart Money Score. Entity data from DeFiLlama.</p>
+          </div>
+          <div className="text-[10px] font-mono text-text-muted">{wallets.length} wallets tracked</div>
         </div>
 
-        {/* Wallet Lookup */}
-        <div className="bg-bg-panel border border-border-dim rounded">
-          <div className="px-3 py-2 border-b border-border-dim">
-            <span className="text-xs font-mono text-accent-cyan">WALLET LOOKUP</span>
-          </div>
-          <div className="p-3">
-            <div className="flex gap-2 mb-3">
+        {/* Single Wallet Lookup */}
+        <div className="bg-bg-panel border border-bg-border rounded p-3">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="text-[10px] font-mono text-text-muted uppercase mb-1 block">Wallet Address</label>
               <input
                 type="text"
                 value={lookupAddr}
                 onChange={e => setLookupAddr(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && lookupWallet()}
-                placeholder="Enter wallet address (0x...)"
-                className="flex-1 bg-bg-deep border border-border-dim rounded px-3 py-1.5 text-xs font-mono text-text-primary placeholder:text-text-muted focus:border-accent-cyan focus:outline-none"
+                placeholder="0x..."
+                className="w-full bg-bg-raised border border-bg-border rounded px-3 py-2 text-[12px] font-mono text-text-primary placeholder:text-text-muted focus:border-teal-vivid focus:outline-none"
               />
+            </div>
+            <div>
+              <label className="text-[10px] font-mono text-text-muted uppercase mb-1 block">Chain</label>
               <select
                 value={lookupChain}
                 onChange={e => setLookupChain(e.target.value)}
-                className="bg-bg-deep border border-border-dim rounded px-2 py-1.5 text-xs font-mono text-text-primary focus:border-accent-cyan focus:outline-none"
+                className="bg-bg-raised border border-bg-border rounded px-3 py-2 text-[12px] font-mono text-text-primary"
               >
-                <option value="eth">ETH</option>
-                <option value="arb">ARB</option>
-                <option value="base">BASE</option>
-                <option value="op">OP</option>
-                <option value="polygon">POLYGON</option>
+                <option value="eth">Ethereum</option>
                 <option value="bsc">BSC</option>
+                <option value="polygon">Polygon</option>
+                <option value="arbitrum">Arbitrum</option>
+                <option value="base">Base</option>
+                <option value="solana">Solana</option>
               </select>
-              <button
-                onClick={lookupWallet}
-                disabled={lookupLoading || !lookupAddr.trim()}
-                className="px-4 py-1.5 bg-accent-cyan/20 text-accent-cyan text-xs font-mono rounded border border-accent-cyan/30 hover:bg-accent-cyan/30 disabled:opacity-50 transition-colors"
-              >
-                {lookupLoading ? 'Calculating...' : 'CALCULATE'}
-              </button>
             </div>
+            <button
+              onClick={lookupWallet}
+              disabled={lookupLoading}
+              className="px-4 py-2 bg-teal-vivid text-bg-base rounded text-[11px] font-mono font-bold hover:bg-teal-vivid/80 transition-colors disabled:opacity-50"
+            >
+              {lookupLoading ? 'Scanning...' : 'Analyze'}
+            </button>
+          </div>
 
-            {singleWallet && (
-              <div className="bg-bg-elevated rounded p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-text-primary">{formatAddress(singleWallet.address)}</span>
-                  <span className="text-[10px] text-accent-cyan">{singleWallet.chain.toUpperCase()}</span>
+          {singleWallet && (
+            <div className="mt-3 bg-bg-raised rounded p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-mono text-text-primary font-bold">{formatAddress(singleWallet.address)}</span>
+                <span className="text-[10px] font-mono text-teal-vivid">{singleWallet.chain}</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <span className="text-text-muted text-[10px] font-mono">Total PnL</span>
+                  <p className={`font-mono font-bold ${singleWallet.totalPnl >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
+                    {formatUsd(singleWallet.totalPnl)}
+                  </p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                  <div>
-                    <span className="text-text-dim">Total PnL</span>
-                    <p className={`font-mono font-bold ${singleWallet.totalPnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                      {formatPnl(singleWallet.totalPnl)}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-text-dim">Win Rate</span>
-                    <p className="font-mono text-text-primary">{(singleWallet.winRate * 100).toFixed(1)}%</p>
-                  </div>
-                  <div>
-                    <span className="text-text-dim">Trades</span>
-                    <p className="font-mono text-text-primary">{singleWallet.tradeCount}</p>
-                  </div>
-                  <div>
-                    <span className="text-text-dim">Avg Size</span>
-                    <p className="font-mono text-text-primary">{formatPnl(singleWallet.avgTradeSize)}</p>
-                  </div>
+                <div>
+                  <span className="text-text-muted text-[10px] font-mono">Win Rate</span>
+                  <p className="font-mono text-text-primary">{(singleWallet.winRate * 100).toFixed(1)}%</p>
+                </div>
+                <div>
+                  <span className="text-text-muted text-[10px] font-mono">Trades</span>
+                  <p className="font-mono text-text-primary">{singleWallet.totalTrades}</p>
+                </div>
+                <div>
+                  <span className="text-text-muted text-[10px] font-mono">Avg Size</span>
+                  <p className="font-mono text-text-primary">{formatUsd(singleWallet.avgTradeSize)}</p>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Leaderboard */}
-        <div className="bg-bg-panel border border-border-dim rounded">
-          <div className="px-3 py-2 border-b border-border-dim flex items-center justify-between">
-            <span className="text-xs font-mono text-accent-cyan">TOP 50 WALLETS BY PnL</span>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Filter..."
-                  className="bg-bg-deep border border-border-dim rounded pl-7 pr-2 py-1 text-[10px] font-mono text-text-primary placeholder:text-text-muted focus:border-accent-cyan focus:outline-none w-32"
-                />
-              </div>
+        <div className="bg-bg-panel border border-bg-border rounded">
+          <div className="px-3 py-2 border-b border-bg-border flex items-center justify-between">
+            <span className="text-[11px] font-mono font-bold text-text-primary">TOP 50 WALLETS BY SMART MONEY SCORE</span>
+            <div className="relative">
+              <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Filter..."
+                className="bg-bg-raised border border-bg-border rounded pl-7 pr-2 py-1 text-[10px] font-mono text-text-primary placeholder:text-text-muted focus:border-teal-vivid focus:outline-none w-32"
+              />
             </div>
           </div>
 
           {loading ? (
-            <div className="p-4 text-text-dim text-xs text-center">Loading leaderboard...</div>
+            <div className="p-8 text-text-muted text-[11px] font-mono text-center">Loading leaderboard...</div>
           ) : filtered.length === 0 ? (
-            <div className="p-4 text-text-dim text-xs text-center">No wallet data available</div>
+            <div className="p-8 text-text-muted text-[11px] font-mono text-center">No wallet data available</div>
           ) : (
             <div className="overflow-auto scrollbar-thin" style={{ maxHeight: '600px' }}>
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="text-text-muted">
-                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-border-dim sticky top-0 bg-bg-deep z-10 text-left w-12">Rank</th>
-                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-border-dim sticky top-0 bg-bg-deep z-10 text-left">Address</th>
-                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-border-dim sticky top-0 bg-bg-deep z-10 text-left w-20">Chain</th>
-                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-border-dim sticky top-0 bg-bg-deep z-10 text-right">Total PnL</th>
-                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-border-dim sticky top-0 bg-bg-deep z-10 text-right hidden sm:table-cell">Win Rate</th>
-                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-border-dim sticky top-0 bg-bg-deep z-10 text-right hidden md:table-cell">Trades</th>
+                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-bg-border sticky top-0 bg-bg-base z-10 text-left w-12">Rank</th>
+                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-bg-border sticky top-0 bg-bg-base z-10 text-left">Entity / Address</th>
+                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-bg-border sticky top-0 bg-bg-base z-10 text-left w-20">Chain</th>
+                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-bg-border sticky top-0 bg-bg-base z-10 text-left w-20">Type</th>
+                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-bg-border sticky top-0 bg-bg-base z-10 text-right w-16">Score</th>
+                    <th className="text-[10px] font-mono font-normal uppercase px-2 py-1 border-b border-bg-border sticky top-0 bg-bg-base z-10 text-right hidden sm:table-cell">TVL</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((w, i) => (
                     <tr
-                      key={`${w.address}-${w.chain}`}
-                      className="border-b border-border-dim/30 hover:bg-bg-elevated transition-colors cursor-pointer"
+                      key={`${w.address}-${i}`}
+                      className="border-b border-bg-border/30 hover:bg-bg-raised transition-colors cursor-pointer"
                       onClick={() => {
                         setLookupAddr(w.address)
-                        setLookupChain(w.chain)
+                        setLookupChain(w.chain.toLowerCase())
                       }}
                     >
-                      <td className="text-[11px] font-mono px-2 py-0.5 text-text-muted">{i + 1}</td>
-                      <td className="text-[11px] font-mono px-2 py-0.5 text-text-primary whitespace-nowrap overflow-hidden text-ellipsis" style={{ maxWidth: '200px' }}>
-                        {formatAddress(w.address)}
+                      <td className="text-[11px] font-mono px-2 py-1.5 text-text-muted">{i + 1}</td>
+                      <td className="px-2 py-1.5">
+                        <div className="flex flex-col">
+                          {w.entityName && (
+                            <span className="text-[11px] font-mono font-bold text-text-primary">{w.entityName}</span>
+                          )}
+                          <span className="text-[10px] font-mono text-text-muted">{formatAddress(w.address)}</span>
+                        </div>
                       </td>
-                      <td className="text-[11px] font-mono px-2 py-0.5 text-accent-cyan">{w.chain.toUpperCase()}</td>
-                      <td className={`text-[11px] font-mono px-2 py-0.5 text-right font-bold ${w.totalPnl >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                        {formatPnl(w.totalPnl)}
+                      <td className="text-[10px] font-mono px-2 py-1.5 text-teal-vivid">{w.chain}</td>
+                      <td className="px-2 py-1.5">
+                        {w.entityType && (
+                          <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${typeColors[w.entityType.toLowerCase()] ?? 'bg-bg-raised text-text-muted'}`}>
+                            {w.entityType.toUpperCase()}
+                          </span>
+                        )}
                       </td>
-                      <td className="text-[11px] font-mono px-2 py-0.5 text-right text-text-primary hidden sm:table-cell">
-                        {(w.winRate * 100).toFixed(1)}%
+                      <td className="text-[12px] font-mono px-2 py-1.5 text-right font-bold text-text-primary tabular-nums">
+                        {w.smartMoneyScore ?? '—'}
                       </td>
-                      <td className="text-[11px] font-mono px-2 py-0.5 text-right text-text-primary hidden md:table-cell">
-                        {w.tradeCount}
+                      <td className="text-[11px] font-mono px-2 py-1.5 text-right text-text-secondary hidden sm:table-cell tabular-nums">
+                        {w.entityTvl ? formatUsd(w.entityTvl) : '—'}
                       </td>
                     </tr>
                   ))}

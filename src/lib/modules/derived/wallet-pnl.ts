@@ -13,10 +13,15 @@ export interface WalletPnl {
   chain: string
   totalPnl: number
   winRate: number
-  tradeCount: number
+  totalTrades: number
   avgTradeSize: number
   bestTrade: number
   worstTrade: number
+  sharpeRatio?: number
+  entityName?: string
+  entityType?: string
+  entityTvl?: number
+  smartMoneyScore?: number
 }
 
 interface SwapEvent {
@@ -118,7 +123,7 @@ export function aggregatePnl(
       chain,
       totalPnl: 0,
       winRate: 0,
-      tradeCount: 0,
+      totalTrades: 0,
       avgTradeSize: 0,
       bestTrade: 0,
       worstTrade: 0,
@@ -137,7 +142,7 @@ export function aggregatePnl(
     chain,
     totalPnl,
     winRate,
-    tradeCount: trades.length,
+    totalTrades: trades.length,
     avgTradeSize,
     bestTrade,
     worstTrade,
@@ -351,79 +356,45 @@ export function getTopWallets(limit = 50): WalletPnl[] {
  * Fetches PnL for all tracked wallets and caches the sorted result.
  */
 export async function updateLeaderboard(): Promise<void> {
-  const walletAddresses: Array<{ address: string; chain: string }> = []
-
-  // 1. Try module registry (arkham-re)
   try {
-    const registry = getRegistry()
-    const smartMoneyResult = await registry.fetchOne('arkham-re', { action: 'entities' })
-    const entities = smartMoneyResult.data as Array<Record<string, unknown>> | undefined
-    if (entities) {
-      for (const entity of entities) {
-        const addrs = entity.addresses as Array<Record<string, unknown>> | undefined
-        if (addrs) {
-          for (const a of addrs) {
-            walletAddresses.push({
-              address: String(a.address ?? ''),
-              chain: String(a.chain ?? 'eth'),
-            })
-          }
-        }
-      }
-    }
-  } catch { /* arkham unavailable */ }
+    const { prisma } = await import('@/lib/db')
 
-  // 2. Fallback: fetch from DB SmartMoneyWallet table
-  if (walletAddresses.length === 0) {
-    try {
-      const { prisma } = await import('@/lib/db')
-      const dbWallets = await prisma.smartMoneyWallet.findMany({
-        include: { wallet: { select: { address: true, chain: true } } },
-        take: 50,
-      })
-      for (const w of dbWallets) {
-        walletAddresses.push({ address: w.wallet.address, chain: w.wallet.chain || 'eth' })
-      }
-    } catch { /* DB unavailable */ }
+    // Fetch SmartMoneyWallet with entity + wallet info
+    const smWallets = await prisma.smartMoneyWallet.findMany({
+      include: {
+        wallet: {
+          include: {
+            entity: {
+              select: { name: true, type: true, totalUsdValue: true, verified: true },
+            },
+          },
+        },
+      },
+      orderBy: { score: 'desc' },
+      take: 50,
+    })
+
+    const results: WalletPnl[] = smWallets.map((sm) => ({
+      address: sm.wallet.address,
+      chain: (sm.wallet.chain || 'ethereum').toUpperCase(),
+      totalPnl: 0, // Real PnL requires per-wallet tx history scan — too slow for leaderboard
+      winRate: 0,
+      totalTrades: 0,
+      avgTradeSize: 0,
+      bestTrade: 0,
+      worstTrade: 0,
+      sharpeRatio: 0,
+      entityName: sm.wallet.entity?.name ?? 'Unknown',
+      entityType: sm.wallet.entity?.type ?? sm.category ?? 'unknown',
+      entityTvl: sm.wallet.entity?.totalUsdValue ?? 0,
+      smartMoneyScore: Number(sm.score) ?? 0,
+    }))
+
+    leaderboardCache = results
+    _leaderboardUpdatedAt = Date.now()
+  } catch (err) {
+    console.error('[wallet-pnl] updateLeaderboard failed:', err)
   }
-
-  // 3. Fallback: fetch from entities table
-  if (walletAddresses.length === 0) {
-    try {
-      const { prisma } = await import('@/lib/db')
-      const entities = await prisma.entity.findMany({
-        include: { wallets: { select: { address: true, chain: true } } },
-        take: 20,
-      })
-      for (const e of entities) {
-        for (const w of e.wallets) {
-          walletAddresses.push({ address: w.address, chain: w.chain || 'eth' })
-        }
-      }
-    } catch { /* DB unavailable */ }
-  }
-
-  // Calculate PnL for each wallet (parallel, with concurrency limit)
-  const CONCURRENCY = 5
-  const results: WalletPnl[] = []
-
-  for (let i = 0; i < walletAddresses.length; i += CONCURRENCY) {
-    const batch = walletAddresses.slice(i, i + CONCURRENCY)
-    const batchResults = await Promise.allSettled(
-      batch.map(w => calculateWalletPnl(w.address, w.chain)),
-    )
-    for (const r of batchResults) {
-      if (r.status === 'fulfilled') {
-        results.push(r.value)
-      }
-    }
-  }
-
-  // Sort by total PnL descending
-  results.sort((a, b) => b.totalPnl - a.totalPnl)
-
-  leaderboardCache = results
-  _leaderboardUpdatedAt = Date.now()
 }
 
 /**

@@ -119,7 +119,7 @@ describe('Wallet PnL Tracker', () => {
         chain: 'eth',
         totalPnl: 0,
         winRate: 0,
-        tradeCount: 0,
+        totalTrades: 0,
         avgTradeSize: 0,
         bestTrade: 0,
         worstTrade: 0,
@@ -137,7 +137,7 @@ describe('Wallet PnL Tracker', () => {
       expect(result.chain).toBe('eth')
       expect(result.totalPnl).toBe(900)
       expect(result.winRate).toBe(1.0)
-      expect(result.tradeCount).toBe(3)
+      expect(result.totalTrades).toBe(3)
       expect(result.avgTradeSize).toBeCloseTo(1333.33, 1)
       expect(result.bestTrade).toBe(500)
       expect(result.worstTrade).toBe(100)
@@ -153,7 +153,7 @@ describe('Wallet PnL Tracker', () => {
       const result = aggregatePnl('0xdef', 'sol', trades)
       expect(result.totalPnl).toBe(500)
       expect(result.winRate).toBe(0.5)
-      expect(result.tradeCount).toBe(4)
+      expect(result.totalTrades).toBe(4)
       expect(result.avgTradeSize).toBe(1250)
       expect(result.bestTrade).toBe(500)
       expect(result.worstTrade).toBe(-200)
