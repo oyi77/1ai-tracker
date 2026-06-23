@@ -61,11 +61,11 @@ export default function SmartMoneyPage() {
             label: (wallet.labels as string[])?.[0] || w.category as string || 'Smart Money',
             type: (w.category as string || 'unknown').toLowerCase(),
             score: w.score as number || 0,
-            pnl30d: 0,
-            winRate: 0,
-            tradeCount: 0,
-            avgSize: 0,
-            sparkline: Array.from({ length: 20 }, (_, j) => 50 + Math.sin(j + i) * 20),
+            pnl30d: (w.pnl30d as number) || 0,
+            winRate: (w.winRate as number) || 0,
+            tradeCount: (w.tradeCount as number) || 0,
+            avgSize: (w.avgTradeSize as number) || 0,
+            sparkline: Array.isArray(w.sparkline) ? w.sparkline as number[] : [],
           }
         }))
       }
@@ -78,13 +78,13 @@ export default function SmartMoneyPage() {
           walletLabel: s.walletLabel as string || 'Unknown',
           action: (s.action as string || 'swap').charAt(0).toUpperCase() + (s.action as string || 'swap').slice(1) as SmartMoneySignal['action'],
           token: s.tokenIn as string || 'UNKNOWN',
-          amount: 0,
+          amount: (s.amount as number) || 0,
           amountUsd: s.amountUsd as number || 0,
           score: Math.round((s.confidence as number || 0) * 100),
           confidence: s.confidence as number || 0,
           timestamp: new Date(s.timestamp as string).toLocaleTimeString(),
-          chain: 'multi',
-          sparkline: Array.from({ length: 20 }, (_, j) => 50 + Math.sin(j + i) * 15),
+          chain: (s.chain as string) || 'multi',
+          sparkline: Array.isArray(s.sparkline) ? s.sparkline as number[] : [],
         })))
       }
 

@@ -84,7 +84,6 @@ const CEX_ETH: EntitySeed[] = [
 
   // ── Crypto.com ──
   { address: '0x6262998Ced04146fA42253a5C0AF90CA02dfd2A3', chain: 'eth', label: 'Crypto.com Hot Wallet', category: 'cex', confidence: 0.85 },
-  { address: '0xUNVERIFIED:00000000000000000000000000000000000000aa', chain: 'eth', label: 'Crypto.com Deposit', category: 'cex', confidence: 0.8 },
 
   // ── FTX (defunct) ──
   { address: '0x2FAF487A4414Fe77e2327F0bf4AE2a264a776AD2', chain: 'eth', label: 'FTX Exchange', category: 'cex', confidence: 0.85 },
@@ -95,46 +94,30 @@ const CEX_ETH: EntitySeed[] = [
   { address: '0x6dE4b8Bc48f3B42F33F1Feb845e9c7A6C32D216D', chain: 'eth', label: 'Bitstamp Cold Wallet', category: 'cex', confidence: 0.8 },
 
   // ── Poloniex ──
-  { address: '0xUNVERIFIED:00000000000000000000000000000000000000bb', chain: 'eth', label: 'Poloniex Cold Wallet', category: 'cex', confidence: 0.75 },
 
   // ── Deribit ──
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000001', chain: 'eth', label: 'Deribit Hot Wallet', category: 'cex', confidence: 0.7 },
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000002', chain: 'eth', label: 'Deribit Cold Wallet', category: 'cex', confidence: 0.7 },
 
   // ── Phemex ──
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000003', chain: 'eth', label: 'Phemex Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── Bitget ──
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000004', chain: 'eth', label: 'Bitget Hot Wallet', category: 'cex', confidence: 0.7 },
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000005', chain: 'eth', label: 'Bitget Cold Wallet', category: 'cex', confidence: 0.7 },
 
   // ── BitMEX ──
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000006', chain: 'eth', label: 'BitMEX Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── Upbit ──
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000007', chain: 'eth', label: 'Upbit Hot Wallet', category: 'cex', confidence: 0.7 },
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000008', chain: 'eth', label: 'Upbit Cold Wallet', category: 'cex', confidence: 0.7 },
 
   // ── WhiteBIT ──
-  { address: '0xUNVERIFIED:0000000000000000000000000000000000000009', chain: 'eth', label: 'WhiteBIT Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── CoinEx ──
-  { address: '0xUNVERIFIED:000000000000000000000000000000000000000a', chain: 'eth', label: 'CoinEx Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── BingX ──
-  { address: '0xUNVERIFIED:000000000000000000000000000000000000000b', chain: 'eth', label: 'BingX Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── LBank ──
-  { address: '0xUNVERIFIED:000000000000000000000000000000000000000c', chain: 'eth', label: 'LBank Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── DigiFinex ──
-  { address: '0xUNVERIFIED:000000000000000000000000000000000000000d', chain: 'eth', label: 'DigiFinex Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── Coincheck ──
-  { address: '0xUNVERIFIED:000000000000000000000000000000000000000e', chain: 'eth', label: 'Coincheck Hot Wallet', category: 'cex', confidence: 0.7 },
 
   // ── Bittrex (defunct) ──
-  { address: '0xUNVERIFIED:000000000000000000000000000000000000000f', chain: 'eth', label: 'Bittrex Hot Wallet', category: 'cex', confidence: 0.7 },
 ]
 
 // ═══════════════════════════════════════════════════════════════
@@ -162,52 +145,6 @@ const VC_ETH: EntitySeed[] = [
   { address: '0xA4fFE3141D4f39C5E7f0fC3a69D3Cc1c20C8F028', chain: 'eth', label: 'Multicoin Capital', category: 'vc', confidence: 0.8 },
 
   // ── Additional VC / Fund addresses ──
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000001', chain: 'eth', label: 'Sequoia Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000002', chain: 'eth', label: 'Lightspeed Venture', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000003', chain: 'eth', label: 'Ribbit Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000004', chain: 'eth', label: 'Coatue Management', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000005', chain: 'eth', label: 'General Catalyst', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000006', chain: 'eth', label: 'Benchmark Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000007', chain: 'eth', label: 'Union Square Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000008', chain: 'eth', label: 'Polychain Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000009', chain: 'eth', label: 'Placeholder VC', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000000a', chain: 'eth', label: 'Polychain Capital 2', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000000b', chain: 'eth', label: 'Binance Labs', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000000c', chain: 'eth', label: 'Coinbase Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000000d', chain: 'eth', label: 'OKX Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000000e', chain: 'eth', label: 'Kraken Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000000f', chain: 'eth', label: 'Huobi Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000010', chain: 'eth', label: 'Digital Currency Group', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000011', chain: 'eth', label: 'Grayscale Investments', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000012', chain: 'eth', label: 'Cumberland DRW', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000013', chain: 'eth', label: 'GSR Markets', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000014', chain: 'eth', label: 'Alameda Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000015', chain: 'eth', label: 'HashKey Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000016', chain: 'eth', label: 'Fenbushi Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000017', chain: 'eth', label: 'IOSG Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000018', chain: 'eth', label: 'Spartan Group', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000019', chain: 'eth', label: 'DeFiance Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000001a', chain: 'eth', label: 'Three Arrows Capital Treasury', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000001b', chain: 'eth', label: 'CMS Holdings', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000001c', chain: 'eth', label: 'Arca Funds', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000001d', chain: 'eth', label: 'ParaFi Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000001e', chain: 'eth', label: 'Mechanism Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000001f', chain: 'eth', label: 'Delphi Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000020', chain: 'eth', label: 'Dialectic Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000021', chain: 'eth', label: 'Robot Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000022', chain: 'eth', label: 'Nascent', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000023', chain: 'eth', label: 'Archetype', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000024', chain: 'eth', label: 'Variant Fund', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000025', chain: 'eth', label: 'Standard Crypto', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000026', chain: 'eth', label: 'Volt Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000027', chain: 'eth', label: 'Hypersphere Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000028', chain: 'eth', label: 'Maven 11', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:1000000000000000000000000000000000000029', chain: 'eth', label: 'Arrington Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000002a', chain: 'eth', label: 'Breyer Capital', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000002b', chain: 'eth', label: 'Compound Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000002c', chain: 'eth', label: 'Reciprocal Ventures', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000002d', chain: 'eth', label: 'LedgerPrime', category: 'vc', confidence: 0.7 },
-  { address: '0xUNVERIFIED:100000000000000000000000000000000000002e', chain: 'eth', label: 'Notation Capital', category: 'vc', confidence: 0.7 },
 ]
 
 // ═══════════════════════════════════════════════════════════════
@@ -265,7 +202,6 @@ const DEFI_ETH: EntitySeed[] = [
   { address: '0x49048044D57e1C92A77f79988d21Fa8fAF74E97e', chain: 'eth', label: 'Base Bridge', category: 'bridge', confidence: 0.9 },
   { address: '0x3ee18B2214AFF97000D974cf647E7C347E8fa585', chain: 'eth', label: 'Wormhole Bridge', category: 'bridge', confidence: 0.85 },
   { address: '0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf', chain: 'eth', label: 'Polygon Bridge', category: 'bridge', confidence: 0.9 },
-  { address: '0xUNVERIFIED:20000000000000000000000000000000000000aa', chain: 'eth', label: 'Stargate Bridge', category: 'bridge', confidence: 0.8 },
   { address: '0x9DeaC4c7d7EFB3F1dE1bF3D12f5A4e56f6D2B8c9', chain: 'eth', label: 'Across Bridge', category: 'bridge', confidence: 0.8 },
 
   // ── Aggregators ──
@@ -293,23 +229,6 @@ const DEFI_ETH: EntitySeed[] = [
   { address: '0x03cD191F589d12b058fB3f2A72F535c18D1a693C', chain: 'eth', label: 'Bancor Network', category: 'defi', confidence: 0.85 },
   { address: '0x217DdeF1cb4d5b62D3a63fc3C0F6Ee7D8F0bf6c2', chain: 'eth', label: 'GMX Router', category: 'defi', confidence: 0.85 },
   { address: '0x823c9C63b4078a1E8e5E64E0a90f3C1f8B2a78F3', chain: 'eth', label: 'Pendle Finance', category: 'defi', confidence: 0.8 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000001', chain: 'eth', label: 'EigenLayer', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000002', chain: 'eth', label: 'Ethena USDe', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000003', chain: 'eth', label: 'Morpho Blue', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000004', chain: 'eth', label: 'Spark Protocol', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000005', chain: 'eth', label: 'Frax Finance', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000006', chain: 'eth', label: 'Convex Finance', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000007', chain: 'eth', label: 'Nexus Mutual', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000008', chain: 'eth', label: 'Aura Finance', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000009', chain: 'eth', label: 'Yearn Finance', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:200000000000000000000000000000000000000a', chain: 'eth', label: 'Velodrome', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:200000000000000000000000000000000000000b', chain: 'eth', label: 'Aerodrome', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:200000000000000000000000000000000000000c', chain: 'eth', label: 'Kyber Network', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:200000000000000000000000000000000000000d', chain: 'eth', label: 'dODO DEX', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:200000000000000000000000000000000000000e', chain: 'eth', label: 'Hashflow', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:200000000000000000000000000000000000000f', chain: 'eth', label: 'Morpho Labs', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000010', chain: 'eth', label: 'Gearbox Protocol', category: 'defi', confidence: 0.75 },
-  { address: '0xUNVERIFIED:2000000000000000000000000000000000000011', chain: 'eth', label: 'Reserve Protocol', category: 'defi', confidence: 0.75 },
 ]
 
 // ═══════════════════════════════════════════════════════════════
@@ -474,10 +393,6 @@ const L2: EntitySeed[] = [
   { address: '0xE592427A0AEce92De3Edee1F18E0157C05861564', chain: 'polygon', label: 'Uniswap V3 Router (Polygon)', category: 'defi', confidence: 0.85 },
 
   // ── Additional L2 ──
-  { address: '0xUNVERIFIED:3000000000000000000000000000000000000001', chain: 'arb', label: 'GMX Router (Arbitrum)', category: 'defi', confidence: 0.7 },
-  { address: '0xUNVERIFIED:3000000000000000000000000000000000000002', chain: 'arb', label: 'Camelot DEX (Arbitrum)', category: 'defi', confidence: 0.7 },
-  { address: '0xUNVERIFIED:3000000000000000000000000000000000000003', chain: 'base', label: 'Aerodrome (Base)', category: 'defi', confidence: 0.7 },
-  { address: '0xUNVERIFIED:3000000000000000000000000000000000000004', chain: 'op', label: 'Velodrome (Optimism)', category: 'defi', confidence: 0.7 },
 ]
 
 // ═══════════════════════════════════════════════════════════════
@@ -492,57 +407,8 @@ const MEV: EntitySeed[] = [
   { address: '0x000000000000084e91743124a985000000000000', chain: 'eth', label: 'Flashbots Relay', category: 'mev', confidence: 0.8 },
 
   // ── Well-known MEV sandwich bots ──
-  { address: '0x0000000000000000000000000000000000000001', chain: 'eth', label: 'MEV Bot Generic', category: 'mev', confidence: 0.7 },
-  { address: '0x0000000000000000000000000000000000000002', chain: 'eth', label: 'MEV Bot Generic 2', category: 'mev', confidence: 0.7 },
 
   // ── Additional MEV bots ──
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000001', chain: 'eth', label: 'MEV Bot 0x698250 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000002', chain: 'eth', label: 'MEV Bot Sandwich 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000003', chain: 'eth', label: 'MEV Bot Sandwich 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000004', chain: 'eth', label: 'MEV Bot Front-Run 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000005', chain: 'eth', label: 'MEV Bot Front-Run 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000006', chain: 'eth', label: 'MEV Bot Arbitrage 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000007', chain: 'eth', label: 'MEV Bot Arbitrage 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000008', chain: 'eth', label: 'MEV Bot Liquidation 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000009', chain: 'eth', label: 'MEV Bot Liquidation 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000000a', chain: 'eth', label: 'MEV Bot Searcher 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000000b', chain: 'eth', label: 'MEV Bot Searcher 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000000c', chain: 'eth', label: 'MEV Bot Searcher 3', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000000d', chain: 'eth', label: 'MEV Bot DEX Arb 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000000e', chain: 'eth', label: 'MEV Bot DEX Arb 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000000f', chain: 'eth', label: 'MEV Bot DEX Arb 3', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000010', chain: 'eth', label: 'MEV Bot CEX-DEX Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000011', chain: 'eth', label: 'MEV Bot JIT Liquidity', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000012', chain: 'eth', label: 'MEV Bot Backrun 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000013', chain: 'eth', label: 'MEV Bot Backrun 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000014', chain: 'eth', label: 'MEV Bot NFT Sniper', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000015', chain: 'eth', label: 'MEV Bot Liquidation Bot 3', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000016', chain: 'eth', label: 'MEV Bot Generalized 1', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000017', chain: 'eth', label: 'MEV Bot Generalized 2', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000018', chain: 'eth', label: 'MEV Bot Generalized 3', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000019', chain: 'eth', label: 'MEV Bot Generalized 4', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000001a', chain: 'eth', label: 'MEV Bot Generalized 5', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000001b', chain: 'eth', label: 'MEV Bot Staking Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000001c', chain: 'eth', label: 'MEV Bot Yield Aggregator', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000001d', chain: 'eth', label: 'MEV Bot Cross-Chain Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000001e', chain: 'eth', label: 'MEV Bot Stablecoin Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000001f', chain: 'eth', label: 'MEV Bot LST Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000020', chain: 'eth', label: 'MEV Bot Lending Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000021', chain: 'eth', label: 'MEV Bot Oracle Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000022', chain: 'eth', label: 'MEV Bot Sandwich 3', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000023', chain: 'eth', label: 'MEV Bot Sandwich 4', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000024', chain: 'eth', label: 'MEV Bot Sandwich 5', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000025', chain: 'eth', label: 'MEV Bot Curve Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000026', chain: 'eth', label: 'MEV Bot Uniswap Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000027', chain: 'eth', label: 'MEV Bot Balancer Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000028', chain: 'eth', label: 'MEV Bot Aave Liquidator', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:4000000000000000000000000000000000000029', chain: 'eth', label: 'MEV Bot Compound Liquidator', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000002a', chain: 'eth', label: 'MEV Bot MakerDAO Liquidator', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000002b', chain: 'eth', label: 'MEV Bot EigenLayer Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000002c', chain: 'eth', label: 'MEV Bot Pendle Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000002d', chain: 'eth', label: 'MEV Bot Ethena Arb', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000002e', chain: 'eth', label: 'MEV Bot Spark Liquidator', category: 'mev', confidence: 0.7 },
-  { address: '0xUNVERIFIED:400000000000000000000000000000000000002f', chain: 'eth', label: 'MEV Bot Morpho Liquidator', category: 'mev', confidence: 0.7 },
 
   // ── Solana MEV bots ──
   { address: 'UNVERIFIED:needs_real_address_sol_mev_bot_1', chain: 'sol', label: 'MEV Bot (Solana)', category: 'mev', confidence: 0.7 },
@@ -575,86 +441,20 @@ const WHALE_ETH: EntitySeed[] = [
   // ── Well-known individuals ──
   { address: '0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B', chain: 'eth', label: 'Vitalik Buterin', category: 'whale', confidence: 0.99 },
   { address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', chain: 'eth', label: 'Vitalik Buterin 2', category: 'whale', confidence: 0.95 },
-  { address: '0xUNVERIFIED:50000000000000000000000000000000000000aa', chain: 'eth', label: 'Vb.eth Donations', category: 'whale', confidence: 0.8 },
 
   // ── Large ETH holders (Etherscan rich list) ──
-  { address: '0xUNVERIFIED:50000000000000000000000000000000000000cc', chain: 'eth', label: 'Ethereum Foundation', category: 'whale', confidence: 0.85 },
   { address: '0NdEx25E075F8A2B1d99e3e28D9d5e75e1D7Bc3A3', chain: 'eth', label: 'Wrapped ETH Deployer', category: 'whale', confidence: 0.7 },
   { address: '0x000000000000000000000000000000000000dEaD', chain: 'eth', label: 'Burn Address', category: 'whale', confidence: 0.95 },
 
   // ── Institutional / fund wallets ──
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000001', chain: 'eth', label: 'BlackRock BUIDL Fund', category: 'whale', confidence: 0.7 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000002', chain: 'eth', label: 'Fidelity Crypto', category: 'whale', confidence: 0.7 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000003', chain: 'eth', label: 'Grayscale ETH Trust', category: 'whale', confidence: 0.7 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000004', chain: 'eth', label: 'VanEck ETH ETF', category: 'whale', confidence: 0.7 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000005', chain: 'eth', label: 'ARK Invest', category: 'whale', confidence: 0.7 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000006', chain: 'eth', label: 'Invesco Galaxy', category: 'whale', confidence: 0.7 },
 
   // ── Early Ethereum adopters / whales ──
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000007', chain: 'eth', label: 'ETH Whale OG 1', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000008', chain: 'eth', label: 'ETH Whale OG 2', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000009', chain: 'eth', label: 'ETH Whale OG 3', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000000a', chain: 'eth', label: 'ETH Whale OG 4', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000000b', chain: 'eth', label: 'ETH Whale OG 5', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000000c', chain: 'eth', label: 'ETH Whale OG 6', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000000d', chain: 'eth', label: 'ETH Whale OG 7', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000000e', chain: 'eth', label: 'ETH Whale OG 8', category: 'whale', confidence: 0.6 },
 
   // ── Known large DeFi farmers ──
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000000f', chain: 'eth', label: 'DeFi Whale Farmer 1', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000010', chain: 'eth', label: 'DeFi Whale Farmer 2', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000011', chain: 'eth', label: 'DeFi Whale Farmer 3', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000012', chain: 'eth', label: 'DeFi Whale Farmer 4', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000013', chain: 'eth', label: 'DeFi Whale Farmer 5', category: 'whale', confidence: 0.6 },
 
   // ── Corporate treasuries ──
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000014', chain: 'eth', label: 'MicroStrategy ETH', category: 'whale', confidence: 0.7 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000015', chain: 'eth', label: 'Tesla ETH', category: 'whale', confidence: 0.65 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000016', chain: 'eth', label: 'Galaxy Digital Trading', category: 'whale', confidence: 0.7 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000017', chain: 'eth', label: 'Jump Trading Trading', category: 'whale', confidence: 0.7 },
 
   // ── ETH Rich List whales ──
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000018', chain: 'eth', label: 'Etherscan Rich #10', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000019', chain: 'eth', label: 'Etherscan Rich #11', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000001a', chain: 'eth', label: 'Etherscan Rich #12', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000001b', chain: 'eth', label: 'Etherscan Rich #13', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000001c', chain: 'eth', label: 'Etherscan Rich #14', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000001d', chain: 'eth', label: 'Etherscan Rich #15', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000001e', chain: 'eth', label: 'Etherscan Rich #16', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000001f', chain: 'eth', label: 'Etherscan Rich #17', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000020', chain: 'eth', label: 'Etherscan Rich #18', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000021', chain: 'eth', label: 'Etherscan Rich #19', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000022', chain: 'eth', label: 'Etherscan Rich #20', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000023', chain: 'eth', label: 'Etherscan Rich #21', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000024', chain: 'eth', label: 'Etherscan Rich #22', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000025', chain: 'eth', label: 'Etherscan Rich #23', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000026', chain: 'eth', label: 'Etherscan Rich #24', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000027', chain: 'eth', label: 'Etherscan Rich #25', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000028', chain: 'eth', label: 'Etherscan Rich #26', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000029', chain: 'eth', label: 'Etherscan Rich #27', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000002a', chain: 'eth', label: 'Etherscan Rich #28', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000002b', chain: 'eth', label: 'Etherscan Rich #29', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000002c', chain: 'eth', label: 'Etherscan Rich #30', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000002d', chain: 'eth', label: 'Etherscan Rich #31', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000002e', chain: 'eth', label: 'Etherscan Rich #32', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000002f', chain: 'eth', label: 'Etherscan Rich #33', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000030', chain: 'eth', label: 'Etherscan Rich #34', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000031', chain: 'eth', label: 'Etherscan Rich #35', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000032', chain: 'eth', label: 'Etherscan Rich #36', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000033', chain: 'eth', label: 'Etherscan Rich #37', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000034', chain: 'eth', label: 'Etherscan Rich #38', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000035', chain: 'eth', label: 'Etherscan Rich #39', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000036', chain: 'eth', label: 'Etherscan Rich #40', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000037', chain: 'eth', label: 'Etherscan Rich #41', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000038', chain: 'eth', label: 'Etherscan Rich #42', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000039', chain: 'eth', label: 'Etherscan Rich #43', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000003a', chain: 'eth', label: 'Etherscan Rich #44', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000003b', chain: 'eth', label: 'Etherscan Rich #45', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000003c', chain: 'eth', label: 'Etherscan Rich #46', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000003d', chain: 'eth', label: 'Etherscan Rich #47', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000003e', chain: 'eth', label: 'Etherscan Rich #48', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:500000000000000000000000000000000000003f', chain: 'eth', label: 'Etherscan Rich #49', category: 'whale', confidence: 0.6 },
-  { address: '0xUNVERIFIED:5000000000000000000000000000000000000040', chain: 'eth', label: 'Etherscan Rich #50', category: 'whale', confidence: 0.6 },
 ]
 
 // ═══════════════════════════════════════════════════════════════
@@ -665,59 +465,6 @@ const DAO_TREASURY: EntitySeed[] = [
   // ── Major DAO Treasuries ──
 
   // ── Protocol governance treasuries ──
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000001', chain: 'eth', label: 'Uniswap DAO Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000002', chain: 'eth', label: 'Compound Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000003', chain: 'eth', label: 'Lido DAO Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000004', chain: 'eth', label: 'SushiSwap Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000005', chain: 'eth', label: 'Balancer Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000006', chain: 'eth', label: 'Yearn Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000007', chain: 'eth', label: 'Rari Capital Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000008', chain: 'eth', label: 'Gitcoin Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000009', chain: 'eth', label: 'ENS DAO Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000000a', chain: 'eth', label: 'Nouns DAO Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000000b', chain: 'eth', label: 'ConstitutionDAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000000c', chain: 'eth', label: 'Lido DAO Agent', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000000d', chain: 'eth', label: 'Frax DAO Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000000e', chain: 'eth', label: 'Rocket Pool DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000000f', chain: 'eth', label: 'Nexus Mutual DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000010', chain: 'eth', label: 'Convex Finance DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000011', chain: 'eth', label: 'Ribbon Finance DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000012', chain: 'eth', label: 'BadgerDAO Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000013', chain: 'eth', label: 'PleasrDAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000014', chain: 'eth', label: 'OlympusDAO Treasury', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000015', chain: 'eth', label: 'Maple Finance DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000016', chain: 'eth', label: 'Goldfinch DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000017', chain: 'eth', label: 'dForce DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000018', chain: 'eth', label: 'Tracer DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000019', chain: 'eth', label: 'Fei Protocol DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000001a', chain: 'eth', label: 'Index Coop DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000001b', chain: 'eth', label: 'PoolTogether DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000001c', chain: 'eth', label: 'Dopex DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000001d', chain: 'eth', label: 'Perpetual Protocol DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000001e', chain: 'eth', label: 'dHEDGE DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000001f', chain: 'eth', label: 'Morpho DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000020', chain: 'eth', label: 'SparkDAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000021', chain: 'eth', label: 'Pendle DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000022', chain: 'eth', label: 'Ethena DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000023', chain: 'eth', label: 'EigenLayer DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000024', chain: 'eth', label: 'Gearbox DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000025', chain: 'eth', label: 'Reserve DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000026', chain: 'eth', label: 'JuiceboxDAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000027', chain: 'eth', label: 'Aave Grants DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000028', chain: 'eth', label: 'Uniswap Grants DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000029', chain: 'eth', label: 'Optimism Collective', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000002a', chain: 'eth', label: 'Arbitrum DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000002b', chain: 'eth', label: 'Base DAO (future)', category: 'dao', confidence: 0.6 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000002c', chain: 'eth', label: 'SafeDAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000002d', chain: 'eth', label: 'ZKSync DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000002e', chain: 'eth', label: 'Starknet DAO', category: 'dao', confidence: 0.7 },
-  { address: '0xUNVERIFIED:600000000000000000000000000000000000002f', chain: 'eth', label: 'Scroll DAO', category: 'dao', confidence: 0.6 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000030', chain: 'eth', label: 'Linea DAO', category: 'dao', confidence: 0.6 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000031', chain: 'eth', label: 'Blast DAO', category: 'dao', confidence: 0.6 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000032', chain: 'eth', label: 'Mantle DAO', category: 'dao', confidence: 0.6 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000033', chain: 'eth', label: 'Metis DAO', category: 'dao', confidence: 0.6 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000034', chain: 'eth', label: 'Mode DAO', category: 'dao', confidence: 0.6 },
-  { address: '0xUNVERIFIED:6000000000000000000000000000000000000035', chain: 'eth', label: 'Polygon DAO', category: 'dao', confidence: 0.6 },
 ]
 
 // ═══════════════════════════════════════════════════════════════

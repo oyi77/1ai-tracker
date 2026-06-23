@@ -43,20 +43,26 @@ export function PriceChart({ symbol, className = '' }: PriceChartProps) {
       const currentPrice = marketData.current_price?.usd ?? 0
       const change24h = marketData.price_change_percentage_24h ?? 0
 
-      // Generate synthetic OHLCV from 24h data (real chart would use historical endpoint)
+      // Generate deterministic candles from real 24h price data
+      // (No OHLCV historical endpoint available — derive from current price + change)
       const now = Math.floor(Date.now() / 1000)
       const candles: ChartData[] = []
+      const hourlyChange = change24h / 24
+      let price = currentPrice / (1 + change24h / 100) // Start from 24h ago price
       for (let i = 23; i >= 0; i--) {
         const time = new Date((now - i * 3600) * 1000).toISOString().slice(0, 10)
-        const basePrice = currentPrice * (1 + (Math.random() - 0.5) * Math.abs(change24h) / 100)
+        const nextPrice = price * (1 + hourlyChange / 100)
+        const high = Math.max(price, nextPrice) * 1.001
+        const low = Math.min(price, nextPrice) * 0.999
         candles.push({
           time,
-          open: basePrice * 0.999,
-          high: basePrice * 1.002,
-          low: basePrice * 0.998,
-          close: basePrice,
-          volume: Math.random() * 1000000,
+          open: price,
+          high,
+          low,
+          close: nextPrice,
+          volume: 0, // No volume data available
         })
+        price = nextPrice
       }
 
       // Render with lightweight-charts
