@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Coins, Building2, Zap, Bell,
-  ChevronLeft, ChevronRight, Globe,
+  ChevronLeft, ChevronRight, ChevronDown, Globe,
   TrendingUp, BarChart3, Activity, Shield, Radio, Eye,
   Menu, X,
 } from 'lucide-react'
@@ -14,35 +14,85 @@ import { CommandBar } from './CommandBar'
 import { NotificationTray } from './NotificationTray'
 import { TickerStrip } from './TickerStrip'
 import { PwaInstallPrompt } from './PwaInstallPrompt'
-const NAV_ITEMS = [
-  { label: '⚡ Alpha Feed',  href: '/alpha',          icon: Zap },
-  { label: 'Dashboard',    href: '/dashboard',      icon: LayoutDashboard },
-  { label: '🔍 Insider',   href: '/insider',        icon: Eye },
-  { label: '📡 Mempool',   href: '/mempool',        icon: Radio },
-  { label: '🛡 RugCheck',  href: '/rugcheck',       icon: Shield },
-  { label: '💰 Exchange Flow', href: '/exchange-flow', icon: BarChart3 },
-  { label: '⛽ Gas Tracker', href: '/gas',           icon: Activity },
-  { label: '🐋 Whale Clusters', href: '/whale-cluster', icon: Building2 },
-  { label: 'Tokens',       href: '/tokens',        icon: Coins },
-  { label: 'Entities',     href: '/entities',       icon: Building2 },
-  { label: 'Knowledge Graph', href: '/graph',       icon: Eye },
-  { label: 'Smart Money',  href: '/smart-money',    icon: Zap },
-  { label: 'Derivatives',  href: '/derivatives',    icon: TrendingUp },
-  { label: 'Liquidations', href: '/liquidations',   icon: Activity },
-  { label: 'DEX Monitor',  href: '/dex',            icon: Activity },
-  { label: 'New Scanner',  href: '/scanner',        icon: Radio },
-  { label: 'Alerts',       href: '/alerts',         icon: Bell },
-  { label: 'Macro',        href: '/macro',          icon: Globe },
-  { label: 'Weather',      href: '/weather',        icon: BarChart3 },
-  { label: 'PnL Tracker',  href: '/pnl',            icon: BarChart3 },
-  { label: 'Yields',       href: '/yields',         icon: Activity },
-  { label: 'Trending',     href: '/trending',       icon: TrendingUp },
-  { label: 'Basis',        href: '/basis',          icon: Activity },
-  { label: 'Calendar',     href: '/calendar',       icon: Globe },
-  { label: 'Watchlist',    href: '/watchlist',      icon: Eye },
-  { label: 'Order Book',   href: '/orderbook',       icon: BarChart3 },
-  { label: 'Top Traders',   href: '/top-traders',     icon: TrendingUp },
-  { label: 'Status',       href: '/status',         icon: Shield },
+interface NavItem {
+  label: string
+  href: string
+  icon: React.ComponentType<{ size?: number; className?: string }>
+}
+interface NavSection {
+  title: string
+  items: NavItem[]
+}
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: 'Overview',
+    items: [
+      { label: 'Dashboard',     href: '/dashboard',      icon: LayoutDashboard },
+      { label: 'Alpha Feed',    href: '/alpha',          icon: Zap },
+      { label: 'Watchlist',     href: '/watchlist',      icon: Eye },
+      { label: 'Alerts',        href: '/alerts',         icon: Bell },
+    ],
+  },
+  {
+    title: 'Market Intel',
+    items: [
+      { label: 'Order Book',    href: '/orderbook',      icon: BarChart3 },
+      { label: 'Derivatives',   href: '/derivatives',    icon: TrendingUp },
+      { label: 'Basis Scanner', href: '/basis',          icon: Activity },
+      { label: 'Liquidations',  href: '/liquidations',   icon: Activity },
+      { label: 'Heatmap',       href: '/liquidations/heatmap', icon: Activity },
+    ],
+  },
+  {
+    title: 'On-Chain',
+    items: [
+      { label: 'Whale Alerts',  href: '/whale-cluster',  icon: Building2 },
+      { label: 'Smart Money',   href: '/smart-money',    icon: Zap },
+      { label: 'Entities',      href: '/entities',       icon: Building2 },
+      { label: 'Knowledge Graph', href: '/graph',        icon: Eye },
+      { label: 'Top Traders',   href: '/top-traders',    icon: TrendingUp },
+      { label: 'Mempool',       href: '/mempool',        icon: Radio },
+    ],
+  },
+  {
+    title: 'Trading',
+    items: [
+      { label: 'Token Scanner', href: '/scanner',        icon: Radio },
+      { label: 'DEX Monitor',   href: '/dex',            icon: Activity },
+      { label: 'Trending',      href: '/trending',       icon: TrendingUp },
+      { label: 'Arbitrage',     href: '/arbitrage',      icon: Activity },
+      { label: 'MEV Detector',  href: '/mev',            icon: Shield },
+      { label: 'RugCheck',      href: '/rugcheck',       icon: Shield },
+    ],
+  },
+  {
+    title: 'DeFi',
+    items: [
+      { label: 'Yield Farming', href: '/yields',         icon: Activity },
+      { label: 'Sector Flows',  href: '/sectors',        icon: Activity },
+      { label: 'Revenue',       href: '/revenue',        icon: BarChart3 },
+      { label: 'DeFi Overview', href: '/defi',           icon: Coins },
+    ],
+  },
+  {
+    title: 'Macro & News',
+    items: [
+      { label: 'News Feed',     href: '/news',           icon: Globe },
+      { label: 'Macro',         href: '/macro',          icon: Globe },
+      { label: 'Calendar',      href: '/calendar',       icon: Globe },
+    ],
+  },
+  {
+    title: 'Tools',
+    items: [
+      { label: 'PnL Tracker',   href: '/pnl',            icon: BarChart3 },
+      { label: 'Insider',       href: '/insider',        icon: Eye },
+      { label: 'Exchange Flow', href: '/exchange-flow',  icon: BarChart3 },
+      { label: 'Gas Tracker',   href: '/gas',            icon: Activity },
+      { label: 'Weather',       href: '/weather',        icon: BarChart3 },
+      { label: 'Status',        href: '/status',         icon: Shield },
+    ],
+  },
 ]
 
 interface NexusLayoutProps {
@@ -51,6 +101,7 @@ interface NexusLayoutProps {
 
 export function NexusLayout({ children }: NexusLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [time, setTime] = useState('')
   const [tickers, setTickers] = useState<Array<{ symbol: string; price: string; change: string; positive: boolean }>>([])
@@ -149,27 +200,53 @@ export function NexusLayout({ children }: NexusLayoutProps) {
           `}
           style={{ width: collapsed ? 48 : 200 }}
         >
-
-          {/* Nav Items */}
+          {/* Nav Sections */}
           <div className="flex-1 py-1">
-            {NAV_ITEMS.map(item => {
-              const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
-              const Icon = item.icon
+            {NAV_SECTIONS.map(section => {
+              const sectionCollapsed = collapsedSections.has(section.title)
+              const toggleSection = () => {
+                setCollapsedSections(prev => {
+                  const next = new Set(prev)
+                  if (next.has(section.title)) next.delete(section.title)
+                  else next.add(section.title)
+                  return next
+                })
+              }
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 text-[12px] font-medium transition-colors
-                    ${isActive
-                      ? 'bg-teal-dim/30 text-teal-vivid border-r-2 border-teal-vivid'
-                      : 'text-text-secondary hover:bg-bg-raised hover:text-text-primary'
-                    }`}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <Icon size={14} className="shrink-0" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </Link>
+                <div key={section.title}>
+                  {!collapsed && (
+                    <button
+                      onClick={toggleSection}
+                      className="flex items-center justify-between w-full px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted hover:text-text-secondary transition-colors"
+                    >
+                      <span>{section.title}</span>
+                      <ChevronDown
+                        size={12}
+                        className={`transition-transform ${sectionCollapsed ? '-rotate-90' : ''}`}
+                      />
+                    </button>
+                  )}
+                  {(!sectionCollapsed || collapsed) && section.items.map(item => {
+                    const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-2.5 px-3 py-1.5 text-[12px] font-medium transition-colors
+                          ${isActive
+                            ? 'bg-teal-dim/30 text-teal-vivid border-r-2 border-teal-vivid'
+                            : 'text-text-secondary hover:bg-bg-raised hover:text-text-primary'
+                          }`}
+                        title={collapsed ? item.label : undefined}
+                      >
+                        <Icon size={14} className="shrink-0" />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
+                      </Link>
+                    )
+                  })}
+                </div>
               )
             })}
           </div>
