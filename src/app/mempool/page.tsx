@@ -52,12 +52,14 @@ interface WhaleResponse {
 // ── Helpers ───────────────────────────────────────────────
 
 function formatSats(sats: number): string {
+  if (sats == null || isNaN(sats)) return '—'
   if (sats >= 1_000_000) return `${(sats / 1_000_000).toFixed(1)}M`
   if (sats >= 1_000) return `${(sats / 1_000).toFixed(1)}K`
   return String(sats)
 }
 
 function formatVsize(vb: number): string {
+  if (vb == null || isNaN(vb)) return '—'
   if (vb >= 1_000_000) return `${(vb / 1_000_000).toFixed(1)} MB`
   if (vb >= 1_000) return `${(vb / 1_000).toFixed(0)} KB`
   return `${vb} vB`
@@ -70,6 +72,7 @@ function formatAge(seconds: number): string {
 }
 
 function formatUsd(n: number): string {
+  if (n == null || isNaN(n)) return '—'
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`
   return `$${n.toFixed(0)}`
@@ -141,7 +144,7 @@ export default function MempoolPage() {
       sortable: true,
       render: r => (
         <span className="font-mono text-[12px] font-bold text-data-bull tabular-nums">
-          {r.valueBtc.toFixed(4)} BTC
+          {(r.valueBtc ?? 0).toFixed(4)} BTC
         </span>
       ),
     },
@@ -176,7 +179,7 @@ export default function MempoolPage() {
       sortable: true,
       render: r => (
         <span className={`font-mono text-[11px] tabular-nums ${r.rate > 50 ? 'text-data-bear' : r.rate > 20 ? 'text-data-warn' : 'text-data-bull'}`}>
-          {r.rate.toFixed(1)}
+          {(r.rate ?? 0).toFixed(1)}
         </span>
       ),
     },

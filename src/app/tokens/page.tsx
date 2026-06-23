@@ -137,14 +137,14 @@ export default function TokensPage() {
       header: 'Volume 24h',
       width: 100,
       align: 'right',
-      render: (row) => <span className="text-text-secondary">${(row.volume / 1e6).toFixed(1)}M</span>,
+      render: (row) => <span className="text-text-secondary">${((row.volume ?? 0) / 1e6).toFixed(1)}M</span>,
     },
     {
       key: 'marketCap',
       header: 'MCap',
       width: 100,
       align: 'right',
-      render: (row) => <span className="text-text-muted">{row.marketCap > 0 ? `$${(row.marketCap / 1e9).toFixed(2)}B` : '—'}</span>,
+      render: (row) => <span className="text-text-muted">{row.marketCap > 0 ? `$${((row.marketCap ?? 0) / 1e9).toFixed(2)}B` : '—'}</span>,
     },
     {
       key: 'holders',
@@ -250,12 +250,12 @@ export default function TokensPage() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { label: 'Volume 24h', value: `$${(selectedToken.volume / 1e6).toFixed(1)}M` },
-                    { label: 'Market Cap', value: selectedToken.marketCap > 0 ? `$${(selectedToken.marketCap / 1e9).toFixed(2)}B` : 'N/A' },
+                    { label: 'Volume 24h', value: `$${((selectedToken.volume ?? 0) / 1e6).toFixed(1)}M` },
+                    { label: 'Market Cap', value: selectedToken.marketCap > 0 ? `$${((selectedToken.marketCap ?? 0) / 1e9).toFixed(2)}B` : 'N/A' },
                     { label: 'Holders', value: selectedToken.holders > 0 ? selectedToken.holders.toLocaleString() : 'N/A' },
                     { label: 'Risk Score', value: String(selectedToken.riskScore) },
                     { label: 'Chain', value: selectedToken.chain },
-                    { label: '7d Change', value: `${selectedToken.change7d.toFixed(2)}%` },
+                    { label: '7d Change', value: `${(selectedToken.change7d ?? 0).toFixed(2)}%` },
                   ].map((stat, i) => (
                     <div key={i} className="bg-bg-raised rounded p-2">
                       <div className="text-[9px] text-text-muted font-mono uppercase">{stat.label}</div>

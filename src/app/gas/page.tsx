@@ -56,7 +56,7 @@ export default function GasPage() {
                     <div key={j} className="text-center">
                       <div className="text-[9px] text-text-muted font-mono uppercase">{tier.label}</div>
                       <div className={`text-[16px] font-head font-bold tabular-nums ${tier.color}`}>
-                        {gas.unit === 'gwei' ? tier.value.toFixed(2) : tier.value}
+                        {gas.unit === 'gwei' ? (tier.value ?? 0).toFixed(2) : tier.value}
                       </div>
                       <div className="text-[9px] text-text-muted">{gas.unit}</div>
                     </div>

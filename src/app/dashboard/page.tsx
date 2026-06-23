@@ -153,7 +153,7 @@ export default function DashboardPage() {
       header: 'Volume',
       width: 100,
       align: 'right',
-      render: (row) => <span className="text-text-secondary">${(row.volume / 1e6).toFixed(1)}M</span>,
+      render: (row) => <span className="text-text-secondary">${((row.volume ?? 0) / 1e6).toFixed(1)}M</span>,
     },
     {
       key: 'sparkline',

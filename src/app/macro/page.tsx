@@ -93,7 +93,7 @@ export default function MacroPage() {
                 ) : latest ? (
                   <div>
                     <span className="text-2xl font-mono font-bold text-text-primary">
-                      {latest.value.toFixed(2)}
+                      {(latest.value ?? 0).toFixed(2)}
                     </span>
                     <span className="text-xs text-text-dim ml-1">{s.unit}</span>
                     <p className="text-[10px] text-text-muted mt-1">as of {latest.date}</p>

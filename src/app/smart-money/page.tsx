@@ -160,7 +160,7 @@ export default function SmartMoneyPage() {
       header: 'Conf',
       width: 50,
       align: 'right',
-      render: (row) => <span className="text-text-muted">{(row.confidence * 100).toFixed(0)}%</span>,
+      render: (row) => <span className="text-text-muted">{((row.confidence ?? 0) * 100).toFixed(0)}%</span>,
     },
     {
       key: 'timestamp',
@@ -203,7 +203,7 @@ export default function SmartMoneyPage() {
       header: 'Win%',
       width: 50,
       align: 'right',
-      render: (row) => <span className="text-data-bull">{row.winRate.toFixed(1)}%</span>,
+      render: (row) => <span className="text-data-bull">{(row.winRate ?? 0).toFixed(1)}%</span>,
     },
     {
       key: 'tradeCount',

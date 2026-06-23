@@ -79,6 +79,7 @@ function densityToColor(density: number, isLong: boolean): string {
 }
 
 function formatUsd(n: number): string {
+  if (n == null || isNaN(n)) return '—'
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
   if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`
@@ -101,7 +102,7 @@ function FundingRateChip({ entry }: { entry: FundingEntry }) {
       }`}
     >
       <span className="font-bold">{entry.symbol}</span>
-      <span>{(entry.rate * 100).toFixed(4)}%</span>
+      <span>{((entry.rate ?? 0) * 100).toFixed(4)}%</span>
     </span>
   )
 }
@@ -251,7 +252,7 @@ export default function LiquidationsPage() {
             r.fundingRate > 0 ? 'text-data-bear' : r.fundingRate < 0 ? 'text-data-bull' : 'text-text-muted'
           }`}
         >
-          {r.fundingRate !== 0 ? `${(r.fundingRate * 100).toFixed(4)}%` : '—'}
+          {r.fundingRate !== 0 ? `${((r.fundingRate ?? 0) * 100).toFixed(4)}%` : '—'}
         </span>
       ),
     },

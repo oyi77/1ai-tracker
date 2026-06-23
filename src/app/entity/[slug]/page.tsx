@@ -27,7 +27,7 @@ export default function EntityDetailPage() {
             <p className="text-xs text-text-dim">Category: <span className="text-accent-cyan">{entity.category}</span></p>
             <p className="text-xs text-text-dim">Chain: <span className="text-accent-cyan">{entity.chain.toUpperCase()}</span></p>
             <p className="text-xs text-text-dim">Address: <span className="font-mono text-text-primary">{entity.address}</span></p>
-            <p className="text-xs text-text-dim">Confidence: <span className="text-accent-green">{(entity.confidence * 100).toFixed(0)}%</span></p>
+            <p className="text-xs text-text-dim">Confidence: <span className="text-accent-green">{((entity.confidence ?? 0) * 100).toFixed(0)}%</span></p>
           </div>
         ) : (
           <p className="text-text-dim text-xs">Entity not found in label database</p>

@@ -82,7 +82,7 @@ export default function AlphaFeedPage() {
                       <span className="px-1 py-0 rounded bg-data-orange/20 text-data-orange text-[9px] font-mono">🔥 LOCAL EXCLUSIVE</span>
                     )}
                     {signal.zScore && Math.abs(signal.zScore) > 2 && (
-                      <span className="px-1 py-0 rounded bg-data-warn/20 text-data-warn text-[9px] font-mono">Z={signal.zScore.toFixed(1)}</span>
+                      <span className="px-1 py-0 rounded bg-data-warn/20 text-data-warn text-[9px] font-mono">Z={(signal.zScore ?? 0).toFixed(1)}</span>
                     )}
                   </div>
                   <div className="text-[12px] font-medium text-text-primary mt-0.5">{signal.headline}</div>

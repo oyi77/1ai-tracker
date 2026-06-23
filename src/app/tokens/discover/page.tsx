@@ -120,14 +120,14 @@ export default function TokenDiscoverPage() {
                     </td>
                     <td className="py-2 px-2 text-right font-mono">
                       {t.priceUsd < 0.000001 ? t.priceUsd.toExponential(2) :
-                       t.priceUsd < 0.01 ? t.priceUsd.toFixed(6) :
-                       t.priceUsd < 1 ? t.priceUsd.toFixed(4) :
+                       t.priceUsd < 0.01 ? (t.priceUsd ?? 0).toFixed(6) :
+                       t.priceUsd < 1 ? (t.priceUsd ?? 0).toFixed(4) :
                        `$${t.priceUsd.toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
                     </td>
                     <td className={`py-2 px-2 text-right font-mono ${t.change24h >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                       <span className="flex items-center justify-end gap-0.5">
                         {t.change24h >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                        {t.change24h >= 0 ? '+' : ''}{t.change24h.toFixed(1)}%
+                        {t.change24h >= 0 ? '+' : ''}{(t.change24h ?? 0).toFixed(1)}%
                       </span>
                     </td>
                     <td className="py-2 px-2 text-right font-mono">${formatNum(t.volume24h)}</td>
@@ -189,6 +189,7 @@ function RugScoreBadge({ score }: { score: number }) {
 }
 
 function formatNum(n: number): string {
+  if (n == null || isNaN(n)) return '—'
   if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`

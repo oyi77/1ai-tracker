@@ -122,13 +122,13 @@ export default function DexMonitorPage() {
       key: 'tokenIn',
       header: 'From',
       width: 60,
-      render: (row) => <span className="text-text-primary">{row.amountIn.toFixed(2)} {row.tokenIn}</span>,
+      render: (row) => <span className="text-text-primary">{(row.amountIn ?? 0).toFixed(2)} {row.tokenIn}</span>,
     },
     {
       key: 'tokenOut',
       header: 'To',
       width: 80,
-      render: (row) => <span className="text-text-primary">{row.amountOut.toFixed(2)} {row.tokenOut}</span>,
+      render: (row) => <span className="text-text-primary">{(row.amountOut ?? 0).toFixed(2)} {row.tokenOut}</span>,
     },
     {
       key: 'valueUsd',
@@ -181,7 +181,7 @@ export default function DexMonitorPage() {
       header: '24h Vol',
       width: 100,
       align: 'right',
-      render: (row) => <span className="text-text-primary">${(row.volume24h / 1e6).toFixed(1)}M</span>,
+      render: (row) => <span className="text-text-primary">${((row.volume24h ?? 0) / 1e6).toFixed(1)}M</span>,
     },
     {
       key: 'price',
@@ -202,7 +202,7 @@ export default function DexMonitorPage() {
       header: 'Liquidity',
       width: 100,
       align: 'right',
-      render: (row) => <span className="text-text-muted">${(row.liquidity / 1e6).toFixed(0)}M</span>,
+      render: (row) => <span className="text-text-muted">${((row.liquidity ?? 0) / 1e6).toFixed(0)}M</span>,
     },
     {
       key: 'txCount',

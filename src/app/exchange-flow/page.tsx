@@ -42,6 +42,7 @@ interface FlowPayload {
 }
 
 function fmtUsd(n: number): string {
+  if (n == null || isNaN(n)) return '—'
   if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
   if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
   if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(0)}K`
@@ -112,7 +113,7 @@ export default function ExchangeFlowPage() {
       sortable: true,
       render: r => (
         <span className={`tabular-nums ${r.avgPriceChange >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
-          {r.avgPriceChange >= 0 ? '+' : ''}{r.avgPriceChange.toFixed(2)}%
+          {r.avgPriceChange >= 0 ? '+' : ''}{(r.avgPriceChange ?? 0).toFixed(2)}%
         </span>
       ),
     },
@@ -176,7 +177,7 @@ export default function ExchangeFlowPage() {
       align: 'right',
       render: r => (
         <span className={`tabular-nums ${r.priceChange >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
-          {r.priceChange >= 0 ? '+' : ''}{r.priceChange.toFixed(2)}%
+          {r.priceChange >= 0 ? '+' : ''}{(r.priceChange ?? 0).toFixed(2)}%
         </span>
       ),
     },

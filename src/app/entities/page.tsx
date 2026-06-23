@@ -123,7 +123,7 @@ export default function EntitiesPage() {
       align: 'right',
       render: (row) => (
         <span className={`font-mono ${row.pnl7d > 0 ? 'text-data-bull' : 'text-data-bear'}`}>
-          {row.pnl7d > 0 ? '+' : ''}{row.pnl7d.toFixed(1)}%
+          {row.pnl7d > 0 ? '+' : ''}{(row.pnl7d ?? 0).toFixed(1)}%
         </span>
       ),
     },
@@ -213,7 +213,7 @@ export default function EntitiesPage() {
                   {[
                     { label: 'Balance', value: `$${selectedEntity.balanceUsd.toLocaleString()}` },
                     { label: 'Tx Count', value: selectedEntity.txCount.toLocaleString() },
-                    { label: '7d PnL', value: `${selectedEntity.pnl7d > 0 ? '+' : ''}${selectedEntity.pnl7d.toFixed(1)}%` },
+                    { label: '7d PnL', value: `${selectedEntity.pnl7d > 0 ? '+' : ''}${(selectedEntity.pnl7d ?? 0).toFixed(1)}%` },
                     { label: 'First Seen', value: selectedEntity.firstSeen },
                     { label: 'Last Active', value: selectedEntity.lastActive },
                     { label: 'Chain', value: selectedEntity.chain },
