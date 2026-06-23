@@ -62,25 +62,38 @@ async function buildGraph() {
     }
   }
 
-  // Synthetic inter-entity links
+  // Deterministic inter-entity links based on shared chain proximity
+  // Entities on the same chain get linked — no random data
   const byType = (t: string) => entities.filter(e => (e.type || '').toLowerCase() === t)
   const protocols = byType('protocol')
   const funds = [...byType('fund'), ...byType('dao')]
   const exchanges = byType('exchange')
   const bridges = byType('bridge')
 
+  // Funds linked to protocols on the same chain
   for (const f of funds) {
-    const n = 2 + Math.floor(Math.random() * 3)
-    for (let i = 0; i < n; i++) {
-      const p = protocols[Math.floor(Math.random() * protocols.length)]
-      if (p) links.push({ source: f.id, target: p.id, value: 5 })
+    const fChains = (f.chains || []).map((c: string) => c.toLowerCase())
+    const matching = protocols.filter(p => {
+      const pChains = (p.chains || []).map((c: string) => c.toLowerCase())
+      return pChains.some(pc => fChains.includes(pc))
+    })
+    for (const p of matching.slice(0, 3)) {
+      links.push({ source: f.id, target: p.id, value: 5 })
     }
   }
+  // Protocols linked to exchanges/bridges on the same chain
   for (const p of protocols.slice(0, 30)) {
-    const ex = exchanges[Math.floor(Math.random() * exchanges.length)]
-    if (ex) links.push({ source: p.id, target: ex.id, value: 2 })
-    const br = bridges[Math.floor(Math.random() * bridges.length)]
-    if (br) links.push({ source: p.id, target: br.id, value: 3 })
+    const pChains = (p.chains || []).map((c: string) => c.toLowerCase())
+    const matchingEx = exchanges.filter(ex => {
+      const exChains = (ex.chains || []).map((c: string) => c.toLowerCase())
+      return exChains.some(ec => pChains.includes(ec))
+    })
+    if (matchingEx[0]) links.push({ source: p.id, target: matchingEx[0].id, value: 2 })
+    const matchingBr = bridges.filter(br => {
+      const brChains = (br.chains || []).map((c: string) => c.toLowerCase())
+      return brChains.some(bc => pChains.includes(bc))
+    })
+    if (matchingBr[0]) links.push({ source: p.id, target: matchingBr[0].id, value: 3 })
   }
 
   return { nodes, links }
