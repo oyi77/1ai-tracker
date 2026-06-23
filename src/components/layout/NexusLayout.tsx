@@ -57,6 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Trading',
     items: [
+      { label: 'Live Trades',   href: '/trades',         icon: Activity },
       { label: 'Token Scanner', href: '/scanner',        icon: Radio },
       { label: 'DEX Monitor',   href: '/dex',            icon: Activity },
       { label: 'Trending',      href: '/trending',       icon: TrendingUp },
