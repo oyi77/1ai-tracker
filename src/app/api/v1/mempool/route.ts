@@ -56,14 +56,14 @@ export async function GET(request: Request) {
         // Detect whale transactions from recent Bitcoin blocks via mempool.space
         const WHALE_THRESHOLD_BTC = 5 // ~$325K+
         const txs: Array<Record<string, unknown>> = []
+        let btcPrice = 0
         try {
           // Get BTC price
-          let btcPrice = 65000
           try {
             const priceRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4400'}/api/v1/market/prices`, { signal: AbortSignal.timeout(10_000) })
-            const priceData = await priceRes.json() as { data?: Array<Record<string, unknown>> }
-            const btcTicker = priceData.data?.find((t: Record<string, unknown>) => t.symbol === 'BTC')
-            if (btcTicker) btcPrice = typeof btcTicker.price === 'string' ? parseFloat(btcTicker.price.replace(/[$,]/g, '')) : (btcTicker.price as number) || 65000
+            const priceData = await priceRes.json() as { data?: { tickers?: Array<Record<string, unknown>> } }
+            const btcTicker = priceData.data?.tickers?.find((t: Record<string, unknown>) => t.symbol === 'BTC')
+            if (btcTicker) btcPrice = typeof btcTicker.price === 'string' ? parseFloat(btcTicker.price.replace(/[$,]/g, '')) : (btcTicker.price as number) || 0
           } catch { /* use default */ }
 
           // Get latest block height
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
           data: {
             transactions: txs.slice(0, 20),
             count: txs.length,
-            threshold: `${WHALE_THRESHOLD_BTC} BTC (~$${(WHALE_THRESHOLD_BTC * 65000 / 1000).toFixed(0)}K)`,
+            threshold: `${WHALE_THRESHOLD_BTC} BTC (~$${btcPrice > 0 ? (WHALE_THRESHOLD_BTC * btcPrice / 1000).toFixed(0) : '?'}K)`,
             source: 'mempool.space',
           },
           error: null,

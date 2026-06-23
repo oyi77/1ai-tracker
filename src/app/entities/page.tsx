@@ -42,19 +42,19 @@ export default function EntitiesPage() {
 
       if (data.data && Array.isArray(data.data)) {
         setEntities(data.data.map((e: Record<string, unknown>, i: number) => ({
-          id: e.id as string || String(i),
-          name: e.name as string || 'Unknown',
-          type: e.type as string || 'unknown',
-          address: `entity-${i}`,
+          id: (e.id as string) || String(i),
+          name: (e.name as string) || 'Unknown',
+          type: (e.type as string) || 'unknown',
+          address: (e.address as string) || `entity-${i}`,
           chain: Array.isArray(e.chains) ? (e.chains as string[])[0] || 'ethereum' : 'ethereum',
-          balance: 0,
+          balance: (e.balance as number) || 0,
           balanceUsd: (e.totalUsdValue as number) || 0,
-          txCount: 0,
-          firstSeen: '2024-01-15',
-          lastActive: 'recent',
-          labels: [e.type as string, e.verified ? 'Verified' : 'Unverified'],
-          pnl7d: 0,
-          sparkline: Array.from({ length: 20 }, (_, j) => 50 + Math.sin(j) * 10),
+          txCount: (e.txCount as number) || 0,
+          firstSeen: (e.createdAt as string) || '',
+          lastActive: (e.updatedAt as string) || '',
+          labels: Array.isArray(e.labels) ? e.labels as string[] : [e.type as string || 'unknown'],
+          pnl7d: (e.pnl7d as number) || 0,
+          sparkline: Array.isArray(e.sparkline) ? e.sparkline as number[] : [],
         })))
       }
       setFeedStatus('live')

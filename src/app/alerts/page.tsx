@@ -38,28 +38,19 @@ export default function AlertsPage() {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      // Fetch real alerts from API
       const res = await fetch('/api/v1/alerts')
-      const _data = await res.json()
 
-      // Generate sample rules
-      setRules([
-        { id: '1', name: 'Whale Wallet Monitor', type: 'wallet_moved', condition: '0x28C6... transfers > $500K', severity: 'high', enabled: true, lastTriggered: '2h ago', fireCount: 14 },
-        { id: '2', name: 'BTC Price Alert', type: 'price_threshold', condition: 'BTC > $70,000 or < $60,000', severity: 'medium', enabled: true, lastTriggered: '6h ago', fireCount: 3 },
-        { id: '3', name: 'Large DEX Swap', type: 'large_swap', condition: 'Any swap > $1M on Uniswap', severity: 'critical', enabled: true, lastTriggered: '45m ago', fireCount: 8 },
-        { id: '4', name: 'Smart Money Signal', type: 'smart_money', condition: 'Top 10 wallets accumulate > $100K', severity: 'high', enabled: true, lastTriggered: '1h ago', fireCount: 22 },
-        { id: '5', name: 'Liquidation Cascade', type: 'liquidation', condition: 'Liquidations > $5M in 5min', severity: 'critical', enabled: false, lastTriggered: '3d ago', fireCount: 1 },
-      ])
+      if (res.status === 401) {
+        setRules([])
+        setTriggered([])
+        setFeedStatus('error')
+        return
+      }
 
-      // Generate triggered alerts
-      setTriggered([
-        { id: 't1', ruleId: '3', ruleName: 'Large DEX Swap', severity: 'critical', message: 'SWAP 42.3 ETH → 137,240 USDC on Uniswap V3', value: 137240, txHash: '0xabc123def456789', timestamp: '14:23:01' },
-        { id: 't2', ruleId: '1', ruleName: 'Whale Wallet Monitor', severity: 'high', message: 'Binance Hot Wallet transferred 500 ETH ($866K)', value: 866000, txHash: '0xdef789abc012345', timestamp: '14:20:15' },
-        { id: 't3', ruleId: '4', ruleName: 'Smart Money Signal', severity: 'high', message: 'Top wallet accumulated 1,200 ETH ($2.08M)', value: 2080000, timestamp: '14:18:30' },
-        { id: 't4', ruleId: '2', ruleName: 'BTC Price Alert', severity: 'medium', message: 'BTC reached $64,500 (threshold: $64,000)', value: 64500, timestamp: '14:15:00' },
-        { id: 't5', ruleId: '3', ruleName: 'Large DEX Swap', severity: 'critical', message: 'SWAP 2.1M USDC → 645 ETH on Curve', value: 2100000, txHash: '0xghi345jkl678901', timestamp: '14:12:45' },
-      ])
+      const data = await res.json() as { data?: { rules?: AlertRule[]; triggered?: TriggeredAlert[] } }
 
+      setRules(data.data?.rules ?? [])
+      setTriggered(data.data?.triggered ?? [])
       setFeedStatus('live')
     } catch {
       setFeedStatus('error')

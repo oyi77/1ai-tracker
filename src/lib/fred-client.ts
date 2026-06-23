@@ -1,8 +1,7 @@
 // ─── Macro-Economic Data Client ────────────────────────────
 // Sources:
 //   - World Bank API (free, no key) for GDP, CPI, Unemployment
-//   - Hardcoded fallback for financial market data (rates, spreads)
-// No API keys required for any functionality.
+// No API keys required. Returns empty if live data unavailable.
 // ─────────────────────────────────────────────────────────
 
 const WORLD_BANK_BASE = "https://api.worldbank.org/v2";
@@ -117,109 +116,11 @@ async function fetchFromWorldBank(
     }));
 }
 
-// ─── Hardcoded fallback (financial market data) ───────────
-// No free API exists for these. Update periodically or
-// switch to a paid provider when available.
-
-const FALLBACK_DATA: Record<string, FredObservation[]> = {
-  // Rates
-  FEDFUNDS: [
-    { date: "2026-03", value: "4.33" },
-    { date: "2025-12", value: "4.33" },
-  ],
-  DFF: [
-    { date: "2026-06-20", value: "4.33" },
-    { date: "2026-06-19", value: "4.33" },
-  ],
-  DGS10: [
-    { date: "2026-06-20", value: "4.25" },
-    { date: "2026-06-19", value: "4.28" },
-  ],
-  DGS2: [
-    { date: "2026-06-20", value: "3.95" },
-    { date: "2026-06-19", value: "3.98" },
-  ],
-  T10Y2Y: [
-    { date: "2026-06-20", value: "0.30" },
-    { date: "2026-06-19", value: "0.30" },
-  ],
-
-  // Inflation (market-based, not CPI)
-  T10YIE: [
-    { date: "2026-06-20", value: "2.32" },
-    { date: "2026-06-19", value: "2.28" },
-  ],
-  T5YIFR: [
-    { date: "2026-06-20", value: "2.28" },
-    { date: "2026-06-19", value: "2.25" },
-  ],
-
-  // Employment
-  ICSA: [
-    { date: "2026-06-14", value: "218" },
-    { date: "2026-06-07", value: "222" },
-  ],
-  PAYEMS: [
-    { date: "2026-05", value: "162850" },
-    { date: "2026-04", value: "162720" },
-  ],
-
-  // Growth
-  INDPRO: [
-    { date: "2026-05", value: "108.2" },
-    { date: "2026-04", value: "107.9" },
-  ],
-
-  // Real Estate
-  HOUST: [
-    { date: "2026-05", value: "1420" },
-    { date: "2026-04", value: "1385" },
-  ],
-  MORTGAGE30US: [
-    { date: "2026-06-19", value: "6.95" },
-    { date: "2026-06-12", value: "7.02" },
-  ],
-
-  // Sentiment
-  UMCSENT: [
-    { date: "2026-06", value: "68.2" },
-    { date: "2026-05", value: "67.5" },
-  ],
-
-  // Monetary
-  M2SL: [
-    { date: "2026-04", value: "20850" },
-    { date: "2026-03", value: "20640" },
-  ],
-
-  // Cross-Market
-  DTWEXBGS: [
-    { date: "2026-06-20", value: "104.2" },
-    { date: "2026-06-19", value: "102.8" },
-  ],
-  DCOILWTICO: [
-    { date: "2026-06-20", value: "78.5" },
-    { date: "2026-06-19", value: "76.2" },
-  ],
-  GOLDAMGBD228NLBM: [
-    { date: "2026-06-20", value: "2450" },
-    { date: "2026-06-19", value: "2380" },
-  ],
-  SP500: [
-    { date: "2026-06-20", value: "5520" },
-    { date: "2026-06-19", value: "5350" },
-  ],
-  VIXCLS: [
-    { date: "2026-06-20", value: "14.5" },
-    { date: "2026-06-19", value: "15.2" },
-  ],
-};
-
 // ─── Client ───────────────────────────────────────────────
 
 /**
  * Fetch observations for a macro-economic series.
- * Uses World Bank API for GDP/CPI/Unemployment, hardcoded fallback for financial market data.
+ * Uses World Bank API for GDP/CPI/Unemployment. Returns empty if unavailable.
  * @param seriesId — e.g. "FEDFUNDS", "GDP"
  * @param limit — max observations to return (most recent first, default 10)
  */
@@ -248,10 +149,8 @@ export async function getFredSeries(seriesId: string, limit = 10): Promise<FredS
     }
   }
 
-  // Hardcoded fallback for financial market data (or if World Bank failed)
-  const fallbackData = FALLBACK_DATA[seriesId];
-  const observations = fallbackData ? fallbackData.slice(0, limit) : [];
-  const series: FredSeries = { id: seriesId, title, observations };
+  // No fallback data — return empty if World Bank didn't provide results
+  const series: FredSeries = { id: seriesId, title, observations: [] };
   seriesCache.set(seriesId, { data: series, timestamp: Date.now() });
   return series;
 }
