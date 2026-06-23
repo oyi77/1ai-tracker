@@ -71,6 +71,7 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/v1/gas",
   "/api/v1/stablecoin-flow",
   "/api/v1/whale-cluster",
+  "/api/v1/status/cache",
   "/api/auth",
 ]);
 
@@ -152,9 +153,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Skip public routes
+  // Public routes — rate limit per IP but don't require API key
   if (PUBLIC_API_ROUTES.has(pathname) || pathname.startsWith("/api/auth/")) {
-    return addCorsHeaders(NextResponse.next(), request);
+    const ip = getClientIp(request);
+    const { allowed, remaining } = checkRateLimit(`public:${ip}`, 300, 60_000); // 300 req/min per IP
+    if (!allowed) {
+      return NextResponse.json(
+        { data: null, error: "Rate limit exceeded. Slow down." },
+        { status: 429, headers: { "X-RateLimit-Remaining": "0", "Retry-After": "60" } }
+      );
+    }
+    const response = addCorsHeaders(NextResponse.next(), request);
+    response.headers.set("X-RateLimit-Remaining", String(remaining));
+    response.headers.set("X-RateLimit-Limit", "300");
+    return response;
   }
   // Legacy routes (used by frontend) — rate limit + deprecation warning
   if (!pathname.startsWith("/api/v1/")) {
