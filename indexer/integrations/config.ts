@@ -60,7 +60,7 @@ export function buildConfig(): IntegrationConfig {
       yieldsUrl: "https://yields.llama.fi",
     },
     jupiter: {
-      priceUrl: "https://api.jup.ag/price/v2",
+      priceUrl: "https://api.coingecko.com/api/v3/simple/price",
     },
   };
 }

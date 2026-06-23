@@ -146,10 +146,10 @@ export async function healthCheck(_config: IntegrationConfig): Promise<{
 }> {
   void _config;
   try {
-    // Get enabled exchanges as a proxy for health
-    const exchanges = cexClient.getEnabledExchanges();
-    if (!exchanges || exchanges.length === 0) {
-      return { ok: false, error: "no enabled exchanges" };
+    // Check exchange connectivity
+    const status = await cexClient.getExchangeStatus()
+    if (!status || status.status !== 'online') {
+      return { ok: false, error: 'exchange offline' }
     }
 
     // Try to fetch a small sample of pairs to confirm connectivity
@@ -160,9 +160,9 @@ export async function healthCheck(_config: IntegrationConfig): Promise<{
 
     return {
       ok: true,
-      exchangeCount: exchanges.length,
+      exchangeCount: 1,
       pairCount: pairs.length,
-    };
+    }
   } catch (err) {
     return { ok: false, error: (err as Error).message };
   }

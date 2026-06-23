@@ -16,21 +16,26 @@ interface StablecoinFlow {
 const DEFI_LLAMA_URL = 'https://stablecoins.llama.fi'
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(8_000),
+    headers: { Accept: 'application/json', 'User-Agent': 'NexusTracker/1.0' },
+  })
+  if (!res.ok) throw new Error(`DefiLlama HTTP ${res.status}`)
   return res.json() as Promise<T>
 }
 
 export async function getStablecoinFlows(): Promise<StablecoinFlow[]> {
   try {
-    const data = await fetchJson<{ peggedAssets: Array<{ name: string; symbol: string; circulating: { current: number }; circulatingPrevDay: { current: number }; circulatingPrevWeek: { current: number } }> }>(`${DEFI_LLAMA_URL}/stablecoins`)
+    // DefiLlama returns { peggedUSD: number } not { current: number }
+    type PeggedAmount = { peggedUSD: number }
+    const data = await fetchJson<{ peggedAssets: Array<{ name: string; symbol: string; circulating: PeggedAmount; circulatingPrevDay: PeggedAmount; circulatingPrevWeek: PeggedAmount }> }>(`${DEFI_LLAMA_URL}/stablecoins`)
 
     return data.peggedAssets
-      .filter(a => a.circulating?.current > 1_000_000) // Only >$1M supply
+      .filter(a => (a.circulating?.peggedUSD ?? 0) > 1_000_000) // Only >$1M supply
       .map(a => {
-        const current = a.circulating?.current || 0
-        const prevDay = a.circulatingPrevDay?.current || current
-        const prevWeek = a.circulatingPrevWeek?.current || current
+        const current = a.circulating?.peggedUSD ?? 0
+        const prevDay = a.circulatingPrevDay?.peggedUSD ?? current
+        const prevWeek = a.circulatingPrevWeek?.peggedUSD ?? current
         const change24h = current - prevDay
         const change7d = current - prevWeek
 
@@ -46,7 +51,8 @@ export async function getStablecoinFlows(): Promise<StablecoinFlow[]> {
       })
       .sort((a, b) => b.currentSupply - a.currentSupply)
       .slice(0, 20)
-  } catch {
+  } catch (err) {
+    console.error('[stablecoin-flow] DefiLlama fetch failed:', (err as Error).message)
     return []
   }
 }

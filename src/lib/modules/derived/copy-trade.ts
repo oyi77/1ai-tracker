@@ -41,8 +41,14 @@ export function addCopyTradeSignal(signal: CopyTradeSignal): void {
   if (signals.length > MAX_SIGNALS) signals.pop()
 }
 
-export function getCopyTradeSignals(config: Partial<CopyTradeConfig> = {}): CopyTradeSignal[] {
+export async function getCopyTradeSignals(config: Partial<CopyTradeConfig> = {}): Promise<CopyTradeSignal[]> {
   const { minAmountUsd, minWalletScore, maxSignals } = { ...DEFAULT_CONFIG, ...config }
+
+  // Auto-seed from DB if the in-memory store is empty
+  if (signals.length === 0) {
+    await generateCopyTradeSignals()
+  }
+
   return signals
     .filter(s => s.amountUsd >= minAmountUsd && s.confidence >= minWalletScore / 100)
     .slice(0, maxSignals)

@@ -10,7 +10,7 @@ import {
 
 export async function GET() {
   try {
-    const confidences = getAllConfidences()
+    const confidences = await getAllConfidences()
 
     const data = confidences.map(c => ({
       signalType: c.signalType,

@@ -88,7 +88,7 @@ function cleanHtml(text: string): string {
 
 // ─── Feed Fetching with Concurrency ─────────────────────────
 
-async function fetchFeed(feed: typeof CRYPTO_FEEDS[0], timeoutMs = 8000): Promise<RssItem[]> {
+async function fetchFeed(feed: typeof CRYPTO_FEEDS[0], timeoutMs = 5000): Promise<RssItem[]> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -113,13 +113,18 @@ async function fetchFeed(feed: typeof CRYPTO_FEEDS[0], timeoutMs = 8000): Promis
 async function fetchAllFeeds(
   feeds: typeof CRYPTO_FEEDS,
   concurrency = 8,
+  overallTimeoutMs = 15_000,
 ): Promise<RssItem[]> {
   const results: RssItem[] = [];
-  // Process in batches
+  const deadline = Date.now() + overallTimeoutMs;
+
+  // Process in batches with overall deadline
   for (let i = 0; i < feeds.length; i += concurrency) {
+    if (Date.now() >= deadline) break; // Hit overall deadline, return what we have
     const batch = feeds.slice(i, i + concurrency);
+    const remaining = Math.max(1000, deadline - Date.now());
     const batchResults = await Promise.allSettled(
-      batch.map((f) => fetchFeed(f))
+      batch.map((f) => fetchFeed(f, Math.min(5000, remaining)))
     );
     for (const r of batchResults) {
       if (r.status === "fulfilled") results.push(...r.value);

@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     }
 
     // Default: return recent signals
-    let signals = getCopyTradeSignals({ maxSignals: limit })
+    let signals = await getCopyTradeSignals({ maxSignals: limit })
     if (chain) {
       signals = signals.filter(s => s.chain === chain)
     }

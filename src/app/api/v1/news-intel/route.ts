@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
   try {
     switch (action) {
       case 'gdelt': {
-        const r = await handleGdelt(searchParams)
+        // Race GDELT against a 10s deadline so the handler never hangs
+        const r = await Promise.race([
+          handleGdelt(searchParams),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('GDELT timeout')), 10_000)),
+        ])
         r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
         return r
       }
@@ -30,7 +34,10 @@ export async function GET(request: NextRequest) {
         return r
       }
       case 'local-exclusive': {
-        const r = await handleLocalExclusive(searchParams)
+        const r = await Promise.race([
+          handleLocalExclusive(searchParams),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Local exclusive timeout')), 10_000)),
+        ])
         r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
         return r
       }

@@ -31,7 +31,7 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
-const _cexClient = {
+export const cexClient = {
   async getExchangeStatus(): Promise<{ status: string }> {
     try {
       await fetchJson(`${BINANCE_API}/api/v3/ping`)

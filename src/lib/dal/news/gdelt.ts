@@ -73,12 +73,16 @@ export async function searchGdelt(
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(8_000),
     })
 
-    if (!res.ok) throw new Error(`GDELT ${res.status}`)
-
-    const data = await res.json() as { articles?: GdeltArticle[] }
+    // GDELT may return rate-limit text instead of JSON
+    const text = await res.text()
+    if (!text.startsWith('{')) {
+      console.warn('[gdelt] Rate limited or non-JSON response')
+      return cached?.data ?? []
+    }
+    const data = JSON.parse(text) as { articles?: GdeltArticle[] }
     const articles: GdeltArticle[] = data.articles ?? []
 
     fetchCache.set(cacheKey, { data: articles, ts: Date.now() })
@@ -93,8 +97,8 @@ export async function searchGdelt(
  * Get top news for a country. Falls back to global if country omitted.
  */
 export async function getTopNews(country?: string): Promise<GdeltArticle[]> {
-  const query = country ? `sourcecountry:${country}` : ''
-  return searchGdelt(query || 'top news', { country, maxRecords: 25 })
+  const query = country ? `sourcecountry:${country}` : 'world'
+  return searchGdelt(query, { country, maxRecords: 25 })
 }
 
 /**
