@@ -6,11 +6,8 @@ import { Panel } from '@/components/shell/Panel'
 import { DataTable, type Column } from '@/components/shell/DataTable'
 import { PriceTag } from '@/components/primitives/PriceTag'
 import { DeltaBadge } from '@/components/primitives/DeltaBadge'
-import { Sparkline } from '@/components/primitives/Sparkline'
 import { LiveDot } from '@/components/primitives/LiveDot'
 import { EntityLabel } from '@/components/primitives/EntityLabel'
-import { AlertPill } from '@/components/primitives/AlertPill'
-import { TxHash } from '@/components/primitives/TxHash'
 
 interface KPIData {
   label: string
@@ -25,29 +22,33 @@ interface TokenRow {
   price: number
   change24h: number
   volume: number
-  sparkline: number[]
   [key: string]: unknown
 }
 
 interface WhaleMove {
-  address: string
-  entity: string
-  type: string
-  amount: number
-  token: string
-  txHash: string
-  timestamp: string
+  txid: string
+  valueBtc: number
+  valueUsd: number
+  block: number
   [key: string]: unknown
 }
 
 interface ActivityEvent {
   id: string
   type: string
-  description: string
-  amount?: number
+  headline: string
+  asset: string
+  direction: string
+  strength: number
   timestamp: string
-  severity?: string
   [key: string]: unknown
+}
+
+function fmtUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`
+  return `$${(n ?? 0).toFixed(0)}`
 }
 
 export default function DashboardPage() {
@@ -59,58 +60,56 @@ export default function DashboardPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [derivativesRes, fearGreedRes, edgeReportRes, entitiesRes, newsRes] = await Promise.allSettled([
+      const [derivativesRes, fearGreedRes, edgeReportRes, whaleRes, alphaRes] = await Promise.allSettled([
         fetch('/api/v1/derivatives?limit=10').then(r => r.json()),
         fetch('/api/v1/fear-greed').then(r => r.json()),
         fetch('/api/v1/edge-report').then(r => r.json()),
-        fetch('/api/v1/entities?pageSize=5').then(r => r.json()),
-        fetch('/api/v1/news?limit=5').then(r => r.json()),
+        fetch('/api/v1/mempool?action=whale').then(r => r.json()),
+        fetch('/api/v1/alpha-feed?limit=10').then(r => r.json()),
       ])
 
-      // KPIs
-      const btcPrice = derivativesRes.status === 'fulfilled' ? derivativesRes.value?.data?.topPairs?.[0]?.price || 0 : 0
-      const fgScore = fearGreedRes.status === 'fulfilled' ? fearGreedRes.value?.data?.composite?.score || 0 : 0
+      // KPIs — unwrap envelope: response.data
+      const deriv = derivativesRes.status === 'fulfilled' ? derivativesRes.value?.data : null
+      const fg = fearGreedRes.status === 'fulfilled' ? fearGreedRes.value?.data : null
+      const edge = edgeReportRes.status === 'fulfilled' ? edgeReportRes.value?.data : null
+
+      const btcPrice = deriv?.topPairs?.[0]?.price ?? 0
+      const fgScore = fg?.composite?.score ?? 0
 
       setKpis([
-        { label: 'BTC Price', value: `$${btcPrice.toLocaleString()}`, delta: 0.5 },
+        { label: 'BTC Price', value: `$${(btcPrice ?? 0).toLocaleString()}`, delta: deriv?.topPairs?.[0]?.priceChange24h ?? 0 },
         { label: 'Fear & Greed', value: String(fgScore), suffix: '/100' },
-        { label: 'Active Signals', value: String(edgeReportRes.status === 'fulfilled' ? edgeReportRes.value?.data?.signals?.length || 0 : 0) },
-        { label: 'Entities', value: String(entitiesRes.status === 'fulfilled' ? entitiesRes.value?.data?.length || 0 : 0) },
+        { label: 'Active Signals', value: String(edge?.signals?.length ?? 0) },
+        { label: 'Whale TXs', value: String(whaleRes.status === 'fulfilled' ? (whaleRes.value?.data?.transactions?.length ?? 0) : 0) },
       ])
 
-      // Token Radar from real derivatives data
-      if (derivativesRes.status === 'fulfilled' && derivativesRes.value?.data?.topPairs) {
-        setTokens(derivativesRes.value.data.topPairs.map((p: Record<string, unknown>) => ({
+      // Token Radar — real derivatives data
+      if (deriv?.topPairs) {
+        setTokens(deriv.topPairs.map((p: Record<string, unknown>) => ({
           symbol: p.symbol as string,
-          price: p.price as number,
-          change24h: p.priceChange24h as number,
-          volume: p.quoteVolume24h as number,
-          sparkline: Array.from({ length: 20 }, (_, i) => (p.price as number) * (1 + (Math.sin(i) * 0.02))),
+          price: (p.price as number) ?? 0,
+          change24h: (p.priceChange24h as number) ?? 0,
+          volume: (p.quoteVolume24h as number) ?? 0,
         })))
       }
 
-      // Whale Moves from real entities data
-      if (entitiesRes.status === 'fulfilled' && entitiesRes.value?.data) {
-        setWhaleMoves(entitiesRes.value.data.slice(0, 5).map((e: Record<string, unknown>) => ({
-          address: `0x${'0'.repeat(40)}`,
-          entity: e.name as string || 'Unknown',
-          type: 'TRANSFER',
-          amount: (e.totalUsdValue as number) || 0,
-          token: 'USD',
-          txHash: `0x${'a'.repeat(12)}`,
-          timestamp: 'recent',
-        })))
+      // Whale Moves — real mempool whale TXs
+      const whaleData = whaleRes.status === 'fulfilled' ? whaleRes.value?.data : null
+      if (whaleData?.transactions) {
+        setWhaleMoves(whaleData.transactions.slice(0, 5))
       }
 
-      // Activity Feed from real news data
-      if (newsRes.status === 'fulfilled' && newsRes.value?.items) {
-        setActivity(newsRes.value.items.slice(0, 5).map((n: Record<string, unknown>, i: number) => ({
-          id: String(i),
-          type: 'news',
-          description: n.title as string || 'News update',
-          amount: 0,
-          timestamp: new Date(n.publishedAt as string).toLocaleTimeString(),
-          severity: 'low',
+      // Activity Feed — real alpha signals
+      const alphaData = alphaRes.status === 'fulfilled' ? alphaRes.value?.data : null
+      if (Array.isArray(alphaData)) {
+        setActivity(alphaData.slice(0, 8).map((s: Record<string, unknown>) => ({
+          id: String(s.id ?? ''),
+          type: String(s.type ?? 'signal'),
+          headline: String(s.headline ?? ''),
+          asset: String(s.asset ?? ''),
+          direction: String(s.direction ?? 'neutral'),
+          strength: (s.strength as number) ?? 0,
+          timestamp: s.timestamp ? new Date(s.timestamp as string).toLocaleTimeString() : '',
         })))
       }
 
@@ -128,169 +127,92 @@ export default function DashboardPage() {
   }, [fetchData])
 
   const tokenColumns: Column<TokenRow>[] = [
-    {
-      key: 'symbol',
-      header: 'Symbol',
-      width: 80,
-      render: (row) => <span className="text-teal-vivid font-bold">{row.symbol}</span>,
-    },
-    {
-      key: 'price',
-      header: 'Price',
-      width: 100,
-      align: 'right',
-      render: (row) => <PriceTag value={row.price} size="sm" />,
-    },
-    {
-      key: 'change24h',
-      header: '24h%',
-      width: 70,
-      align: 'right',
-      render: (row) => <DeltaBadge value={row.change24h} size="xs" />,
-    },
-    {
-      key: 'volume',
-      header: 'Volume',
-      width: 100,
-      align: 'right',
-      render: (row) => <span className="text-text-secondary">${((row.volume ?? 0) / 1e6).toFixed(1)}M</span>,
-    },
-    {
-      key: 'sparkline',
-      header: '',
-      width: 80,
-      render: (row) => <Sparkline data={row.sparkline} width={60} height={20} />,
-    },
+    { key: 'symbol', header: 'Pair', width: 100, render: r => <span className="text-teal-vivid font-bold">{r.symbol}</span> },
+    { key: 'price', header: 'Price', width: 100, align: 'right', render: r => <PriceTag value={r.price} size="sm" /> },
+    { key: 'change24h', header: '24h%', width: 80, align: 'right', render: r => <DeltaBadge value={r.change24h} size="xs" /> },
+    { key: 'volume', header: 'Volume', width: 100, align: 'right', render: r => <span className="text-text-secondary font-mono text-[10px]">{fmtUsd(r.volume)}</span> },
   ]
 
   const whaleColumns: Column<WhaleMove>[] = [
-    {
-      key: 'entity',
-      header: 'Entity',
-      width: 120,
-      render: (row) => <EntityLabel type="whale" label={row.entity} size="xs" />,
-    },
-    {
-      key: 'type',
-      header: 'Type',
-      width: 80,
-      render: (row) => <span className="text-data-orange text-[10px]">{row.type}</span>,
-    },
-    {
-      key: 'amount',
-      header: 'Amount',
-      width: 100,
-      align: 'right',
-      render: (row) => <PriceTag value={row.amount} currency="" decimals={row.amount > 1000 ? 0 : 2} size="sm" />,
-    },
-    {
-      key: 'token',
-      header: 'Token',
-      width: 60,
-      render: (row) => <span className="text-text-secondary">{row.token}</span>,
-    },
-    {
-      key: 'txHash',
-      header: 'Tx',
-      width: 100,
-      render: (row) => <TxHash hash={row.txHash} truncate={4} />,
-    },
-    {
-      key: 'timestamp',
-      header: 'Time',
-      width: 60,
-      align: 'right',
-      render: (row) => <span className="text-text-muted">{row.timestamp}</span>,
-    },
+    { key: 'txid', header: 'TX Hash', width: 140, render: r => <span className="text-text-muted font-mono text-[10px]">{String(r.txid).slice(0, 16)}...</span> },
+    { key: 'valueBtc', header: 'BTC', width: 90, align: 'right', render: r => <span className="text-teal-vivid font-bold tabular-nums">{(r.valueBtc ?? 0).toFixed(4)} BTC</span> },
+    { key: 'valueUsd', header: 'USD', width: 100, align: 'right', render: r => <PriceTag value={r.valueUsd} size="sm" /> },
+    { key: 'block', header: 'Block', width: 80, align: 'right', render: r => <span className="text-text-muted font-mono text-[10px]">{r.block}</span> },
+  ]
+
+  const activityColumns: Column<ActivityEvent>[] = [
+    { key: 'type', header: 'Type', width: 80, render: r => <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-bg-raised text-text-muted">{r.type}</span> },
+    { key: 'headline', header: 'Signal', width: 350, render: r => <span className="text-text-primary text-[11px]">{r.headline}</span> },
+    { key: 'asset', header: 'Asset', width: 80, render: r => <span className="text-teal-vivid font-mono text-[10px]">{r.asset}</span> },
+    { key: 'direction', header: 'Dir', width: 60, render: r => (
+      <span className={`text-[10px] font-mono font-bold ${r.direction === 'bullish' ? 'text-data-bull' : r.direction === 'bearish' ? 'text-data-bear' : 'text-text-muted'}`}>
+        {r.direction === 'bullish' ? '🟢' : r.direction === 'bearish' ? '🔴' : '⚪'}
+      </span>
+    )},
+    { key: 'strength', header: 'Str', width: 50, align: 'right', render: r => <span className="text-text-primary font-mono text-[10px]">{r.strength}</span> },
+    { key: 'timestamp', header: 'Time', width: 80, align: 'right', render: r => <span className="text-text-muted font-mono text-[10px]">{r.timestamp}</span> },
   ]
 
   return (
     <NexusLayout>
       <div className="p-3 space-y-3">
-        {/* ── KPI Strip ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-1">
-          {kpis.map((kpi, i) => (
-            <div key={i} aria-label={`${kpi.label}: ${kpi.value}`} className="bg-bg-panel border border-bg-border px-3 py-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[20px] font-head font-bold text-text-primary">Dashboard</h1>
+            <p className="text-[11px] text-text-muted font-mono">Real-time overview — all live data, no mocks</p>
+          </div>
+          <LiveDot status={feedStatus} label />
+        </div>
 
-              <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">
-                {kpi.label}
+        {/* KPI Strip */}
+        <div className="grid grid-cols-4 gap-1">
+          {kpis.map((kpi, i) => (
+            <div key={i} className="bg-bg-panel border border-bg-border px-3 py-2">
+              <div className="text-[10px] text-text-muted font-mono uppercase mb-1">{kpi.label}</div>
+              <div className="text-[18px] font-head font-bold tabular-nums text-text-primary">
+                {kpi.prefix}{kpi.value}{kpi.suffix}
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-[18px] font-bold font-head text-text-primary tabular-nums">
-                  {kpi.prefix}{kpi.value}{kpi.suffix}
-                </span>
-                {kpi.delta !== undefined && kpi.delta !== 0 && (
-                  <DeltaBadge value={kpi.delta} size="xs" />
-                )}
-              </div>
+              {kpi.delta !== undefined && kpi.delta !== 0 && (
+                <div className={`text-[10px] font-mono ${kpi.delta > 0 ? 'text-data-bull' : 'text-data-bear'}`}>
+                  {kpi.delta > 0 ? '+' : ''}{(kpi.delta ?? 0).toFixed(2)}%
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        {/* ── Main Grid: Token Radar + Whale Moves ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
+        <div className="grid grid-cols-2 gap-3">
           {/* Token Radar */}
-          <Panel
-            title="Token Radar"
-            subtitle="Top perpetuals by volume"
-            liveStatus={feedStatus}
-            onRefresh={fetchData}
-            maxHeight={400}
-          >
+          <Panel title="Token Radar" subtitle={`${tokens.length} pairs by volume`} liveStatus={feedStatus} onRefresh={fetchData}>
             <DataTable
-              columns={tokenColumns}
-              data={tokens}
+              columns={tokenColumns as unknown as Column<Record<string, unknown>>[]}
+              data={tokens as unknown as Record<string, unknown>[]}
               sortable
               rowHeight={28}
-              emptyState={<div className="text-text-muted text-[11px] p-4">Loading token data...</div>}
+              emptyState={<div className="text-text-muted text-[11px] p-4">Loading derivatives data...</div>}
             />
           </Panel>
 
           {/* Whale Moves */}
-          <Panel
-            title="Whale Moves"
-            subtitle="Large transfers detected"
-            liveStatus={feedStatus}
-            maxHeight={400}
-          >
+          <Panel title="Whale Moves" subtitle={`${whaleMoves.length} recent large BTC transactions`} liveStatus={feedStatus} onRefresh={fetchData}>
             <DataTable
-              columns={whaleColumns}
-              data={whaleMoves}
+              columns={whaleColumns as unknown as Column<Record<string, unknown>>[]}
+              data={whaleMoves as unknown as Record<string, unknown>[]}
+              sortable
               rowHeight={28}
-              emptyState={<div className="text-text-muted text-[11px] p-4">Monitoring whale wallets...</div>}
+              emptyState={<div className="text-text-muted text-[11px] p-4">Monitoring mempool for whale TXs...</div>}
             />
           </Panel>
         </div>
 
-        {/* ── Activity Feed (full width) ── */}
-        <Panel
-          title="Activity Feed"
-          subtitle="Live on-chain events"
-          liveStatus={feedStatus}
-          maxHeight={300}
-        >
-          <div role="status" aria-live="polite" className="space-y-0">
-
-            {activity.map((event) => (
-              <div
-                key={event.id}
-                className="flex items-center gap-2 px-3 py-1.5 border-b border-bg-border/50 hover:bg-bg-raised/50 transition-colors"
-                style={{ height: 28 }}
-              >
-                <LiveDot status="live" size={4} />
-                <span className="text-[10px] font-mono text-text-muted w-16 shrink-0">{event.timestamp}</span>
-                {event.severity && (
-                  <AlertPill severity={event.severity as 'critical' | 'high' | 'medium' | 'low'} size="xs" />
-                )}
-                <span className="text-[11px] font-mono text-text-primary truncate flex-1">
-                  {event.description}
-                </span>
-                {event.amount && (
-                  <PriceTag value={event.amount} size="xs" className="text-text-secondary" />
-                )}
-              </div>
-            ))}
-          </div>
+        {/* Activity Feed */}
+        <Panel title="Activity Feed" subtitle={`${activity.length} live signals`} liveStatus={feedStatus} onRefresh={fetchData}>
+          <DataTable
+            columns={activityColumns as unknown as Column<Record<string, unknown>>[]}
+            data={activity as unknown as Record<string, unknown>[]}
+            rowHeight={28}
+            emptyState={<div className="text-text-muted text-[11px] p-4">No signals yet...</div>}
+          />
         </Panel>
       </div>
     </NexusLayout>

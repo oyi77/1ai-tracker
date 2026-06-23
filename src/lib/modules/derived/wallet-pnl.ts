@@ -351,12 +351,11 @@ export function getTopWallets(limit = 50): WalletPnl[] {
  * Fetches PnL for all tracked wallets and caches the sorted result.
  */
 export async function updateLeaderboard(): Promise<void> {
-  const registry = getRegistry()
-
-  // Collect known wallet addresses from smart-money and entity data
   const walletAddresses: Array<{ address: string; chain: string }> = []
 
+  // 1. Try module registry (arkham-re)
   try {
+    const registry = getRegistry()
     const smartMoneyResult = await registry.fetchOne('arkham-re', { action: 'entities' })
     const entities = smartMoneyResult.data as Array<Record<string, unknown>> | undefined
     if (entities) {
@@ -372,8 +371,36 @@ export async function updateLeaderboard(): Promise<void> {
         }
       }
     }
-  } catch {
-    // If Arkham is unavailable, use empty set
+  } catch { /* arkham unavailable */ }
+
+  // 2. Fallback: fetch from DB SmartMoneyWallet table
+  if (walletAddresses.length === 0) {
+    try {
+      const { prisma } = await import('@/lib/db')
+      const dbWallets = await prisma.smartMoneyWallet.findMany({
+        include: { wallet: { select: { address: true, chain: true } } },
+        take: 50,
+      })
+      for (const w of dbWallets) {
+        walletAddresses.push({ address: w.wallet.address, chain: w.wallet.chain || 'eth' })
+      }
+    } catch { /* DB unavailable */ }
+  }
+
+  // 3. Fallback: fetch from entities table
+  if (walletAddresses.length === 0) {
+    try {
+      const { prisma } = await import('@/lib/db')
+      const entities = await prisma.entity.findMany({
+        include: { wallets: { select: { address: true, chain: true } } },
+        take: 20,
+      })
+      for (const e of entities) {
+        for (const w of e.wallets) {
+          walletAddresses.push({ address: w.address, chain: w.chain || 'eth' })
+        }
+      }
+    } catch { /* DB unavailable */ }
   }
 
   // Calculate PnL for each wallet (parallel, with concurrency limit)

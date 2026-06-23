@@ -13,20 +13,15 @@ import { useLiveFetch } from '@/lib/hooks/useLiveFetch'
 // ── Types ────────────────────────────────────────────────────────
 
 interface DerivativesResponse {
-  data: {
-    topPairs: Array<Record<string, unknown>>
-    timestamp: number
-  }
+  topPairs: Array<Record<string, unknown>>
+  timestamp?: number
 }
 
 interface ExchangeTickers {
   [exchange: string]: Array<Record<string, unknown>>
 }
 
-interface ExchangesResponse {
-  data: ExchangeTickers
-  exchanges: string[]
-}
+type ExchangesResponse = ExchangeTickers
 
 interface ScannerRow {
   token: string
@@ -140,7 +135,7 @@ export default function ScannerPage() {
     const map = new Map<string, ScannerRow>()
 
     // Derivatives pairs (Binance Futures)
-    for (const p of deriv?.data?.topPairs || []) {
+    for (const p of deriv?.topPairs || []) {
       const sym = p.symbol as string
       const price = (p.price as number) || 0
       const vol = (p.quoteVolume24h as number) || 0
@@ -170,7 +165,7 @@ export default function ScannerPage() {
     }
 
     // Exchange tickers (Bybit, OKX, etc.)
-    for (const [exchange, tickers] of Object.entries(exch?.data || {})) {
+    for (const [exchange, tickers] of Object.entries(exch || {})) {
       for (const t of (tickers as Array<Record<string, unknown>>).slice(0, 30)) {
         const sym = (t.symbol as string) || ''
         if (!sym || sym.startsWith('@')) continue
