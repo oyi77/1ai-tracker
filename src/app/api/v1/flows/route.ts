@@ -29,14 +29,14 @@ export const GET = withApiAuth(async (request: NextRequest) => {
     // Aggregate flows by wallet
     const flowMap = new Map<string, { wallet: string; entity: string; totalUsd: number; count: number }>();
     for (const tx of sliced) {
-      const entity = tx.wallet.entity?.name ?? tx.wallet.address.slice(0, 10)
-      const key = tx.walletId
+      const entity = tx.wallet?.entity?.name ?? tx.wallet?.address?.slice(0, 10) ?? 'Unknown'
+      const key = tx.walletId ?? tx.txHash
       const existing = flowMap.get(key)
       if (existing) {
         existing.totalUsd += tx.value
         existing.count++
       } else {
-        flowMap.set(key, { wallet: tx.wallet.address, entity, totalUsd: tx.value, count: 1 })
+        flowMap.set(key, { wallet: tx.wallet?.address ?? 'Unknown', entity, totalUsd: tx.value, count: 1 })
       }
     }
 
