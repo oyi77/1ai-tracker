@@ -53,8 +53,8 @@ export async function GET(request: Request) {
       }
 
       case 'whale': {
-        // Detect whale transactions from recent Bitcoin blocks via mempool.space
-        const WHALE_THRESHOLD_BTC = 5 // ~$325K+
+        // Detect whale transactions from recent Bitcoin blocks via mempool.space & blockchain.info
+        const WHALE_THRESHOLD_BTC = 2 // ~$130K+
         const txs: Array<Record<string, unknown>> = []
         let btcPrice = 0
         try {
@@ -66,32 +66,60 @@ export async function GET(request: Request) {
             if (btcTicker) btcPrice = typeof btcTicker.price === 'string' ? parseFloat(btcTicker.price.replace(/[$,]/g, '')) : (btcTicker.price as number) || 0
           } catch { /* use default */ }
 
-          // Get latest block height
+          // 1. Fetch unconfirmed from blockchain.info (latest 100 txs in mempool)
+          try {
+            const bcRes = await fetch('https://blockchain.info/unconfirmed-transactions?format=json', { signal: AbortSignal.timeout(10_000) })
+            const bcData = await bcRes.json() as { txs: Array<Record<string, unknown>> }
+            for (const tx of (bcData.txs || [])) {
+              const totalOut = ((tx.out as Array<Record<string, unknown>>) || [])
+                .reduce((s: number, o: Record<string, unknown>) => s + ((o.value as number) || 0), 0) / 1e8
+              if (totalOut >= WHALE_THRESHOLD_BTC) {
+                txs.push({
+                  txid: tx.hash,
+                  valueBtc: totalOut,
+                  valueUsd: totalOut * btcPrice,
+                  block: 'mempool',
+                  fee: (tx.fee as number) || 0,
+                  size: (tx.size as number) || 0,
+                })
+              }
+            }
+          } catch (err) {
+            console.error('[mempool/whale] blockchain.info fetch failed', err)
+          }
+
+          // 2. Fetch from recent blocks on mempool.space
           const tipRes = await fetch('https://mempool.space/api/blocks/tip/height', { signal: AbortSignal.timeout(10_000) })
           const tipHeight = parseInt(await tipRes.text(), 10)
 
-          // Scan last 3 blocks for whale TXs
+          // Scan last 3 blocks for whale TXs (mempool.space limits to 25 txs per block query)
           for (let i = 0; i < 3 && tipHeight - i > 0; i++) {
             const height = tipHeight - i
             const hashRes = await fetch(`https://mempool.space/api/block-height/${height}`, { signal: AbortSignal.timeout(10_000) })
             const blockHash = (await hashRes.text()).trim()
-            const txRes = await fetch(`https://mempool.space/api/block/${blockHash}/txs`, { signal: AbortSignal.timeout(15_000) })
-            const blockTxs = await txRes.json() as Array<Record<string, unknown>>
+            
+            // Fetch first 2 pages (50 txs) of each block to get more coverage
+            for (const startIndex of [0, 25]) {
+              const txRes = await fetch(`https://mempool.space/api/block/${blockHash}/txs/${startIndex}`, { signal: AbortSignal.timeout(15_000) })
+              if (!txRes.ok) continue
+              const blockTxs = await txRes.json() as Array<Record<string, unknown>>
 
-            for (const tx of blockTxs) {
-              const totalOut = ((tx.vout as Array<Record<string, unknown>>) || [])
-                .reduce((s: number, o: Record<string, unknown>) => s + ((o.value as number) || 0), 0) / 1e8
-              if (totalOut >= WHALE_THRESHOLD_BTC) {
-                txs.push({
-                  txid: tx.txid,
-                  valueBtc: totalOut,
-                  valueUsd: totalOut * btcPrice,
-                  block: height,
-                  fee: (tx.fee as number) || 0,
-                  size: (tx.size as number) || 0,
-                  inputs: (tx.vin as Array<Record<string, unknown>>)?.length || 0,
-                  outputs: (tx.vout as Array<Record<string, unknown>>)?.length || 0,
-                })
+              for (const tx of blockTxs) {
+                const totalOut = ((tx.vout as Array<Record<string, unknown>>) || [])
+                  .reduce((s: number, o: Record<string, unknown>) => s + ((o.value as number) || 0), 0) / 1e8
+                if (totalOut >= WHALE_THRESHOLD_BTC) {
+                  // avoid duplicates
+                  if (!txs.some(existing => existing.txid === tx.txid)) {
+                    txs.push({
+                      txid: tx.txid,
+                      valueBtc: totalOut,
+                      valueUsd: totalOut * btcPrice,
+                      block: height,
+                      fee: (tx.fee as number) || 0,
+                      size: (tx.size as number) || 0,
+                    })
+                  }
+                }
               }
             }
           }
