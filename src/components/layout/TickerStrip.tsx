@@ -29,11 +29,11 @@ export function TickerStrip() {
       fetch('/api/v1/market/prices').then(r => r.json()),
       fetch('/api/v1/market/sentiment').then(r => r.json()),
     ]).then(([priceRes, fgRes]) => {
-      if (priceRes.status === 'fulfilled' && priceRes.value?.tickers?.length) {
-        setTickers(priceRes.value.tickers)
+      if (priceRes.status === 'fulfilled' && priceRes.value?.data?.tickers?.length) {
+        setTickers(priceRes.value.data.tickers)
       }
-      if (fgRes.status === 'fulfilled' && fgRes.value?.fearGreed != null) {
-        setFgValue(fgRes.value.fearGreed)
+      if (fgRes.status === 'fulfilled' && fgRes.value?.data?.fearGreed != null) {
+        setFgValue(fgRes.value.data.fearGreed)
       }
     })
   }, [])

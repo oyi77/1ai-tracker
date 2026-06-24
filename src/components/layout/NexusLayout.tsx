@@ -120,7 +120,7 @@ export function NexusLayout({ children }: NexusLayoutProps) {
     const id = setInterval(tick, 1000)
 
     const fetchTickers = () => {
-      fetch('/api/v1/market/prices').then(r => r.json()).then(d => { if (d.tickers) setTickers(d.tickers) }).catch(() => {})
+      fetch('/api/v1/market/prices').then(r => r.json()).then(d => { if (d.data?.tickers) setTickers(d.data.tickers) }).catch(() => {})
       fetch('/api/v1/fear-greed').then(r => r.json()).then(d => { if (d.data?.composite?.score) setFgi(d.data.composite.score) }).catch(() => {})
     }
     fetchTickers()

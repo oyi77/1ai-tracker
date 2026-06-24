@@ -27,12 +27,12 @@ export function AiAssistantPanel() {
   useEffect(() => {
     fetch('/api/v1/user/api-key?service=anthropic')
       .then(r => r.json())
-      .then(d => setHasKey(d.hasKey ?? false))
+      .then(d => setHasKey(d.data?.hasKey ?? false))
       .catch(() => setHasKey(false))
 
     fetch('/api/v1/ai/chat')
       .then(r => r.json())
-      .then(d => setAgents(d.agents ?? []))
+      .then(d => setAgents(d.data?.agents ?? []))
       .catch((err) => { console.warn('[AiAssistantPanel] Failed to fetch agents:', err) })
   }, [])
 
