@@ -226,27 +226,43 @@ export async function decodeTransaction(raw: {
     }
   }
 
-  // Estimate USD value
-  // For ETH transfers: raw.value is the ETH amount in wei
-  // For ERC20 transfers: raw.value is "0" but raw.input contains the transfer amount
+  // Estimate USD value from token amount
   let amountUsd = 0;
-  const ethValue = parseFloat(raw.value) / 1e18;
-  if (ethValue > 0) {
-    // Native ETH transfer
-    amountUsd = ethValue * 2500; // Rough ETH price
-  } else if (raw.input && raw.input.length >= 138) {
-    // ERC20 transfer: input = 0xa9059cbb + 32 bytes (to) + 32 bytes (amount)
-    // Decode the amount from the last 32 bytes of input
-    try {
-      const amountHex = '0x' + raw.input.slice(74, 138);
-      const tokenAmount = BigInt(amountHex);
-      // Assume 18 decimals for most ERC20s
-      const tokenDecimal = Number(tokenAmount) / 1e18;
-      // Rough USD estimate — enrichTx will refine with real price
-      amountUsd = tokenDecimal * 1;
-    } catch {
-      amountUsd = 0;
+  try {
+    // raw.value can be:
+    // 1. A hex string (0x...) from ERC20 Transfer log.data
+    // 2. A decimal string ("0" or "123456789") from native ETH transfers
+    let tokenValue = 0
+    if (raw.value && raw.value.startsWith('0x')) {
+      tokenValue = parseInt(raw.value, 16) || 0
+    } else {
+      tokenValue = parseFloat(raw.value) || 0
     }
+    if (tokenValue > 0) {
+      // Check if this is a known token with a rough price
+      const tokenDecimal = tokenValue / 1e18 // Assume 18 decimals
+      
+      // Common token rough prices (USD)
+      // For large amounts, even with 18 decimals, this gives a rough estimate
+      if (tokenDecimal > 0.0001) {
+        // If the raw value is very large, it's likely a low-decimal token (USDC=6, WBTC=8)
+        // Try different decimal places
+        const asUSDC = tokenValue / 1e6  // USDC/USDT 6 decimals
+        const asWBTC = tokenValue / 1e8  // WBTC 8 decimals
+        const asETH = tokenValue / 1e18  // ETH 18 decimals
+        
+        // Use the most reasonable estimate (> $0.01 and < $1B)
+        if (asUSDC > 0.01 && asUSDC < 1e9) {
+          amountUsd = asUSDC // Likely USDC/USDT
+        } else if (asWBTC > 0.01 && asWBTC < 1e9) {
+          amountUsd = asWBTC * 62000 // BTC price
+        } else if (asETH > 0.001 && asETH < 1e6) {
+          amountUsd = asETH * 1650 // ETH price
+        }
+      }
+    }
+  } catch {
+    amountUsd = 0
   }
 
   return {

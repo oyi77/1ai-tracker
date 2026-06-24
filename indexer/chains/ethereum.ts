@@ -122,14 +122,35 @@ function connectChain(chain: Chain) {
       // Log notification (wallet activity)
       if (msg.method === "eth_subscription" && msg.params?.result?.transactionHash) {
         const log = msg.params.result;
+        
+        // Decode ERC20 Transfer event:
+        // topics[0] = Transfer event signature
+        // topics[1] = from address (padded to 32 bytes)
+        // topics[2] = to address (padded to 32 bytes)
+        // data = amount (uint256, 32 bytes)
+        let fromAddr = log.address
+        let toAddr = log.address
+        let value = "0"
+        let input = log.data || "0x"
+        
+        const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+        
+        if (log.topics && log.topics[0] === TRANSFER_TOPIC && log.topics.length >= 3) {
+          // Extract from/to from topics (remove 0x prefix + 24 zero-padding bytes)
+          fromAddr = "0x" + log.topics[1].slice(26)
+          toAddr = "0x" + log.topics[2].slice(26)
+          // data contains the amount
+          value = log.data || "0"
+        }
+        
         const tx = await decodeTransaction({
           hash: log.transactionHash,
-          from: log.address,
-          to: log.address,
+          from: fromAddr,
+          to: toAddr,
           chain,
-          value: "0",
+          value: value,
           timestamp: Math.floor(Date.now() / 1000),
-          input: log.data || "0x",
+          input: input,
         });
 
         await storeTransaction(tx);

@@ -111,7 +111,10 @@ export async function scanForInsiderSignals(): Promise<InsiderSignal[]> {
     // Find transactions with large values
     const largeTxs = await prisma.transaction.findMany({
       where: {
-        value: { gte: DEFAULT_CONFIG.minAmountUsd },
+        OR: [
+          { amountUsd: { gte: DEFAULT_CONFIG.minAmountUsd } },
+          { value: { gte: DEFAULT_CONFIG.minAmountUsd } },
+        ],
       },
       include: { wallet: true },
       orderBy: { timestamp: 'desc' },

@@ -1,13 +1,13 @@
 export const dynamic = "force-dynamic";
 
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { withApiAuth } from "@/lib/api/with-api-auth";
+
 import { apiSuccess, apiError } from "@/lib/api/response";
 
-export const GET = withApiAuth(async (request: NextRequest) => {
+export async function GET(request: Request) {
   try {
-    const { searchParams } = request.nextUrl;
+    const { searchParams } = new URL(request.url);
     const chain = searchParams.get("chain");
     const limit = Math.min(200, Math.max(1, Number(searchParams.get("limit") ?? 100)));
 
@@ -49,4 +49,4 @@ export const GET = withApiAuth(async (request: NextRequest) => {
     console.error("GET /api/v1/flows error:", error);
     return apiError("Internal server error", 500);
   }
-});
+}
