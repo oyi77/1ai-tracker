@@ -144,8 +144,8 @@ export default function YieldsPage() {
                     </td>
                     <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-secondary tabular-nums">{fmtUsd(pool.tvlUsd)}</td>
                     <td className="text-[13px] font-mono px-3 py-1.5 text-right font-bold text-data-bull tabular-nums">{pool.apy.toFixed(2)}%</td>
-                    <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-primary tabular-nums">{pool.apyBase.toFixed(2)}%</td>
-                    <td className="text-[11px] font-mono px-3 py-1.5 text-right text-accent-amber tabular-nums">{pool.apyReward.toFixed(2)}%</td>
+                    <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-primary tabular-nums">{(pool.apyBase ?? 0).toFixed(2)}%</td>
+                    <td className="text-[11px] font-mono px-3 py-1.5 text-right text-accent-amber tabular-nums">{(pool.apyReward ?? 0).toFixed(2)}%</td>
                     <td className="px-3 py-1.5 text-center">
                       <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                         pool.ilRisk === 'no' ? 'bg-data-bull/20 text-data-bull' : 'bg-data-bear/20 text-data-bear'

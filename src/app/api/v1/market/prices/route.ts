@@ -10,10 +10,18 @@ export async function GET() {
   const registry = registerAllModules()
 
   try {
-    const cgPromise = registry.fetchOne<Record<string, { usd: number; usd_24h_change: number }>>(
-      'coingecko',
-      { action: 'price', ids: 'bitcoin,ethereum,solana,binancecoin,ripple,cardano', vs_currency: 'usd' }
-    ).catch(() => null)
+    // Use Binance for crypto prices (no rate limits, no API key)
+    const cgPromise = fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT"]', {
+      signal: AbortSignal.timeout(10_000),
+    }).then(r => r.json()).then(data => {
+      const result: Record<string, { usd: number; usd_24h_change: number }> = {}
+      const map: Record<string, string> = { BTCUSDT: 'bitcoin', ETHUSDT: 'ethereum', SOLUSDT: 'solana' }
+      for (const t of data as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>) {
+        const id = map[t.symbol]
+        if (id) result[id] = { usd: parseFloat(t.lastPrice), usd_24h_change: parseFloat(t.priceChangePercent) }
+      }
+      return { data: result }
+    }).catch(() => null)
 
     const yfPromise = registry.fetchOne<Record<string, unknown>[]>(
       'yahoo-finance',
@@ -27,7 +35,7 @@ export async function GET() {
 
     const [cgResult, yfResult, emResult] = await Promise.all([cgPromise, yfPromise, emPromise])
 
-    const data = cgResult?.data ?? {}
+    const data = (cgResult as { data?: Record<string, { usd: number; usd_24h_change: number }> })?.data ?? {}
 
     const coins = [
       { id: 'bitcoin', symbol: 'BTC' },

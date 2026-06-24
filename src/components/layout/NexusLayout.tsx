@@ -107,8 +107,8 @@ export function NexusLayout({ children }: NexusLayoutProps) {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [time, setTime] = useState('')
-  const [tickers, setTickers] = useState<Array<{ symbol: string; price: string; change: string; positive: boolean }>>([])
-  const [fgi, setFgi] = useState<number | null>(null)
+  
+  
   const pathname = usePathname()
 
   useEffect(() => {
@@ -120,8 +120,7 @@ export function NexusLayout({ children }: NexusLayoutProps) {
     const id = setInterval(tick, 1000)
 
     const fetchTickers = () => {
-      fetch('/api/v1/market/prices').then(r => r.json()).then(d => { if (d.data?.tickers) setTickers(d.data.tickers) }).catch(() => {})
-      fetch('/api/v1/fear-greed').then(r => r.json()).then(d => { if (d.data?.composite?.score) setFgi(d.data.composite.score) }).catch(() => {})
+
     }
     fetchTickers()
     const tickerId = setInterval(fetchTickers, 30_000)
@@ -158,13 +157,8 @@ export function NexusLayout({ children }: NexusLayoutProps) {
           </div>
         </div>
 
-        {/* Center: Global Ticker — Live Data */}
-        <div className="hidden lg:flex items-center gap-4 text-[11px] font-mono">
-          {tickers.slice(0, 4).map((t, i) => (
-            <span key={i} className="text-text-muted">{t.symbol} <span className={t.positive ? 'text-data-bull' : 'text-data-bear'}>{t.price}</span></span>
-          ))}
-          {fgi !== null && <span className="text-text-muted">FGI <span className="text-data-warn">{fgi}</span></span>}
-        </div>
+        {/* Spacer for layout balance */}
+        <div className="flex-1" />
 
         {/* Right: Status + Actions */}
         <div className="flex items-center gap-3">

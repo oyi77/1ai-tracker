@@ -36,6 +36,15 @@ export async function GET(request: NextRequest) {
         take: pageSize,
         skip: (page - 1) * pageSize,
         orderBy: { [sort]: order },
+        include: {
+          wallet: {
+            include: {
+              entity: {
+                select: { id: true, name: true, type: true, totalUsdValue: true, verified: true }
+              }
+            }
+          }
+        },
       }),
       prisma.smartMoneyWallet.count({ where }),
     ]);

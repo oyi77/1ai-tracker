@@ -7,14 +7,17 @@ import { LiveDot } from '@/components/primitives/LiveDot'
 
 interface Market {
   id: string
-  platform: string
+  source: string
   question: string
-  yesPrice: number
-  noPrice: number
-  volume: number
+  probability: number
+  volume24h: number
+  totalVolume: number
+  liquidity: number
   category: string
-  timeRemaining: string
-  edge: number
+  endDate: string | null
+  active: boolean
+  url: string
+  [key: string]: unknown
 }
 
 function fmtUsd(n: number): string {
@@ -100,25 +103,25 @@ export default function PredictionMarketsPage() {
             {filtered.slice(0, 20).map((m, i) => (
               <div key={i} className="bg-bg-raised p-4 rounded border border-bg-border hover:border-teal-vivid transition-colors">
                 <div className="flex items-start justify-between mb-2">
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-raised text-text-muted uppercase">{m.platform}</span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-bg-raised text-text-muted uppercase">{m.source}</span>
                   <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent-amber/20 text-accent-amber">{m.category}</span>
                 </div>
                 <p className="text-[12px] font-mono text-text-primary leading-tight mb-3 line-clamp-2">{m.question}</p>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono text-data-bull">YES</span>
-                    <span className="text-[16px] font-mono font-bold text-data-bull tabular-nums">{(m.yesPrice * 100).toFixed(1)}¢</span>
+                    <span className="text-[16px] font-mono font-bold text-data-bull tabular-nums">{(m.probability * 100).toFixed(1)}¢</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[16px] font-mono font-bold text-data-bear tabular-nums">{(m.noPrice * 100).toFixed(1)}¢</span>
+                    <span className="text-[16px] font-mono font-bold text-data-bear tabular-nums">{((1 - m.probability) * 100).toFixed(1)}¢</span>
                     <span className="text-[10px] font-mono text-data-bear">NO</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-[10px] font-mono text-text-muted">
-                  <span>Vol: {fmtUsd(m.volume)}</span>
-                  <span>{m.timeRemaining}</span>
-                  {m.edge > 0.1 && (
-                    <span className="text-teal-vivid font-bold">Edge: {(m.edge * 100).toFixed(1)}%</span>
+                  <span>Vol: {fmtUsd(m.volume24h)}</span>
+                  <span>{m.endDate ? new Date(m.endDate).toLocaleDateString() : "—"}</span>
+                  {Math.abs(m.probability - 0.5) > 0.1 && (
+                    <span className="text-teal-vivid font-bold">Edge: {(Math.abs(m.probability - 0.5) * 100).toFixed(1)}%</span>
                   )}
                 </div>
               </div>
