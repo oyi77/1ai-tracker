@@ -38,7 +38,15 @@ const chainColors: Record<string, string> = {
   bsc: 'text-yellow-400',
 }
 
+export function YieldsPageContent() {
+  return <YieldsPageInner />
+}
+
 export default function YieldsPage() {
+  return <NexusLayout><YieldsPageInner /></NexusLayout>
+}
+
+function YieldsPageInner() {
   const [topYields, setTopYields] = useState<YieldPool[]>([])
   const [stableYields, setStableYields] = useState<YieldPool[]>([])
   const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
@@ -76,7 +84,7 @@ export default function YieldsPage() {
   const totalTvl = topYields.reduce((s, y) => s + y.tvlUsd, 0)
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -186,7 +194,7 @@ export default function YieldsPage() {
           </div>
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

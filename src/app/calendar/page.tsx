@@ -32,7 +32,15 @@ const countryFlags: Record<string, string> = {
   DE: '🇩🇪',
 }
 
+export function CalendarPageContent() {
+  return <CalendarPageInner />
+}
+
 export default function CalendarPage() {
+  return <NexusLayout><CalendarPageInner /></NexusLayout>
+}
+
+function CalendarPageInner() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
@@ -70,7 +78,7 @@ export default function CalendarPage() {
   const nextEvent = events.find(e => e.actual === null)
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-5xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -155,7 +163,7 @@ export default function CalendarPage() {
           <div className="text-center text-text-muted text-[12px] font-mono p-8">No events matching filter</div>
         )}
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

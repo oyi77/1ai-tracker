@@ -41,7 +41,15 @@ interface Accuracy {
   avgPnl: number
 }
 
+export function AlphaEnginePageContent() {
+  return <AlphaEnginePageInner />
+}
+
 export default function AlphaEnginePage() {
+  return <NexusLayout><AlphaEnginePageInner /></NexusLayout>
+}
+
+function AlphaEnginePageInner() {
   const [signals, setSignals] = useState<AlphaSignal[]>([])
   const [predictions, setPredictions] = useState<{ open: Prediction[]; closed: Prediction[]; accuracy: Accuracy }>({ open: [], closed: [], accuracy: { total: 0, wins: 0, losses: 0, winRate: 0, avgPnl: 0 } })
   const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
@@ -75,7 +83,7 @@ export default function AlphaEnginePage() {
   const acc = predictions.accuracy
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -242,7 +250,7 @@ export default function AlphaEnginePage() {
           </Panel>
         )}
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

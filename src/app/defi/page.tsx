@@ -13,7 +13,15 @@ interface Protocol {
   category: string
 }
 
+export function DeFiPageContent() {
+  return <DeFiPageInner />
+}
+
 export default function DeFiPage() {
+  return <NexusLayout><DeFiPageInner /></NexusLayout>
+}
+
+function DeFiPageInner() {
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [loading, setLoading] = useState(true)
   const [chain, setChain] = useState('')
@@ -43,7 +51,7 @@ export default function DeFiPage() {
   )
 
   return (
-    <NexusLayout>
+    <>
       <div className="h-full overflow-auto">
         <div className="sticky top-0 bg-bg-deep z-10 px-4 py-3 border-b border-border-dim">
           <div className="flex items-center justify-between mb-2">
@@ -122,7 +130,7 @@ export default function DeFiPage() {
           )}
         </div>
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

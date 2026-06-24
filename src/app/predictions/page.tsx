@@ -42,7 +42,15 @@ const SORT_OPTIONS = [
   { value: "probability", label: "Probability" },
 ] as const
 
+export function PredictionsPageContent() {
+  return <PredictionsPageInner />
+}
+
 export default function PredictionsPage() {
+  return <NexusLayout><PredictionsPageInner /></NexusLayout>
+}
+
+function PredictionsPageInner() {
   const [data, setData] = useState<AggregatedData | null>(null)
   const [loading, setLoading] = useState(true)
   const [source, setSource] = useState<string>("all")
@@ -74,7 +82,7 @@ export default function PredictionsPage() {
   }, [fetchData])
 
   return (
-    <NexusLayout>
+    <>
       <div className="h-full overflow-auto p-4 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -160,7 +168,7 @@ export default function PredictionsPage() {
           </div>
         )}
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

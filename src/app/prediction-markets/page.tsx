@@ -27,7 +27,15 @@ function fmtUsd(n: number): string {
   return `$${n.toFixed(0)}`
 }
 
+export function PredictionMarketsPageContent() {
+  return <PredictionMarketsPageInner />
+}
+
 export default function PredictionMarketsPage() {
+  return <NexusLayout><PredictionMarketsPageInner /></NexusLayout>
+}
+
+function PredictionMarketsPageInner() {
   const [markets, setMarkets] = useState<Market[]>([])
   const [cryptoMarkets, setCryptoMarkets] = useState<Market[]>([])
   const [economicsMarkets, setEconomicsMarkets] = useState<Market[]>([])
@@ -62,7 +70,7 @@ export default function PredictionMarketsPage() {
   const filtered = filter === 'crypto' ? cryptoMarkets : filter === 'economics' ? economicsMarkets : markets
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -129,7 +137,7 @@ export default function PredictionMarketsPage() {
           </div>
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

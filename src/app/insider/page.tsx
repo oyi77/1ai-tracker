@@ -24,7 +24,15 @@ interface InsiderSignal {
 
 type InsiderSignals = InsiderSignal[]
 
+export function InsiderPageContent() {
+  return <InsiderPageInner />
+}
+
 export default function InsiderPage() {
+  return <NexusLayout><InsiderPageInner /></NexusLayout>
+}
+
+function InsiderPageInner() {
   const { data, status, refresh } = useLiveFetch<InsiderSignals>({ url: '/api/v1/insider', interval: 60_000 })
   const signals = data || []
 
@@ -103,7 +111,7 @@ export default function InsiderPage() {
   const medRisk = signals.filter(s => s.riskScore >= 50 && s.riskScore < 70).length
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -178,6 +186,6 @@ export default function InsiderPage() {
           </div>
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }

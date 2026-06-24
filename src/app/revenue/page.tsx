@@ -26,7 +26,15 @@ function fmtUsd(n: number): string {
   return `$${n.toFixed(0)}`
 }
 
+export function RevenuePageContent() {
+  return <RevenuePageInner />
+}
+
 export default function RevenuePage() {
+  return <NexusLayout><RevenuePageInner /></NexusLayout>
+}
+
+function RevenuePageInner() {
   const [protocols, setProtocols] = useState<ProtocolRevenue[]>([])
   const [totals, setTotals] = useState<{ totalFees24h: number; totalRevenue24h: number } | null>(null)
   const [categories, setCategories] = useState<Array<{ name: string; fees24h: number; count: number }>>([])
@@ -56,7 +64,7 @@ export default function RevenuePage() {
   }, [fetchData])
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -135,7 +143,7 @@ export default function RevenuePage() {
           </div>
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

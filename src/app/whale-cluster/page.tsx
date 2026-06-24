@@ -92,7 +92,15 @@ const CHAIN_COLORS: Record<string, string> = {
   bitcoin: 'bg-[#F7931A]/20 text-[#F7931A]',
 }
 
+export function WhaleClusterPageContent() {
+  return <WhaleClusterPageInner />
+}
+
 export default function WhaleClusterPage() {
+  return <NexusLayout><WhaleClusterPageInner /></NexusLayout>
+}
+
+function WhaleClusterPageInner() {
   const { data, status, refresh } = useLiveFetch<ClusterPayload>({
     url: '/api/v1/whale-cluster',
     interval: 300_000,
@@ -329,7 +337,7 @@ export default function WhaleClusterPage() {
   )
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -495,6 +503,6 @@ export default function WhaleClusterPage() {
           </Panel>
         )}
       </div>
-    </NexusLayout>
+    </>
   )
 }

@@ -12,7 +12,15 @@ import { useLiveFetch } from '@/lib/hooks/useLiveFetch'
 interface DefiResponse { chains: Array<{ name: string; tvl: number }> }
 interface Sector { name: string; tvl: number; change24h: number | null; change7d: number | null; dominance: number; sparkline: number[]; [k: string]: unknown }
 
+export function SectorsPageContent() {
+  return <SectorsPageInner />
+}
+
 export default function SectorsPage() {
+  return <NexusLayout><SectorsPageInner /></NexusLayout>
+}
+
+function SectorsPageInner() {
   const { data, status, refresh } = useLiveFetch<DefiResponse>({ url: '/api/v1/defi/overview', interval: 300_000 })
 
   const sectors: Sector[] = (() => {
@@ -37,7 +45,7 @@ export default function SectorsPage() {
   ]
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div><h1 className="text-[20px] font-head font-bold text-text-primary">Sectors</h1><p className="text-[11px] text-text-muted font-mono">DeFi sector analysis — TVL, dominance</p></div>
@@ -47,6 +55,6 @@ export default function SectorsPage() {
           <DataTable columns={columns} data={sectors} sortable rowHeight={28} emptyState={<div className="text-text-muted text-[11px] p-4">Loading...</div>} />
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }

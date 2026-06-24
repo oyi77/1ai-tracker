@@ -13,7 +13,15 @@ interface RugCheckResult {
   summary: string
 }
 
+export function RugcheckPageContent() {
+  return <RugcheckPageInner />
+}
+
 export default function RugcheckPage() {
+  return <NexusLayout><RugcheckPageInner /></NexusLayout>
+}
+
+function RugcheckPageInner() {
   const [address, setAddress] = useState('')
   const [chain, setChain] = useState('eth')
   const [result, setResult] = useState<RugCheckResult | null>(null)
@@ -54,7 +62,7 @@ export default function RugcheckPage() {
   }
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -172,6 +180,6 @@ export default function RugcheckPage() {
           </>
         )}
       </div>
-    </NexusLayout>
+    </>
   )
 }

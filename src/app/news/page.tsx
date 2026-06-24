@@ -8,14 +8,22 @@ import { useLiveFetch } from '@/lib/hooks/useLiveFetch'
 
 interface NewsResponse { items: Array<{ id: string; title: string; url: string; sourceId: string; publishedAt: string; summary?: string; category?: string }> }
 
+export function NewsPageContent() {
+  return <NewsPageInner />
+}
+
 export default function NewsPage() {
+  return <NexusLayout><NewsPageInner /></NexusLayout>
+}
+
+function NewsPageInner() {
   const { data, status, refresh } = useLiveFetch<NewsResponse>({ url: '/api/v1/news', interval: 60_000 })
   const [filter, setFilter] = useState('all')
   const news = data?.items || []
   const filtered = filter === 'all' ? news : news.filter(n => n.category === filter)
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -47,6 +55,6 @@ export default function NewsPage() {
           {filtered.length === 0 && <div className="p-4 text-center text-text-muted text-[11px]">No articles</div>}
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }

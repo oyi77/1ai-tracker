@@ -32,7 +32,15 @@ interface FearGreedData {
   headerMetrics: { btcDom: number; totalMcap: number; mcapChange24h: number }
 }
 
+export function MacroCommandCenterContent() {
+  return <MacroCommandCenterInner />
+}
+
 export default function MacroCommandCenter() {
+  return <NexusLayout><MacroCommandCenterInner /></NexusLayout>
+}
+
+function MacroCommandCenterInner() {
   const [macro, setMacro] = useState<MacroData | null>(null)
   const [fg, setFg] = useState<FearGreedData | null>(null)
   const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
@@ -56,7 +64,7 @@ export default function MacroCommandCenter() {
   }, [fetchData])
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -145,7 +153,7 @@ export default function MacroCommandCenter() {
           </div>
         </div>
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

@@ -39,7 +39,15 @@ interface TopWallet {
   [key: string]: unknown
 }
 
+export function SmartMoneyPageContent() {
+  return <SmartMoneyPageInner />
+}
+
 export default function SmartMoneyPage() {
+  return <NexusLayout><SmartMoneyPageInner /></NexusLayout>
+}
+
+function SmartMoneyPageInner() {
   const [signals, setSignals] = useState<SmartMoneySignal[]>([])
   const [topWallets, setTopWallets] = useState<TopWallet[]>([])
   const [feedStatus, setFeedStatus] = useState<'live' | 'stale' | 'error'>('live')
@@ -221,7 +229,7 @@ export default function SmartMoneyPage() {
   ]
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -282,6 +290,6 @@ export default function SmartMoneyPage() {
           </Panel>
         </div>
       </div>
-    </NexusLayout>
+    </>
   )
 }

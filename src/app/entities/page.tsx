@@ -24,7 +24,15 @@ interface Entity {
   [key: string]: unknown
 }
 
+export function EntitiesPageContent() {
+  return <EntitiesPageInner />
+}
+
 export default function EntitiesPage() {
+  return <NexusLayout><EntitiesPageInner /></NexusLayout>
+}
+
+function EntitiesPageInner() {
   const [entities, setEntities] = useState<Entity[]>([])
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
   const [feedStatus, setFeedStatus] = useState<'live' | 'stale' | 'error'>('live')
@@ -124,7 +132,7 @@ export default function EntitiesPage() {
   ]
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -238,6 +246,6 @@ export default function EntitiesPage() {
           </Panel>
         </div>
       </div>
-    </NexusLayout>
+    </>
   )
 }

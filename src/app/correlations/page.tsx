@@ -20,7 +20,15 @@ interface CorrelationData {
 
 interface CorrelationResponse { data: CorrelationData[] }
 
+export function CorrelationsPageContent() {
+  return <CorrelationsPageInner />
+}
+
 export default function CorrelationsPage() {
+  return <NexusLayout><CorrelationsPageInner /></NexusLayout>
+}
+
+function CorrelationsPageInner() {
   const { data, status, refresh } = useLiveFetch<CorrelationResponse>({ url: '/api/v1/correlations', interval: 60_000 })
   const correlations = data || []
 
@@ -45,7 +53,7 @@ export default function CorrelationsPage() {
   ]
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -65,6 +73,6 @@ export default function CorrelationsPage() {
           />
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }

@@ -1,18 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { LiveDot } from '@/components/primitives/LiveDot'
-
-interface TradeFlow {
-  symbol: string
-  buyVolume: number
-  sellVolume: number
-  netFlow: number
-  tradeCount: number
-  lastPrice: number
-}
 
 interface Trade {
   exchange: string
@@ -24,6 +15,18 @@ interface Trade {
   usdValue: number
 }
 
+interface PriceTick {
+  symbol: string
+  price: number
+  change24h: number
+  volume24h: number
+  high24h: number
+  low24h: number
+  trades24h: number
+}
+
+const SYMBOLS = ['btc', 'eth', 'sol', 'xrp', 'doge', 'avax', 'link', 'arb', 'op']
+
 function fmtUsd(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
@@ -32,47 +35,77 @@ function fmtUsd(n: number): string {
 }
 
 export default function TradesPage() {
-  const [flows, setFlows] = useState<TradeFlow[]>([])
+  const [prices, setPrices] = useState<Map<string, PriceTick>>(new Map())
   const [trades, setTrades] = useState<Trade[]>([])
-  const [stats, setStats] = useState({ totalBuyVolume: 0, totalSellVolume: 0, totalNetFlow: 0, tradeCount: 0 })
-  const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
-  const [view, setView] = useState<'flow' | 'trades'>('flow')
+  const [totalBuy, setTotalBuy] = useState(0)
+  const [totalSell, setTotalSell] = useState(0)
+  const [connected, setConnected] = useState(false)
+  const wsRef = useRef<WebSocket | null>(null)
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [flowRes, tradeRes] = await Promise.allSettled([
-        fetch('/api/v1/trades?mode=flow').then(r => r.json()),
-        fetch('/api/v1/trades?mode=recent&limit=30').then(r => r.json()),
-      ])
+  // Connect to Binance trade stream directly (realtime)
+  useEffect(() => {
+    const streams = SYMBOLS.map(s => `${s}usdt@trade`).join('/')
+    const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
+    wsRef.current = ws
+    let buyVol = 0
+    let sellVol = 0
 
-      if (flowRes.status === 'fulfilled' && flowRes.value?.data) {
-        setFlows(flowRes.value.data.flows ?? [])
-        setStats({
-          totalBuyVolume: flowRes.value.data.totalBuyVolume ?? 0,
-          totalSellVolume: flowRes.value.data.totalSellVolume ?? 0,
-          totalNetFlow: flowRes.value.data.totalNetFlow ?? 0,
-          tradeCount: flowRes.value.data.tradeCount ?? 0,
+    ws.onopen = () => setConnected(true)
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data as string)
+        const d = msg.data
+        if (!d || !d.T) return
+
+        const symbol = d.s.replace('USDT', '').toUpperCase()
+        const price = parseFloat(d.p)
+        const size = parseFloat(d.q)
+        const usdValue = price * size
+        const side = d.m ? 'sell' : 'buy'
+
+        const trade: Trade = {
+          exchange: 'Binance',
+          pair: symbol,
+          price,
+          size,
+          side,
+          timestamp: d.T,
+          usdValue,
+        }
+
+        if (side === 'buy') buyVol += usdValue
+        else sellVol += usdValue
+        setTotalBuy(buyVol)
+        setTotalSell(sellVol)
+
+        setTrades(prev => [trade, ...prev].slice(0, 100))
+
+        setPrices(prev => {
+          const next = new Map(prev)
+          const existing = next.get(symbol)
+          next.set(symbol, {
+            symbol,
+            price,
+            change24h: existing?.change24h ?? 0,
+            volume24h: existing?.volume24h ?? 0,
+            high24h: Math.max(existing?.high24h ?? price, price),
+            low24h: Math.min(existing?.low24h ?? price, price),
+            trades24h: (existing?.trades24h ?? 0) + 1,
+          })
+          return next
         })
-      }
-
-      if (tradeRes.status === 'fulfilled' && tradeRes.value?.data?.trades) {
-        setTrades(tradeRes.value.data.trades)
-      }
-
-      setStatus('live')
-    } catch {
-      setStatus('error')
+      } catch {}
     }
+
+    ws.onerror = () => setConnected(false)
+    ws.onclose = () => setConnected(false)
+
+    return () => ws.close()
   }, [])
 
-  useEffect(() => {
-    fetchData()
-    const id = setInterval(fetchData, 3000) // 3s refresh for live feel
-    return () => clearInterval(id)
-  }, [fetchData])
-
-  const totalVolume = stats.totalBuyVolume + stats.totalSellVolume
-  const buyPct = totalVolume > 0 ? (stats.totalBuyVolume / totalVolume) * 100 : 50
+  const totalVol = totalBuy + totalSell
+  const buyPct = totalVol > 0 ? (totalBuy / totalVol) * 100 : 50
 
   return (
     <NexusLayout>
@@ -83,32 +116,19 @@ export default function TradesPage() {
               <span className="text-data-bull">📊</span> Live Trade Flow
             </h1>
             <p className="text-[12px] text-text-muted font-mono mt-1">
-              Real-time trade aggregation from Binance, Binance Futures, OKX. Inspired by aggr.trade.
+              {connected ? '🟢 WebSocket connected — realtime Binance trades' : '🔴 Connecting...'}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex bg-bg-raised p-1 rounded">
-              {(['flow', 'trades'] as const).map(v => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={`px-3 py-1 text-[10px] font-mono rounded uppercase transition-colors ${view === v ? 'bg-teal-vivid text-bg-base font-bold' : 'text-text-muted hover:text-text-primary'}`}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-            <LiveDot status={status} label />
-          </div>
+          <LiveDot status={connected ? 'live' : 'error'} label />
         </div>
 
-        {/* Global Flow KPIs */}
+        {/* KPI Strip */}
         <div className="grid grid-cols-5 gap-2">
-          <KPI label="Total Volume" value={fmtUsd(totalVolume)} />
-          <KPI label="Buy Volume" value={fmtUsd(stats.totalBuyVolume)} color="text-data-bull" />
-          <KPI label="Sell Volume" value={fmtUsd(stats.totalSellVolume)} color="text-data-bear" />
-          <KPI label="Net Flow" value={fmtUsd(stats.totalNetFlow)} color={stats.totalNetFlow >= 0 ? 'text-data-bull' : 'text-data-bear'} />
-          <KPI label="Trades" value={stats.tradeCount.toLocaleString()} />
+          <KPI label="Total Volume" value={fmtUsd(totalVol)} />
+          <KPI label="Buy Volume" value={fmtUsd(totalBuy)} color="text-data-bull" />
+          <KPI label="Sell Volume" value={fmtUsd(totalSell)} color="text-data-bear" />
+          <KPI label="Net Flow" value={fmtUsd(totalBuy - totalSell)} color={totalBuy >= totalSell ? 'text-data-bull' : 'text-data-bear'} />
+          <KPI label="Trades" value={trades.length.toLocaleString()} />
         </div>
 
         {/* Buy/Sell Bar */}
@@ -124,76 +144,53 @@ export default function TradesPage() {
           </div>
         </div>
 
-        {view === 'flow' ? (
-          /* Flow by Symbol */
-          <Panel title="Trade Flow by Symbol" subtitle={`${flows.length} symbols tracked`} liveStatus={status}>
-            <div className="overflow-auto scrollbar-thin">
-              <table className="w-full border-separate border-spacing-0">
-                <thead>
-                  <tr className="text-text-muted">
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-left">#</th>
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-left">Symbol</th>
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Last Price</th>
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Buy Vol</th>
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Sell Vol</th>
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Net Flow</th>
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Trades</th>
-                    <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-center">Flow Bar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {flows.map((f, i) => {
-                    const vol = f.buyVolume + f.sellVolume
-                    const buyPct = vol > 0 ? (f.buyVolume / vol) * 100 : 50
-                    return (
-                      <tr key={f.symbol} className="border-b border-bg-border/30 hover:bg-bg-raised transition-colors">
-                        <td className="text-[11px] font-mono px-3 py-1.5 text-text-muted">{i + 1}</td>
-                        <td className="text-[12px] font-mono px-3 py-1.5 font-bold text-teal-vivid">{f.symbol}</td>
-                        <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-primary tabular-nums">${f.lastPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                        <td className="text-[11px] font-mono px-3 py-1.5 text-right text-data-bull tabular-nums">{fmtUsd(f.buyVolume)}</td>
-                        <td className="text-[11px] font-mono px-3 py-1.5 text-right text-data-bear tabular-nums">{fmtUsd(f.sellVolume)}</td>
-                        <td className={`text-[11px] font-mono px-3 py-1.5 text-right font-bold tabular-nums ${f.netFlow >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
-                          {fmtUsd(f.netFlow)}
-                        </td>
-                        <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-secondary tabular-nums">{f.tradeCount.toLocaleString()}</td>
-                        <td className="px-3 py-1.5">
-                          <div className="h-2 bg-bg-raised rounded-full overflow-hidden flex">
-                            <div className="h-full bg-data-bull" style={{ width: `${buyPct}%` }} />
-                            <div className="h-full bg-data-bear" style={{ width: `${100 - buyPct}%` }} />
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-        ) : (
-          /* Recent Trades */
-          <Panel title="Recent Trades" subtitle="Live from Binance/OKX WebSockets" liveStatus={status}>
-            <div className="space-y-0 max-h-[500px] overflow-y-auto">
-              {trades.map((t, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-1 border-b border-bg-border/30 hover:bg-bg-raised transition-colors">
-                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                    t.side === 'buy' ? 'bg-data-bull/20 text-data-bull' : 'bg-data-bear/20 text-data-bear'
-                  }`}>
-                    {t.side.toUpperCase()}
-                  </span>
-                  <span className="text-[10px] font-mono text-text-muted uppercase w-16">{t.exchange}</span>
-                  <span className="text-[11px] font-mono font-bold text-teal-vivid w-16">{t.pair.replace('usdt', '').toUpperCase()}</span>
-                  <span className="text-[11px] font-mono text-text-primary tabular-nums flex-1">${t.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  <span className="text-[11px] font-mono text-text-secondary tabular-nums w-20 text-right">{t.size.toFixed(4)}</span>
-                  <span className="text-[11px] font-mono font-bold text-text-primary tabular-nums w-24 text-right">{fmtUsd(t.usdValue)}</span>
-                  <span className="text-[9px] font-mono text-text-muted w-16 text-right">{new Date(t.timestamp).toLocaleTimeString()}</span>
+        {/* Price Tickers */}
+        <div className="grid grid-cols-9 gap-1">
+          {SYMBOLS.map(s => {
+            const p = prices.get(s.toUpperCase())
+            return (
+              <div key={s} className="bg-bg-panel border border-bg-border p-2 rounded text-center">
+                <div className="text-[10px] font-mono text-text-muted uppercase">{s}</div>
+                <div className="text-[13px] font-mono font-bold text-text-primary tabular-nums">
+                  {p ? `$${p.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}
                 </div>
-              ))}
-              {trades.length === 0 && (
-                <div className="p-8 text-center text-text-muted text-[12px] font-mono">Connecting to exchange WebSockets...</div>
-              )}
-            </div>
-          </Panel>
-        )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Recent Trades */}
+        <Panel title="Recent Trades" subtitle="Live from Binance WebSocket — sub-second updates" liveStatus={connected ? 'live' : 'stale'}>
+          <div className="space-y-0 max-h-[500px] overflow-y-auto scrollbar-thin">
+            {trades.slice(0, 50).map((t, i) => (
+              <div key={`${t.timestamp}-${i}`} className="flex items-center gap-3 px-3 py-1 border-b border-bg-border/30 hover:bg-bg-raised transition-colors">
+                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                  t.side === 'buy' ? 'bg-data-bull/20 text-data-bull' : 'bg-data-bear/20 text-data-bear'
+                }`}>
+                  {t.side.toUpperCase()}
+                </span>
+                <span className="text-[11px] font-mono font-bold text-teal-vivid w-12">{t.pair}</span>
+                <span className="text-[11px] font-mono text-text-primary tabular-nums flex-1">
+                  ${t.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
+                <span className="text-[10px] font-mono text-text-secondary tabular-nums w-16 text-right">
+                  {t.size.toFixed(4)}
+                </span>
+                <span className="text-[11px] font-mono font-bold text-text-primary tabular-nums w-20 text-right">
+                  {fmtUsd(t.usdValue)}
+                </span>
+                <span className="text-[9px] font-mono text-text-muted w-16 text-right">
+                  {new Date(t.timestamp).toLocaleTimeString()}
+                </span>
+              </div>
+            ))}
+            {trades.length === 0 && (
+              <div className="p-8 text-center text-text-muted text-[12px] font-mono">
+                Connecting to Binance WebSocket...
+              </div>
+            )}
+          </div>
+        </Panel>
       </div>
     </NexusLayout>
   )

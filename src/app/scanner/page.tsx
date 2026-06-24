@@ -30,7 +30,15 @@ function fmtUsd(n: number): string {
   return `$${(n ?? 0).toFixed(0)}`
 }
 
+export function DegenScannerPageContent() {
+  return <DegenScannerPageInner />
+}
+
 export default function DegenScannerPage() {
+  return <NexusLayout><DegenScannerPageInner /></NexusLayout>
+}
+
+function DegenScannerPageInner() {
   const [pairs, setPairs] = useState<NewPair[]>([])
   const [network, setNetwork] = useState('solana')
   const [feedStatus, setFeedStatus] = useState<'live' | 'stale' | 'error'>('live')
@@ -123,7 +131,7 @@ export default function DegenScannerPage() {
   ]
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -183,6 +191,6 @@ export default function DegenScannerPage() {
           />
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }

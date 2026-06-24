@@ -31,7 +31,15 @@ function fmtUsd(n: number): string {
   return `$${n.toFixed(2)}`
 }
 
+export function TrendingCoinsPageContent() {
+  return <TrendingCoinsPageInner />
+}
+
 export default function TrendingCoinsPage() {
+  return <NexusLayout><TrendingCoinsPageInner /></NexusLayout>
+}
+
+function TrendingCoinsPageInner() {
   const [tokens, setTokens] = useState<TrendingToken[]>([])
   const [global, setGlobal] = useState<GlobalData | null>(null)
   const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
@@ -59,7 +67,7 @@ export default function TrendingCoinsPage() {
   }, [fetchData])
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-4 space-y-4 max-w-5xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
@@ -123,7 +131,7 @@ export default function TrendingCoinsPage() {
           </div>
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }
 

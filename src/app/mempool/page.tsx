@@ -94,7 +94,15 @@ function txidShort(txid: string): string {
 
 // ── Page ──────────────────────────────────────────────────
 
+export function MempoolPageContent() {
+  return <MempoolPageInner />
+}
+
 export default function MempoolPage() {
+  return <NexusLayout><MempoolPageInner /></NexusLayout>
+}
+
+function MempoolPageInner() {
   const { data: statsData, status: statsStatus, refresh: refreshStats } =
     useLiveFetch<MempoolStatsResponse>({
       url: '/api/v1/mempool?action=stats',
@@ -213,7 +221,7 @@ export default function MempoolPage() {
   }
 
   return (
-    <NexusLayout>
+    <>
       <div className="p-3 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -337,6 +345,6 @@ export default function MempoolPage() {
           </div>
         </Panel>
       </div>
-    </NexusLayout>
+    </>
   )
 }
