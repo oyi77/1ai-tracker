@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       }
 
       case 'whale': {
-        const { data, fromCache } = await getCached('mempool:whale', 60_000, async () => {
+        const { data, fromCache } = await getCached('mempool:whale', 15_000, async () => {
           const WHALE_THRESHOLD_BTC = 2
           const txs: Array<Record<string, unknown>> = []
           let btcPrice = 0
@@ -94,7 +94,7 @@ export async function GET(request: Request) {
       }
 
       case 'blocks': {
-        const { data, fromCache } = await getCached('mempool:blocks', 30_000, async () => {
+        const { data, fromCache } = await getCached('mempool:blocks', 15_000, async () => {
           const blocks = await registry.fetchOne('mempool-space', { action: 'blocks' })
           return blocks.data
         })

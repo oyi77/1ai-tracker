@@ -112,7 +112,7 @@ async function fetchBasisData(): Promise<BasisRow[]> {
 
 export async function GET() {
   try {
-    const { data, fromCache } = await getCached('basis', 30_000, fetchBasisData)
+    const { data, fromCache } = await getCached('basis', 15_000, fetchBasisData)
     const resp = NextResponse.json({ data: { rows: data, count: data.length }, error: null })
     resp.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60')
     resp.headers.set('X-Cache', fromCache ? 'HIT' : 'MISS')

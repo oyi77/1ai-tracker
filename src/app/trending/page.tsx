@@ -54,7 +54,7 @@ export default function TrendingCoinsPage() {
 
   useEffect(() => {
     fetchData()
-    const id = setInterval(fetchData, 120_000) // 2min
+    const id = setInterval(fetchData, 60_000) // 2min
     return () => clearInterval(id)
   }, [fetchData])
 

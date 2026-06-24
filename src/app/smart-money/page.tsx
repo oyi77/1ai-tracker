@@ -97,7 +97,7 @@ export default function SmartMoneyPage() {
   useEffect(() => {
     const invoke = () => fetchData()
     invoke()
-    const interval = setInterval(fetchData, 30_000)
+    const interval = setInterval(fetchData, 15_000)
     return () => clearInterval(interval)
   }, [fetchData])
 

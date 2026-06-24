@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
     const { data, fromCache } = await getCached(
       `arbitrage:${category}:${minSpreadBps}:${minFundingBps}:${minBasisPercent}:${limit}:${symbolsParam ?? 'all'}`,
-      15_000, // 15s cache — prices move fast
+      10_000, // 15s cache — prices move fast
       () => scanArbitrage(options),
     )
 

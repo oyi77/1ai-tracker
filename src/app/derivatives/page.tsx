@@ -76,7 +76,7 @@ export default function DerivativesPage() {
 
   useEffect(() => {
     fetchData()
-    const id = setInterval(fetchData, 15_000)
+    const id = setInterval(fetchData, 10_000)
     return () => clearInterval(id)
   }, [fetchData])
 

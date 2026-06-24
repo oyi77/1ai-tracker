@@ -59,7 +59,7 @@ async function fetchWhaleAlerts(): Promise<WhaleAlertItem[]> {
 
 export async function GET() {
   try {
-    const { data, fromCache } = await getCached('whale-alert', 60_000, fetchWhaleAlerts)
+    const { data, fromCache } = await getCached('whale-alert', 30_000, fetchWhaleAlerts)
     const resp = NextResponse.json({ data: { items: data.slice(0, 20), count: data.length }, error: null })
     resp.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120')
     resp.headers.set('X-Cache', fromCache ? 'HIT' : 'MISS')

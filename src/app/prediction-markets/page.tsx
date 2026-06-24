@@ -55,7 +55,7 @@ export default function PredictionMarketsPage() {
 
   useEffect(() => {
     fetchData()
-    const id = setInterval(fetchData, 300_000)
+    const id = setInterval(fetchData, 120_000)
     return () => clearInterval(id)
   }, [fetchData])
 

@@ -82,7 +82,7 @@ async function fetchTrending() {
 
 export async function GET() {
   try {
-    const { data, fromCache } = await getCached('trending', 120_000, fetchTrending) // 2min cache
+    const { data, fromCache } = await getCached('trending', 60_000, fetchTrending) // 2min cache
     const resp = NextResponse.json({ data, error: null })
     resp.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
     resp.headers.set('X-Cache', fromCache ? 'HIT' : 'MISS')

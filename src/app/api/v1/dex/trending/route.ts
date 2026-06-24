@@ -47,7 +47,7 @@ export async function GET(request: Request) {
 
     const { data, fromCache } = await getCached(
       `dex:trending:${network}`,
-      60_000,
+      30_000,
       () => fetchTrending(network),
     )
 

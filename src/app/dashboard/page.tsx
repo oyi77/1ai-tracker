@@ -150,7 +150,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, 30_000)
+    const interval = setInterval(fetchData, 15_000)
     return () => clearInterval(interval)
   }, [fetchData])
 

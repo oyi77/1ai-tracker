@@ -24,7 +24,7 @@ interface GeckoNewPool {
 async function fetchNewPairs(network: string) {
   const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/${network}/new_pools?page=1`, {
     headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(10_000),
   })
   if (!res.ok) throw new Error(`GeckoTerminal error: ${res.status}`)
 
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
 
     const { data, fromCache } = await getCached(
       `dex:new-pairs:${network}`,
-      15_000,
+      10_000,
       () => fetchNewPairs(network),
     )
 

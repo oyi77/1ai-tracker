@@ -103,7 +103,7 @@ export async function GET(_request: NextRequest) {
   try {
     const { getCached } = await import('@/lib/api/server-cache')
     
-    const { data: result, fromCache } = await getCached('fear-greed', 5 * 60 * 1000, async () => {
+    const { data: result, fromCache } = await getCached('fear-greed', 60_000, async () => {
 
     // Fetch all sources in parallel
     const [fngRes, geckoRes, globalData, btcTicker] = await Promise.all([

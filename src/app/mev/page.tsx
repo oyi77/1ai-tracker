@@ -73,7 +73,7 @@ export default function MevPage() {
 
   useEffect(() => {
     fetchData()
-    const iv = setInterval(fetchData, 30_000)
+    const iv = setInterval(fetchData, 15_000)
     return () => clearInterval(iv)
   }, [fetchData])
 

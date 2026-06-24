@@ -68,7 +68,7 @@ export default function AlphaEnginePage() {
 
   useEffect(() => {
     fetchData()
-    const id = setInterval(fetchData, 30_000)
+    const id = setInterval(fetchData, 15_000)
     return () => clearInterval(id)
   }, [fetchData])
 

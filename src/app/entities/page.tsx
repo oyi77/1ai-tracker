@@ -61,7 +61,7 @@ export default function EntitiesPage() {
   useEffect(() => {
     const invoke = () => fetchEntities()
     invoke()
-    const interval = setInterval(fetchEntities, 60_000)
+    const interval = setInterval(fetchEntities, 30_000)
     return () => clearInterval(interval)
   }, [fetchEntities])
 

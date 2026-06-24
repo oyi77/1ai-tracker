@@ -74,7 +74,7 @@ async function fetchPrices(): Promise<TickerItem[]> {
 
 export async function GET() {
   try {
-    const { data: tickers, fromCache } = await getCached('market:prices', 15_000, fetchPrices)
+    const { data: tickers, fromCache } = await getCached('market:prices', 5_000, fetchPrices)
 
     const resp = NextResponse.json({ data: { tickers }, error: null })
     resp.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')

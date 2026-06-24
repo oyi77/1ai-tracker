@@ -94,7 +94,7 @@ export default function ArbitragePage() {
 
   useEffect(() => {
     fetchData()
-    const iv = setInterval(fetchData, 15_000)
+    const iv = setInterval(fetchData, 10_000)
     return () => clearInterval(iv)
   }, [fetchData])
 

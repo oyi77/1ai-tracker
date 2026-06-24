@@ -106,7 +106,7 @@ export default function LiquidationsPage() {
 
   useEffect(() => {
     fetchBinance()
-    const id = setInterval(fetchBinance, 15_000)
+    const id = setInterval(fetchBinance, 10_000)
     return () => clearInterval(id)
   }, [fetchBinance])
 
