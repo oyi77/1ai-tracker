@@ -42,7 +42,7 @@ export default function TopTradersPage() {
     try {
       const res = await fetch('/api/v1/top-traders')
       const d = await res.json()
-      if (d.success && d.data?.traders) {
+      if (d.data?.traders) {
         setTraders(d.data.traders)
         setStatus('live')
       } else {

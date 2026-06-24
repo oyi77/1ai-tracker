@@ -51,7 +51,7 @@ export default function LiquidationHeatmapPage() {
     try {
       const res = await fetch(`/api/v1/liquidations/heatmap?symbol=${symbol}`)
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setData(d.data as HeatmapData)
         setStatus('live')
       } else {

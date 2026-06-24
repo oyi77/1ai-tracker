@@ -29,7 +29,7 @@ export default function MevPage() {
     try {
       const res = await fetch('/api/v1/mev')
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setEvents(d.data.recentMEV ?? [])
         setStats(d.data.stats ?? null)
         setStatus('live')

@@ -41,7 +41,7 @@ export default function DegenScannerPage() {
       const res = await fetch(`/api/v1/dex/new-pairs?network=${network}`)
       const data = await res.json()
       
-      if (data.success && Array.isArray(data.data?.items)) {
+      if (Array.isArray(data.data?.items)) {
         setPairs(data.data.items.map((p: Record<string, unknown>) => ({
           address: String(p.address ?? ''),
           name: String(p.name ?? ''),

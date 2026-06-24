@@ -48,7 +48,7 @@ export default function YieldsPage() {
     try {
       const res = await fetch('/api/v1/yields')
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setTopYields(d.data.topYields ?? [])
         setStableYields(d.data.stableYields ?? [])
         setStatus('live')

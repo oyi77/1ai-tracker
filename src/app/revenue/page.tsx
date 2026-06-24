@@ -36,7 +36,7 @@ export default function RevenuePage() {
     try {
       const res = await fetch('/api/v1/revenue')
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setProtocols(d.data.protocols ?? [])
         setTotals(d.data.totals ?? null)
         setCategories(d.data.categories ?? [])

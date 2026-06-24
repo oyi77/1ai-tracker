@@ -34,7 +34,7 @@ export default function BasisPage() {
     try {
       const res = await fetch('/api/v1/basis')
       const d = await res.json()
-      if (d.success && d.data?.rows) {
+      if (d.data?.rows) {
         setRows(d.data.rows)
         setStatus('live')
       } else {

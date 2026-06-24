@@ -41,7 +41,7 @@ export default function CalendarPage() {
     try {
       const res = await fetch('/api/v1/calendar')
       const d = await res.json()
-      if (d.success && d.data?.events) {
+      if (d.data?.events) {
         setEvents(d.data.events)
         setStatus('live')
       } else {

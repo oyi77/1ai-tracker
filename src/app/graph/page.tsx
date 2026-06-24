@@ -13,7 +13,7 @@ export default function KnowledgeGraphPage() {
     fetch('/api/v1/entities/graph')
       .then(r => r.json())
       .then(d => {
-        if (d.success && d.data) {
+        if (d.data) {
           setData(d.data as GraphData)
           setStatus('live')
         } else {

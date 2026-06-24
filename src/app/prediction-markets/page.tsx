@@ -36,7 +36,7 @@ export default function PredictionMarketsPage() {
     try {
       const res = await fetch('/api/v1/prediction-markets')
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setMarkets(d.data.markets ?? [])
         setCryptoMarkets(d.data.cryptoMarkets ?? [])
         setEconomicsMarkets(d.data.economicsMarkets ?? [])

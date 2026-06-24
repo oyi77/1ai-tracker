@@ -40,7 +40,7 @@ export default function TrendingCoinsPage() {
     try {
       const res = await fetch('/api/v1/trending-coins')
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setTokens(d.data.tokens ?? [])
         setGlobal(d.data.global ?? null)
         setStatus('live')

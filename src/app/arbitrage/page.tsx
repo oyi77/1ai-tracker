@@ -29,7 +29,7 @@ export default function ArbitragePage() {
     try {
       const res = await fetch('/api/v1/arbitrage')
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setOpps(d.data.cexArbitrage ?? [])
         setStatus('live')
       } else {

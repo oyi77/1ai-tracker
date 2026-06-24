@@ -42,7 +42,7 @@ export default function OrderBookPage() {
     try {
       const res = await fetch(`/api/v1/orderbook?symbol=${symbol}`)
       const d = await res.json()
-      if (d.success && d.data) {
+      if (d.data) {
         setData(d.data as OrderBookData)
         setStatus('live')
       } else {
