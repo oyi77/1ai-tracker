@@ -25,8 +25,8 @@ module.exports = {
     },
     {
       name: 'nexus-ws',
-      script: 'npm',
-      args: 'run dev',
+      script: 'npx',
+      args: 'tsx server.ts',
       cwd: '/home/openclaw/projects/1ai-tracker/ws-server',
       env: {
         REDIS_URL: 'redis://localhost:6379',
