@@ -82,6 +82,7 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/v1/arbitrage",
   "/api/v1/mev",
   "/api/v1/paper-trades",
+  "/api/v1/paper-trading",
   "/api/v1/paper-trades/stats",
   "/api/v1/paper-trades/resolve",
   "/api/v1/alpha-engine",
