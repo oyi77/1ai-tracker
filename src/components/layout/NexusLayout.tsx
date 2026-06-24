@@ -40,7 +40,6 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Derivatives',   href: '/derivatives',    icon: TrendingUp },
       { label: 'Basis Scanner', href: '/basis',          icon: Activity },
       { label: 'Liquidations',  href: '/liquidations',   icon: Activity },
-      { label: 'Heatmap',       href: '/liquidations/heatmap', icon: Activity },
     ],
   },
   {

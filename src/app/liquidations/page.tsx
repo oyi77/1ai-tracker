@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { DataTable, type Column } from '@/components/shell/DataTable'
@@ -16,6 +16,7 @@ interface HeatmapBin {
   longLiquidations: number
   shortLiquidations: number
   symbol: string
+  totalUsd?: number
 }
 
 interface FundingEntry {
@@ -32,15 +33,6 @@ interface PositionEntry {
   maxLeverage: number
 }
 
-interface SpotlightData {
-  symbol: string
-  price: number
-  markPrice: number
-  openInterest: number
-  fundingRate: number
-  maxLeverage: number
-}
-
 interface LeaderboardEntry {
   address: string
   pnl: number
@@ -48,38 +40,35 @@ interface LeaderboardEntry {
 }
 
 interface LiquidationsResponse {
-  spotlight: SpotlightData | null
+  spotlight: { symbol: string; price: number; markPrice: number; openInterest: number; fundingRate: number; maxLeverage: number; priceChange24h: number }
   heatmap: HeatmapBin[]
   fundingStrip: FundingEntry[]
   topPositions: PositionEntry[]
   leaderboard: LeaderboardEntry[]
 }
 
-// ── Helpers ───────────────────────────────────────────────
-
-/** Map density 0–1 to a cool→hot CSS colour. */
-function densityToColor(density: number, isLong: boolean): string {
-  if (density < 0.01) return 'rgba(30, 33, 38, 0.4)'
-
-  // Cool: #1d9e75 (teal-muted) → Hot: #F03D3D (bear red) through #F5A623 (warn amber)
-  if (isLong) {
-    // Longs: teal → amber → red intensity
-    const r = Math.round(29 + density * (240 - 29))
-    const g = Math.round(158 + density * (61 - 158))
-    const b = Math.round(117 + density * (61 - 117))
-    const a = 0.3 + density * 0.7
-    return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`
-  }
-  // Shorts: purple → red
-  const r = Math.round(155 + density * (240 - 155))
-  const g = Math.round(110 + density * (61 - 110))
-  const b = Math.round(245 + density * (61 - 245))
-  const a = 0.3 + density * 0.7
-  return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`
+interface Cluster {
+  priceLevel: number
+  usdValue: number
+  side: string
+  distance: string
 }
 
+interface BinanceHeatmapData {
+  symbol: string
+  currentPrice: number
+  markPrice: number
+  fundingRate: number
+  openInterest: number
+  heatmap: Array<{ priceLevel: number; density: number; longLiquidations: number; shortLiquidations: number; totalUsd: number }>
+  clusters: Cluster[]
+  recentLiquidations: Array<{ price: number; quantity: number; usdValue: number; side: string; usdFormatted: string; timestamp: number }>
+  range: { start: number; end: number; binSize: number }
+}
+
+// ── Helpers ────────────────────────────────────────────────
+
 function formatUsd(n: number): string {
-  if (n == null || isNaN(n)) return '—'
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
   if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`
@@ -87,429 +76,311 @@ function formatUsd(n: number): string {
 }
 
 function shortenAddress(addr: string): string {
-  if (addr.length <= 12) return addr
+  if (!addr || addr.length < 12) return addr ?? '—'
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`
 }
 
-// ── Components ────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────
 
-function FundingRateChip({ entry }: { entry: FundingEntry }) {
-  const isPositive = entry.rate > 0
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono tabular-nums whitespace-nowrap ${
-        isPositive ? 'bg-data-bear/10 text-data-bear' : 'bg-data-bull/10 text-data-bull'
-      }`}
-    >
-      <span className="font-bold">{entry.symbol}</span>
-      <span>{((entry.rate ?? 0) * 100).toFixed(4)}%</span>
-    </span>
-  )
-}
-
-function HeatmapCell({
-  bin,
-  maxPrice,
-}: {
-  bin: HeatmapBin
-  maxPrice: number
-}) {
-  const totalLiq = bin.longLiquidations + bin.shortLiquidations
-  const longRatio = totalLiq > 0 ? bin.longLiquidations / totalLiq : 0.5
-
-  // Build a split-cell background: left = longs, right = shorts
-  const longColor = densityToColor(bin.density * longRatio * 2, true)
-  const shortColor = densityToColor(bin.density * (1 - longRatio) * 2, false)
-
-  const pctFromSpot = maxPrice > 0
-    ? ((bin.priceLevel - maxPrice) / maxPrice) * 100
-    : 0
-
-  return (
-    <div
-      className="relative group border border-bg-border/30 hover:border-teal-vivid/40 transition-colors cursor-default"
-      style={{
-        background: `linear-gradient(to right, ${longColor} 50%, ${shortColor} 50%)`,
-        minHeight: 18,
-      }}
-    >
-      {/* Density label on hover */}
-      <div className="absolute inset-0 flex items-center justify-between px-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-        <span className="text-[7px] font-mono text-data-bull tabular-nums">
-          {bin.longLiquidations > 0 ? bin.longLiquidations.toFixed(2) : ''}
-        </span>
-        <span className="text-[7px] font-mono text-text-muted tabular-nums">
-          ${bin.priceLevel.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-        </span>
-        <span className="text-[7px] font-mono text-data-bear tabular-nums">
-          {bin.shortLiquidations > 0 ? bin.shortLiquidations.toFixed(2) : ''}
-        </span>
-      </div>
-
-      {/* Density indicator bar at bottom */}
-      <div
-        className="absolute bottom-0 left-0 right-0 bg-teal-vivid/20"
-        style={{ height: `${Math.max(1, bin.density * 100)}%` }}
-      />
-
-      {/* Spot price marker */}
-      {Math.abs(pctFromSpot) < 0.5 && (
-        <div className="absolute -left-1 top-0 bottom-0 w-0.5 bg-teal-vivid" />
-      )}
-    </div>
-  )
-}
-
-function SpotMarker({ price, label }: { price: number; label: string }) {
-  return (
-    <div className="flex items-center gap-1.5 px-2 py-1 bg-teal-vivid/10 border border-teal-vivid/30 rounded">
-      <span className="w-1.5 h-1.5 rounded-full bg-teal-vivid animate-live-dot" />
-      <span className="text-[9px] font-mono text-text-muted uppercase">{label}</span>
-      <PriceTag value={price} size="sm" className="text-teal-vivid font-bold" />
-    </div>
-  )
-}
-
-// ── Page ──────────────────────────────────────────────────
+const SYMBOLS = ['BTC', 'ETH', 'SOL', 'DOGE', 'XRP', 'AVAX', 'LINK', 'ARB', 'OP']
 
 export default function LiquidationsPage() {
   const [selectedSymbol, setSelectedSymbol] = useState('BTC')
+  const [tab, setTab] = useState<'heatmap' | 'clusters' | 'funding' | 'leaderboard'>('heatmap')
+  const [binanceData, setBinanceData] = useState<BinanceHeatmapData | null>(null)
 
-  const { data, status, refresh } = useLiveFetch<LiquidationsResponse>({
+  // Hyperliquid data
+  const { data: hlData, status: hlStatus, refresh } = useLiveFetch<LiquidationsResponse>({
     url: `/api/v1/liquidations?symbol=${selectedSymbol}`,
-    interval: 15_000,
-    initialData: { spotlight: null, heatmap: [], fundingStrip: [], topPositions: [], leaderboard: [] },
+    interval: 30_000,
   })
 
-  const spotlight = data?.spotlight ?? null
-  const heatmap = useMemo(() => data?.heatmap ?? [], [data])
-  const fundingStrip = useMemo(() => data?.fundingStrip ?? [], [data])
-  const topPositions = useMemo(() => data?.topPositions ?? [], [data])
-  const leaderboard = useMemo(() => data?.leaderboard ?? [], [data])
-  const marketCount = 0
+  // Binance heatmap data
+  const fetchBinance = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/v1/liquidations/heatmap?symbol=${selectedSymbol}`)
+      const d = await res.json()
+      if (d.data) setBinanceData(d.data as BinanceHeatmapData)
+    } catch { /* silent */ }
+  }, [selectedSymbol])
 
-  // Summary stats
-  const totalLongLiq = useMemo(
-    () => heatmap.reduce((s, b) => s + b.longLiquidations, 0),
-    [heatmap],
-  )
-  const totalShortLiq = useMemo(
-    () => heatmap.reduce((s, b) => s + b.shortLiquidations, 0),
-    [heatmap],
-  )
+  useEffect(() => {
+    fetchBinance()
+    const id = setInterval(fetchBinance, 15_000)
+    return () => clearInterval(id)
+  }, [fetchBinance])
+
+  const spotlight = hlData?.spotlight ?? null
+  const heatmap = hlData?.heatmap ?? []
+  const fundingStrip = hlData?.fundingStrip ?? []
+  const topPositions = hlData?.topPositions ?? []
+  const leaderboard = hlData?.leaderboard ?? []
+  const marketCount = hlData?.topPositions?.length ?? 0
+
+  const totalLongLiq = heatmap.reduce((s, b) => s + b.longLiquidations, 0)
+  const totalShortLiq = heatmap.reduce((s, b) => s + b.shortLiquidations, 0)
   const totalLiq = totalLongLiq + totalShortLiq
   const longDominance = totalLiq > 0 ? (totalLongLiq / totalLiq) * 100 : 50
 
-  // Highest density bins
-  const hotspots = useMemo(
-    () => [...heatmap].sort((a, b) => b.density - a.density).slice(0, 3),
-    [heatmap],
-  )
+  const maxDensity = binanceData ? Math.max(...binanceData.heatmap.map(b => b.density), 0.01) : 1
 
-  // Top positions table columns
   const posColumns: Column<PositionEntry>[] = [
-    {
-      key: 'symbol',
-      header: 'Pair',
-      width: 80,
-      render: r => (
-        <button
-          onClick={() => setSelectedSymbol(r.symbol)}
-          className={`font-bold text-[11px] ${
-            r.symbol === selectedSymbol ? 'text-teal-vivid' : 'text-text-primary hover:text-teal-vivid'
-          } transition-colors`}
-        >
-          {r.symbol}
-        </button>
-      ),
-    },
-    {
-      key: 'price',
-      header: 'Price',
-      width: 100,
-      align: 'right',
-      render: r => <PriceTag value={r.price} size="sm" />,
-    },
-    {
-      key: 'openInterest',
-      header: 'OI',
-      width: 100,
-      align: 'right',
-      render: r => (
-        <span className="text-text-primary font-mono text-[10px] tabular-nums">
-          {formatUsd(r.openInterest * r.price)}
-        </span>
-      ),
-    },
-    {
-      key: 'fundingRate',
-      header: 'Funding',
-      width: 80,
-      align: 'right',
-      render: r => (
-        <span
-          className={`font-mono text-[10px] tabular-nums ${
-            r.fundingRate > 0 ? 'text-data-bear' : r.fundingRate < 0 ? 'text-data-bull' : 'text-text-muted'
-          }`}
-        >
-          {r.fundingRate !== 0 ? `${((r.fundingRate ?? 0) * 100).toFixed(4)}%` : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'maxLeverage',
-      header: 'Max Lev',
-      width: 70,
-      align: 'right',
-      render: r => (
-        <span className="text-text-secondary font-mono text-[10px] tabular-nums">
-          {r.maxLeverage > 0 ? `${r.maxLeverage}×` : '—'}
-        </span>
-      ),
-    },
+    { key: 'symbol', header: 'Pair', width: 80, render: r => (
+      <button onClick={() => setSelectedSymbol(r.symbol)} className={`font-bold text-[11px] ${r.symbol === selectedSymbol ? 'text-teal-vivid' : 'text-text-primary hover:text-teal-vivid'} transition-colors`}>
+        {r.symbol}
+      </button>
+    )},
+    { key: 'price', header: 'Price', width: 100, align: 'right', render: r => <PriceTag value={r.price} size="sm" /> },
+    { key: 'openInterest', header: 'OI', width: 100, align: 'right', render: r => <span className="text-text-primary font-mono text-[10px] tabular-nums">{formatUsd(r.openInterest * r.price)}</span> },
+    { key: 'fundingRate', header: 'Funding', width: 80, align: 'right', render: r => (
+      <span className={`font-mono text-[10px] tabular-nums ${r.fundingRate > 0 ? 'text-data-bear' : 'text-data-bull'}`}>
+        {(r.fundingRate * 100).toFixed(4)}%
+      </span>
+    )},
+    { key: 'maxLeverage', header: 'Max Lev', width: 60, align: 'right', render: r => <span className="text-text-secondary font-mono text-[10px]">{r.maxLeverage}×</span> },
   ]
 
-  // Leaderboard columns
   const lbColumns: Column<LeaderboardEntry>[] = [
-    {
-      key: 'address',
-      header: 'Trader',
-      width: 120,
-      render: r => (
-        <span className="text-teal-vivid font-mono text-[10px]">
-          {shortenAddress(r.address)}
-        </span>
-      ),
-    },
-    {
-      key: 'pnl',
-      header: 'PnL',
-      width: 100,
-      align: 'right',
-      render: r => (
-        <span className={`font-mono text-[10px] tabular-nums ${r.pnl >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
-          {formatUsd(r.pnl)}
-        </span>
-      ),
-    },
-    {
-      key: 'volume',
-      header: 'Volume',
-      width: 100,
-      align: 'right',
-      render: r => (
-        <span className="text-text-secondary font-mono text-[10px] tabular-nums">
-          {formatUsd(r.volume)}
-        </span>
-      ),
-    },
+    { key: 'address', header: 'Trader', width: 140, render: r => <span className="text-text-muted font-mono text-[10px]">{shortenAddress(r.address)}</span> },
+    { key: 'pnl', header: 'PnL', width: 100, align: 'right', render: r => <span className={`font-mono text-[10px] tabular-nums ${r.pnl >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>{formatUsd(r.pnl)}</span> },
+    { key: 'volume', header: 'Volume', width: 100, align: 'right', render: r => <span className="text-text-secondary font-mono text-[10px] tabular-nums">{formatUsd(r.volume)}</span> },
   ]
 
   return (
     <NexusLayout>
       <div className="p-3 space-y-3">
-        {/* ── Header ──────────────────────────────────────── */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] font-head font-bold text-text-primary">
-              Liquidation Heatmap
-            </h1>
+            <h1 className="text-[20px] font-head font-bold text-text-primary">Liquidation Center</h1>
             <p className="text-[11px] text-text-muted font-mono">
-              Hyperliquid {marketCount > 0 ? `· ${marketCount} markets` : ''} — estimated
-              liquidation zones by leverage tier
+              Hyperliquid + Binance • {marketCount} markets • Real-time heatmap
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {spotlight && <SpotMarker price={spotlight.price} label={spotlight.symbol} />}
-            <LiveDot status={status} label />
+          <div className="flex items-center gap-3">
+            <div className="flex bg-bg-raised p-1 rounded">
+              {SYMBOLS.map(s => (
+                <button key={s} onClick={() => setSelectedSymbol(s)}
+                  className={`px-2 py-0.5 text-[10px] font-mono rounded transition-colors ${selectedSymbol === s ? 'bg-teal-vivid text-bg-base font-bold' : 'text-text-muted hover:text-text-primary'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <LiveDot status={hlStatus} label />
           </div>
         </div>
 
-        {/* ── Funding Rate Strip ──────────────────────────── */}
-        <Panel
-          title="Funding Rates"
-          subtitle={`${fundingStrip.length} active`}
-          liveStatus={status}
-          onRefresh={refresh}
-        >
-          <div className="flex gap-1.5 p-2 overflow-x-auto scrollbar-thin">
-            {fundingStrip.length > 0
-              ? fundingStrip.map(f => <FundingRateChip key={f.symbol} entry={f} />)
-              : <span className="text-text-muted text-[10px] font-mono p-1">Loading funding data…</span>}
-          </div>
-        </Panel>
-
-        {/* ── Summary Stats ───────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-1">
-          {[
-            { l: 'Spot Price', v: spotlight ? <PriceTag value={spotlight.price} size="md" /> : '—' },
-            { l: 'Long Liq Zone', v: <span className="text-data-bull tabular-nums">{formatUsd(totalLongLiq)}</span> },
-            { l: 'Short Liq Zone', v: <span className="text-data-bear tabular-nums">{formatUsd(totalShortLiq)}</span> },
-            {
-              l: 'Long/Short Ratio',
-              v: (
-                <span className="tabular-nums">
-                  <span className="text-data-bull">{longDominance.toFixed(0)}%</span>
-                  <span className="text-text-muted mx-0.5">/</span>
-                  <span className="text-data-bear">{(100 - longDominance).toFixed(0)}%</span>
-                </span>
-              ),
-            },
-            {
-              l: 'Max Leverage',
-              v: spotlight && spotlight.maxLeverage > 0
-                ? <span className="text-text-primary">{spotlight.maxLeverage}×</span>
-                : '—',
-            },
-          ].map((k, i) => (
-            <div key={i} className="bg-bg-panel border border-bg-border px-3 py-2">
-              <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">
-                {k.l}
-              </div>
-              <div className="text-[16px] font-head font-bold text-text-primary tabular-nums">
-                {k.v}
-              </div>
-            </div>
+        {/* Tab Bar */}
+        <div className="flex items-center gap-1">
+          {(['heatmap', 'clusters', 'funding', 'leaderboard'] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`px-3 py-1.5 text-[11px] font-mono rounded uppercase transition-colors ${tab === t ? 'bg-teal-vivid text-bg-base font-bold' : 'text-text-muted hover:text-text-primary bg-bg-raised'}`}>
+              {t}
+            </button>
           ))}
         </div>
 
-        {/* ── Hotspot Indicators ──────────────────────────── */}
-        {hotspots.length > 0 && hotspots[0].density > 0 && (
-          <div className="flex items-center gap-3 px-1">
-            <span className="text-[9px] font-mono text-text-muted uppercase tracking-wider">
-              Hotspots:
-            </span>
-            {hotspots.map((h, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-data-bear/10 border border-data-bear/20"
-              >
-                <span className="w-1 h-1 rounded-full bg-data-bear animate-pulse" />
-                <span className="text-[10px] font-mono text-data-bear tabular-nums">
-                  ${h.priceLevel.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </span>
-                <span className="text-[8px] font-mono text-text-muted">
-                  {h.longLiquidations > 0 ? `L:${h.longLiquidations.toFixed(2)}` : ''}
-                  {h.shortLiquidations > 0 ? ` S:${h.shortLiquidations.toFixed(2)}` : ''}
-                </span>
-              </span>
-            ))}
+        {/* KPI Strip */}
+        <div className="grid grid-cols-6 gap-1">
+          <KPI label="Spot Price" value={spotlight ? `$${spotlight.price.toLocaleString()}` : '—'} />
+          <KPI label="Mark Price" value={binanceData ? `$${binanceData.markPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'} />
+          <KPI label="Open Interest" value={binanceData ? formatUsd(binanceData.openInterest * binanceData.currentPrice) : '—'} />
+          <KPI label="Funding" value={binanceData ? `${(binanceData.fundingRate * 100).toFixed(4)}%` : '—'} color={binanceData && binanceData.fundingRate > 0 ? 'text-data-bear' : 'text-data-bull'} />
+          <KPI label="Long Liq Zone" value={formatUsd(totalLongLiq)} color="text-data-bull" />
+          <KPI label="Short Liq Zone" value={formatUsd(totalShortLiq)} color="text-data-bear" />
+        </div>
+
+        {/* ── TAB: Heatmap ── */}
+        {tab === 'heatmap' && (
+          <div className="space-y-3">
+            {/* Binance Real Heatmap */}
+            <Panel title={`Liquidation Heatmap — ${selectedSymbol}`} subtitle="Price levels ±20% • Real-time from Binance Futures" liveStatus={binanceData ? 'live' : 'stale'}>
+              {binanceData && binanceData.heatmap.length > 0 ? (
+                <div className="p-4 space-y-1 max-h-[500px] overflow-y-auto">
+                  <div className="flex items-center justify-center mb-2">
+                    <div className="px-3 py-1 bg-teal-vivid/20 border border-teal-vivid rounded text-[11px] font-mono font-bold text-teal-vivid">
+                      Current: ${binanceData.currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                  {binanceData.heatmap
+                    .filter(b => b.density > 0.001)
+                    .sort((a, b) => b.priceLevel - a.priceLevel)
+                    .map((bin, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-text-muted w-20 text-right tabular-nums">
+                          ${bin.priceLevel.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </span>
+                        <div className="flex-1 h-5 bg-bg-raised rounded relative overflow-hidden">
+                          <div className="absolute left-0 top-0 h-full bg-data-bull/60 transition-all duration-300"
+                            style={{ width: `${(bin.longLiquidations / (bin.longLiquidations + bin.shortLiquidations || 1)) * bin.density * 100}%` }} />
+                          <div className="absolute right-0 top-0 h-full bg-data-bear/60 transition-all duration-300"
+                            style={{ width: `${(bin.shortLiquidations / (bin.longLiquidations + bin.shortLiquidations || 1)) * bin.density * 100}%` }} />
+                          {bin.density > 0.1 && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[9px] font-mono text-white font-bold drop-shadow-md">
+                              {formatUsd(bin.totalUsd ?? 0)}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[9px] font-mono text-text-muted w-16 tabular-nums">
+                          {bin.density > 0.01 ? `${(bin.density * 100).toFixed(0)}%` : ''}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="p-8 text-text-muted text-[12px] font-mono text-center">Loading heatmap...</div>
+              )}
+            </Panel>
+
+            {/* Hyperliquid Heatmap (grid style) */}
+            <Panel title={`Hyperliquid Zones — ${selectedSymbol}`} subtitle="Estimated liquidation zones by leverage tier" liveStatus={hlStatus}>
+              {heatmap.length > 0 && heatmap.some(b => b.density > 0) ? (
+                <div className="p-2">
+                  <div className="flex">
+                    <div className="flex flex-col justify-between pr-2 shrink-0 w-16">
+                      {[...heatmap].reverse().filter((_, i) => i % 5 === 0).map((bin, i) => (
+                        <span key={i} className="text-[8px] font-mono text-text-muted tabular-nums text-right leading-none">
+                          ${bin.priceLevel.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex-1 grid gap-px" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(12px, 1fr))', gridTemplateRows: `repeat(${heatmap.length}, 18px)` }}>
+                      {[...heatmap].reverse().map((bin, i) => {
+                        const longD = bin.longLiquidations
+                        const shortD = bin.shortLiquidations
+                        const maxD = Math.max(longD, shortD, 1)
+                        const intensity = Math.min(1, bin.density)
+                        return (
+                          <div key={i} className="rounded-sm transition-colors"
+                            style={{
+                              background: longD > shortD
+                                ? `rgba(38, 166, 154, ${intensity * 0.7})`
+                                : shortD > longD
+                                ? `rgba(239, 83, 80, ${intensity * 0.7})`
+                                : `rgba(100, 100, 100, ${intensity * 0.2})`,
+                              borderLeft: longD > 0 ? '2px solid rgba(38, 166, 154, 0.4)' : undefined,
+                              borderRight: shortD > 0 ? '2px solid rgba(239, 83, 80, 0.4)' : undefined,
+                            }}
+                            title={`$${bin.priceLevel.toFixed(0)} | L:${longD.toFixed(2)} S:${shortD.toFixed(2)} | Density:${(bin.density * 100).toFixed(0)}%`}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-bg-border">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1.5 text-[9px] font-mono text-text-muted"><span className="w-3 h-3 rounded-sm bg-data-bull/60" />Long Liqs</span>
+                      <span className="flex items-center gap-1.5 text-[9px] font-mono text-text-muted"><span className="w-3 h-3 rounded-sm bg-data-bear/60" />Short Liqs</span>
+                    </div>
+                    <span className="text-[8px] font-mono text-text-muted">{heatmap.length} bins</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-text-muted text-[11px] p-4 text-center font-mono">Computing liquidation zones…</div>
+              )}
+            </Panel>
           </div>
         )}
 
-        {/* ── Heatmap ────────────────────────────────────── */}
-        <Panel
-          title={`Liquidation Heatmap — ${spotlight?.symbol ?? '—'}`}
-          subtitle="Price levels ±15% — left=longs, right=shorts"
-          liveStatus={status}
-          maxHeight={700}
-        >
-          {heatmap.length > 0 ? (
-            <div className="p-2">
-              {/* Y-axis labels + grid */}
-              <div className="flex">
-                {/* Price labels column */}
-                <div className="flex flex-col justify-between pr-2 shrink-0 w-16">
-                  {[...heatmap].reverse().filter((_, i) => i % 5 === 0).map((bin, i) => (
-                    <span key={i} className="text-[8px] font-mono text-text-muted tabular-nums text-right leading-none">
-                      ${bin.priceLevel.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+        {/* ── TAB: Clusters ── */}
+        {tab === 'clusters' && (
+          <div className="space-y-3">
+            <Panel title="Liquidation Clusters" subtitle="High-density zones from Binance" liveStatus={binanceData ? 'live' : 'stale'}>
+              <div className="p-3 space-y-2">
+                {(binanceData?.clusters ?? []).map((c, i) => (
+                  <div key={i} className={`flex items-center justify-between p-3 rounded ${c.side === 'long' ? 'bg-data-bull/5 border border-data-bull/30' : 'bg-data-bear/5 border border-data-bear/30'}`}>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[11px] font-mono font-bold ${c.side === 'long' ? 'text-data-bull' : 'text-data-bear'}`}>{c.side.toUpperCase()}</span>
+                      <span className="text-[14px] font-mono font-bold text-text-primary tabular-nums">${c.priceLevel.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-mono text-text-muted">{c.distance}% away</span>
+                      <span className="text-[13px] font-mono font-bold text-text-primary tabular-nums">{formatUsd(c.usdValue)}</span>
+                    </div>
+                  </div>
+                ))}
+                {(!binanceData?.clusters || binanceData.clusters.length === 0) && (
+                  <div className="text-text-muted text-[11px] font-mono p-4 text-center">No clusters detected</div>
+                )}
+              </div>
+            </Panel>
+
+            <Panel title="Recent Liquidations" subtitle="Last 20 forced closes from Binance" liveStatus={binanceData ? 'live' : 'stale'}>
+              <div className="p-3 space-y-1 max-h-[300px] overflow-y-auto">
+                {(binanceData?.recentLiquidations ?? []).map((liq, i) => (
+                  <div key={i} className="flex items-center justify-between py-1.5 border-b border-bg-border/50">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${liq.side === 'long' ? 'bg-data-bear/20 text-data-bear' : 'bg-data-bull/20 text-data-bull'}`}>
+                        {liq.side === 'long' ? 'LIQ LONG' : 'LIQ SHORT'}
+                      </span>
+                      <span className="text-[11px] font-mono text-text-primary tabular-nums">${liq.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <span className="text-[11px] font-mono font-bold text-text-primary tabular-nums">{liq.usdFormatted}</span>
+                  </div>
+                ))}
+                {(!binanceData?.recentLiquidations || binanceData.recentLiquidations.length === 0) && (
+                  <div className="text-text-muted text-[11px] font-mono p-4 text-center">No liquidations in window</div>
+                )}
+              </div>
+            </Panel>
+          </div>
+        )}
+
+        {/* ── TAB: Funding ── */}
+        {tab === 'funding' && (
+          <Panel title="Funding Rates" subtitle={`${fundingStrip.length} active`} liveStatus={hlStatus} onRefresh={refresh}>
+            <div className="p-3 grid grid-cols-4 gap-2">
+              {fundingStrip.map(f => (
+                <div key={f.symbol} className="bg-bg-raised p-3 rounded border border-bg-border">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[12px] font-mono font-bold text-text-primary">{f.symbol}</span>
+                    <span className={`text-[11px] font-mono font-bold ${f.rate > 0 ? 'text-data-bear' : 'text-data-bull'}`}>
+                      {(f.rate * 100).toFixed(4)}%
                     </span>
-                  ))}
-                </div>
-
-                {/* Heatmap grid */}
-                <div
-                  className="flex-1 grid gap-px"
-                  style={{
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(12px, 1fr))',
-                    gridTemplateRows: `repeat(${heatmap.length}, 18px)`,
-                  }}
-                >
-                  {[...heatmap].reverse().map((bin, i) => (
-                    <HeatmapCell
-                      key={i}
-                      bin={bin}
-                      maxPrice={spotlight?.price ?? 0}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-bg-border">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ background: densityToColor(0.8, true) }} />
-                    <span className="text-[9px] font-mono text-text-muted">Long Liqs</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm" style={{ background: densityToColor(0.8, false) }} />
-                    <span className="text-[9px] font-mono text-text-muted">Short Liqs</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-sm bg-bg-raised" />
-                    <span className="text-[9px] font-mono text-text-muted">Low Density</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-0.5 h-3 bg-teal-vivid" />
-                    <span className="text-[9px] font-mono text-text-muted">Spot Price</span>
+                  <div className="text-[10px] font-mono text-text-muted">
+                    Ann: {f.annualized.toFixed(1)}%
                   </div>
                 </div>
-                <span className="text-[8px] font-mono text-text-muted">
-                  {heatmap.length} bins · est. from {LEVERAGE_TIERS_LABEL}
-                </span>
-              </div>
+              ))}
+              {fundingStrip.length === 0 && (
+                <div className="col-span-4 text-text-muted text-[11px] font-mono p-4 text-center">Loading funding data…</div>
+              )}
             </div>
-          ) : (
-            <div className="text-text-muted text-[11px] p-4 text-center font-mono">
-              {status === 'error' ? 'Failed to load data — check network' : 'Computing liquidation zones…'}
-            </div>
-          )}
-        </Panel>
-
-        {/* ── Bottom Grid: Positions + Leaderboard ────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <Panel
-            title="Top Positions by OI"
-            subtitle="Click symbol to focus heatmap"
-            liveStatus={status}
-            maxHeight={400}
-          >
-            <DataTable
-              columns={posColumns as unknown as Column<Record<string, unknown>>[]}
-              data={topPositions as unknown as Record<string, unknown>[]}
-              sortable
-              rowHeight={28}
-              emptyState={
-                <div className="text-text-muted text-[11px] p-4 text-center font-mono">
-                  Loading positions…
-                </div>
-              }
-            />
           </Panel>
+        )}
 
-          <Panel
-            title="Hyperliquid Leaderboard"
-            subtitle="Top traders by PnL"
-            liveStatus={status}
-            maxHeight={400}
-          >
-            <DataTable
-              columns={lbColumns as unknown as Column<Record<string, unknown>>[]}
-              data={leaderboard as unknown as Record<string, unknown>[]}
-              sortable
-              rowHeight={28}
-              emptyState={
-                <div className="text-text-muted text-[11px] p-4 text-center font-mono">
-                  Loading leaderboard…
-                </div>
-              }
-            />
-          </Panel>
-        </div>
+        {/* ── TAB: Leaderboard ── */}
+        {tab === 'leaderboard' && (
+          <div className="grid grid-cols-2 gap-3">
+            <Panel title="Top Positions by OI" subtitle="Click symbol to focus" liveStatus={hlStatus} maxHeight={500}>
+              <DataTable
+                columns={posColumns as unknown as Column<Record<string, unknown>>[]}
+                data={topPositions as unknown as Record<string, unknown>[]}
+                sortable rowHeight={28}
+                emptyState={<div className="text-text-muted text-[11px] p-4 text-center font-mono">Loading positions…</div>}
+              />
+            </Panel>
+            <Panel title="Hyperliquid Leaderboard" subtitle="Top traders by PnL" liveStatus={hlStatus} maxHeight={500}>
+              <DataTable
+                columns={lbColumns as unknown as Column<Record<string, unknown>>[]}
+                data={leaderboard as unknown as Record<string, unknown>[]}
+                sortable rowHeight={28}
+                emptyState={<div className="text-text-muted text-[11px] p-4 text-center font-mono">Loading leaderboard…</div>}
+              />
+            </Panel>
+          </div>
+        )}
       </div>
     </NexusLayout>
   )
 }
 
-const LEVERAGE_TIERS_LABEL = '2×, 3×, 5×, 10×, 20×, 50×, 75×, 100×'
+function KPI({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="bg-bg-panel border border-bg-border px-3 py-2 rounded">
+      <div className="text-[9px] text-text-muted font-mono uppercase mb-1">{label}</div>
+      <div className={`text-[14px] font-head font-bold tabular-nums ${color ?? 'text-text-primary'}`}>{value}</div>
+    </div>
+  )
+}
