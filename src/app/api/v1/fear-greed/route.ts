@@ -97,20 +97,13 @@ function scoreToRegime(score: number): { state: string; stance: string } {
 
 // ─── Cache ─────────────────────────────────────────────────
 
-let cachedData: FearGreedData | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
 // ─── Handler ───────────────────────────────────────────────
 
 export async function GET(_request: NextRequest) {
   try {
-    const now = Date.now();
-    if (cachedData && now - cacheTimestamp < CACHE_TTL_MS) {
-      const r = apiSuccess(cachedData);
-      r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
-      return r
-    }
+    const { getCached } = await import('@/lib/api/server-cache')
+    
+    const { data: result, fromCache } = await getCached('fear-greed', 5 * 60 * 1000, async () => {
 
     // Fetch all sources in parallel
     const [fngRes, geckoRes, globalData, btcTicker] = await Promise.all([
@@ -200,11 +193,12 @@ export async function GET(_request: NextRequest) {
       history,
     };
 
-    cachedData = result;
-    cacheTimestamp = now;
+    return result
+    })
 
     const r = apiSuccess(result);
     r.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    r.headers.set('X-Cache', fromCache ? 'HIT' : 'MISS')
     return r
   } catch (error) {
     console.error("GET /api/v1/fear-greed error:", error);

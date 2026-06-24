@@ -1,117 +1,87 @@
 // ─────────────────────────────────────────────────────────────
 // GET /api/v1/market/prices — Live prices for ticker strip
-// Expanded with cross-asset tickers via Yahoo Finance
+// Uses Binance (crypto) + Yahoo Finance (tradfi) + EastMoney
+// All wrapped in getCached with single-flight dedup
 // ─────────────────────────────────────────────────────────────
 
-import { apiSuccess, apiError } from '@/lib/api/response'
-import { registerAllModules } from '@/lib/modules'
+import { NextResponse } from 'next/server'
+import { getCached } from '@/lib/api/server-cache'
 
-export async function GET() {
-  const registry = registerAllModules()
+interface TickerItem {
+  symbol: string
+  price: string
+  change: string
+  positive: boolean
+}
 
+async function fetchPrices(): Promise<TickerItem[]> {
+  const tickers: TickerItem[] = []
+
+  // Crypto from Binance (no rate limits)
   try {
-    // Use Binance for crypto prices (no rate limits, no API key)
-    const cgPromise = fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT"]', {
+    const res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbols=["BTCUSDT","ETHUSDT","SOLUSDT"]', {
       signal: AbortSignal.timeout(10_000),
-    }).then(r => r.json()).then(data => {
-      const result: Record<string, { usd: number; usd_24h_change: number }> = {}
-      const map: Record<string, string> = { BTCUSDT: 'bitcoin', ETHUSDT: 'ethereum', SOLUSDT: 'solana' }
-      for (const t of data as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>) {
-        const id = map[t.symbol]
-        if (id) result[id] = { usd: parseFloat(t.lastPrice), usd_24h_change: parseFloat(t.priceChangePercent) }
-      }
-      return { data: result }
-    }).catch(() => null)
-
-    const yfPromise = registry.fetchOne<Record<string, unknown>[]>(
-      'yahoo-finance',
-      { action: 'quote', symbols: '^JKSE,^GSPC,USDIDR=X,GC=F' }
-    ).catch(() => null)
-
-    const emPromise = registry.fetchOne<Record<string, unknown>>(
-      'eastmoney',
-      { action: 'get' }
-    ).catch(() => null)
-
-    const [cgResult, yfResult, emResult] = await Promise.all([cgPromise, yfPromise, emPromise])
-
-    const data = (cgResult as { data?: Record<string, { usd: number; usd_24h_change: number }> })?.data ?? {}
-
-    const coins = [
-      { id: 'bitcoin', symbol: 'BTC' },
-      { id: 'ethereum', symbol: 'ETH' },
-      { id: 'solana', symbol: 'SOL' },
-    ]
-
-    const tickers = coins.map(c => {
-      const coin = data[c.id]
-      return {
-        symbol: c.symbol,
-        price: coin ? fmtPrice(coin.usd) : '—',
-        change: coin ? fmtChange(coin.usd_24h_change) : '—',
-        positive: (coin?.usd_24h_change ?? 0) >= 0,
-      }
     })
+    if (res.ok) {
+      const data = (await res.json()) as Array<{ symbol: string; lastPrice: string; priceChangePercent: string }>
+      const map: Record<string, string> = { BTCUSDT: 'BTC', ETHUSDT: 'ETH', SOLUSDT: 'SOL' }
+      for (const t of data) {
+        const sym = map[t.symbol]
+        if (sym) {
+          const price = parseFloat(t.lastPrice)
+          const change = parseFloat(t.priceChangePercent)
+          tickers.push({
+            symbol: sym,
+            price: price >= 1000 ? `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : `$${price.toFixed(2)}`,
+            change: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
+            positive: change >= 0,
+          })
+        }
+      }
+    }
+  } catch { /* Binance down */ }
+
+  // TradFi from Yahoo Finance (via our module)
+  try {
+    const { registerAllModules } = await import('@/lib/modules')
+    const registry = registerAllModules()
+    const yfResult = await registry.fetchOne<Array<Record<string, unknown>>>(
+      'yahoo-finance', { action: 'quote', symbols: '^JKSE,^GSPC,USDIDR=X,GC=F' }
+    ).catch(() => null)
 
     if (yfResult?.data && Array.isArray(yfResult.data)) {
       for (const item of yfResult.data) {
-        const rec = item as Record<string, unknown>
-        let sym = String(rec.symbol ?? '')
+        let sym = String(item.symbol ?? '')
         if (sym === '^JKSE') sym = 'IHSG'
         if (sym === '^GSPC') sym = 'S&P 500'
         if (sym === 'USDIDR=X') sym = 'USD/IDR'
         if (sym === 'GC=F') sym = 'GOLD'
-        
-        const price = rec.regularMarketPrice as number | undefined
-        const changePct = rec.regularMarketChangePercent as number | undefined
+
+        const price = item.regularMarketPrice as number | undefined
+        const changePct = item.regularMarketChangePercent as number | undefined
         tickers.push({
           symbol: sym,
-          price: price ? fmtPriceRaw(price, sym === 'USD/IDR' ? 0 : 2) : '—',
-          change: changePct ? fmtChange(changePct) : '—',
+          price: price ? (price >= 1000 ? price.toLocaleString('en-US', { maximumFractionDigits: sym === 'USD/IDR' ? 0 : 2 }) : price.toFixed(2)) : '—',
+          change: changePct ? `${changePct >= 0 ? '+' : ''}${changePct.toFixed(1)}%` : '—',
           positive: (changePct ?? 0) >= 0,
         })
       }
     }
+  } catch { /* Yahoo down */ }
 
-    const emData = emResult?.data as Record<string, unknown> | undefined
-    const emInner = emData?.data as Record<string, unknown> | undefined
-    if (emInner?.diff && Array.isArray(emInner.diff)) {
-      const aShares = emInner.diff as Record<string, unknown>[]
-      if (aShares.length > 0) {
-         // Add Shanghai Composite or top A-share just as an example
-         const top = aShares[0]
-         if (top) {
-           tickers.push({
-             symbol: 'CSI300 (EastMoney)',
-             price: String(top.f2),
-             change: fmtChange(top.f3 as number),
-             positive: (top.f3 as number) >= 0
-           })
-         }
-      }
-    }
+  return tickers
+}
 
+export async function GET() {
+  try {
+    const { data: tickers, fromCache } = await getCached('market:prices', 15_000, fetchPrices)
 
-    const r = apiSuccess({ tickers })
-    r.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
-    return r
+    const resp = NextResponse.json({ data: { tickers }, error: null })
+    resp.headers.set('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
+    resp.headers.set('X-Cache', fromCache ? 'HIT' : 'MISS')
+    return resp
   } catch (err) {
     console.error('[market/prices] Error:', err)
-    return apiError('Failed to fetch market prices', 502)
+    return NextResponse.json({ data: null, error: 'Failed to fetch prices' }, { status: 502 })
   }
-}
-
-function fmtPrice(n?: number): string {
-  if (n == null) return '—'
-  return n >= 1000 ? `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : `$${n.toFixed(2)}`
-}
-
-function fmtPriceRaw(n: number, decimals: number = 2): string {
-  return n >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: decimals }) : n.toFixed(decimals)
-}
-
-function fmtChange(n?: number): string {
-  if (n == null) return '—'
-  const sign = n >= 0 ? '+' : ''
-  return `${sign}${n.toFixed(1)}%`
 }
