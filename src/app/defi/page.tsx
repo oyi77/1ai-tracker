@@ -27,8 +27,8 @@ export default function DeFiPage() {
       if (chain) params.set('chain', chain)
       const res = await fetch(`/api/v1/defi/tvl?${params}`)
       const data = await res.json()
-      setProtocols(data.protocols ?? [])
-      setTotalTvl(data.totalTvl ?? 0)
+      setProtocols(data.data?.protocols ?? data.protocols ?? [])
+      setTotalTvl(data.data?.totalTvl ?? data.totalTvl ?? 0)
     } catch {
       // Silent
     } finally {

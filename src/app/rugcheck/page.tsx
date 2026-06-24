@@ -88,6 +88,51 @@ export default function RugcheckPage() {
           </div>
         </Panel>
 
+        {/* Educational content when no search */}
+        {!result && !loading && (
+          <div className="grid grid-cols-2 gap-3">
+            <Panel title="How to Spot a Rug Pull" subtitle="Common red flags">
+              <div className="p-3 space-y-2">
+                {[
+                  { icon: '🔴', title: 'Honeypot Contract', desc: 'Token can be bought but not sold. Check sell function before buying.' },
+                  { icon: '🔴', title: 'Mint Function', desc: 'Owner can create unlimited tokens, diluting your holdings.' },
+                  { icon: '🔴', title: 'Unlocked Liquidity', desc: 'Dev can pull liquidity at any time, crashing the price to zero.' },
+                  { icon: '🔴', title: 'High Owner Concentration', desc: 'Top 10 wallets hold >80% of supply — one sell = crash.' },
+                  { icon: '🟡', title: 'No Verified Contract', desc: 'Source code not verified on Etherscan — could hide malicious functions.' },
+                  { icon: '🟡', title: 'New Contract (< 24h)', desc: 'Very new tokens have no track record — higher risk.' },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 py-1">
+                    <span className="text-[14px]">{item.icon}</span>
+                    <div>
+                      <div className="text-[11px] font-mono font-bold text-text-primary">{item.title}</div>
+                      <div className="text-[10px] font-mono text-text-muted">{item.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+
+            <Panel title="Quick Check" subtitle="Popular tokens to verify">
+              <div className="p-3 space-y-2">
+                {[
+                  { name: 'USDT (Tether)', addr: '0xdAC17F958D2ee523a2206206994597C13D831ec7' },
+                  { name: 'USDC (Circle)', addr: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' },
+                  { name: 'DAI (MakerDAO)', addr: '0x6B175474E89094C44Da98b954EedeAC495271d0F' },
+                  { name: 'LINK (Chainlink)', addr: '0x514910771AF9Ca656af840dff83E8264EcF986CA' },
+                  { name: 'UNI (Uniswap)', addr: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984' },
+                  { name: 'AAVE', addr: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33e2DdAE9' },
+                ].map((t, i) => (
+                  <button key={i} onClick={() => { setAddress(t.addr) }}
+                    className="flex items-center justify-between w-full py-1.5 px-2 rounded hover:bg-bg-raised transition-colors text-left">
+                    <span className="text-[11px] font-mono text-text-primary">{t.name}</span>
+                    <span className="text-[10px] font-mono text-teal-vivid">Check →</span>
+                  </button>
+                ))}
+              </div>
+            </Panel>
+          </div>
+        )}
+
         {/* Result */}
         {result && (
           <>
