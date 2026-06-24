@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { NexusLayout } from '@/components/layout/NexusLayout'
+// NexusLayout removed — sub-pages have their own
 import ScannerPage from '../scanner/page'
 import DexPage from '../dex/page'
 import TrendingPage from '../trending/page'
@@ -20,7 +20,7 @@ export default function TradingPage() {
   const [tab, setTab] = useState<TabKey>('scanner')
 
   return (
-    <NexusLayout>
+    
       <div className="flex flex-col h-full">
         {/* Tab Bar */}
         <div className="flex items-center gap-1 px-4 py-2 border-b border-bg-border bg-bg-panel shrink-0">
@@ -47,6 +47,6 @@ export default function TradingPage() {
           {tab === 'rugcheck' && <RugcheckPage />}
         </div>
       </div>
-    </NexusLayout>
+    
   )
 }

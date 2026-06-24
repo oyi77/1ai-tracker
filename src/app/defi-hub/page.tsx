@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { NexusLayout } from '@/components/layout/NexusLayout'
+// NexusLayout removed — sub-pages have their own
 import DeFiPage from '../defi/page'
 import YieldsPage from '../yields/page'
 import SectorsPage from '../sectors/page'
@@ -20,7 +20,7 @@ export default function DefiHubPage() {
   const [tab, setTab] = useState<TabKey>('defi')
 
   return (
-    <NexusLayout>
+    
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-1 px-4 py-2 border-b border-bg-border bg-bg-panel shrink-0">
           {TABS.map(t => (
@@ -44,6 +44,6 @@ export default function DefiHubPage() {
           {tab === 'revenue' && <RevenuePage />}
         </div>
       </div>
-    </NexusLayout>
+    
   )
 }

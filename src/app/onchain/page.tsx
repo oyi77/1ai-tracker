@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { NexusLayout } from '@/components/layout/NexusLayout'
+// NexusLayout removed — sub-pages have their own
 import WhaleClusterPage from '../whale-cluster/page'
 import SmartMoneyPage from '../smart-money/page'
 import EntitiesPage from '../entities/page'
@@ -22,7 +22,7 @@ export default function OnchainHubPage() {
   const [tab, setTab] = useState<TabKey>('whale')
 
   return (
-    <NexusLayout>
+    
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-1 px-4 py-2 border-b border-bg-border bg-bg-panel shrink-0">
           {TABS.map(t => (
@@ -47,6 +47,6 @@ export default function OnchainHubPage() {
           {tab === 'insider' && <InsiderPage />}
         </div>
       </div>
-    </NexusLayout>
+    
   )
 }

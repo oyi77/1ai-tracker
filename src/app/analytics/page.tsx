@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { NexusLayout } from '@/components/layout/NexusLayout'
+// NexusLayout removed — sub-pages have their own
 import AlphaEnginePage from '../alpha-engine/page'
 import PredictionMarketsPage from '../prediction-markets/page'
 import PredictionsPage from '../predictions/page'
@@ -18,7 +18,7 @@ export default function AnalyticsHubPage() {
   const [tab, setTab] = useState<TabKey>('alpha')
 
   return (
-    <NexusLayout>
+    
       <div className="flex flex-col h-full">
         <div className="flex items-center gap-1 px-4 py-2 border-b border-bg-border bg-bg-panel shrink-0">
           {TABS.map(t => (
@@ -41,6 +41,6 @@ export default function AnalyticsHubPage() {
           {tab === 'paper' && <PredictionsPage />}
         </div>
       </div>
-    </NexusLayout>
+    
   )
 }
