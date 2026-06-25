@@ -7,7 +7,7 @@ import { Panel } from '@/components/shell/Panel'
 import { PriceTag } from '@/components/primitives/PriceTag'
 import { DeltaBadge } from '@/components/primitives/DeltaBadge'
 import { LiveDot } from '@/components/primitives/LiveDot'
-import { CandlestickChart } from '@/components/features/CandlestickChart'
+import { TradingViewChart } from '@/components/features/TradingViewChart'
 
 interface TokenInfo {
   symbol: string
@@ -47,8 +47,7 @@ export default function TokenDetailPage() {
   const [indicators, setIndicators] = useState<Record<string, Array<{ time: number; value: number }>>>({})
   const [interval, setIntervalStr] = useState('1h')
   const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
-  const [chartStatus, setChartStatus] = useState<'loading' | 'live' | 'error'>('loading')
-
+  
   useEffect(() => {
     if (!address) return
     setStatus('stale')
@@ -71,8 +70,7 @@ export default function TokenDetailPage() {
 
   useEffect(() => {
     if (!token) return
-    setChartStatus('loading')
-
+    
     // Map token symbol to Binance format for OHLCV
     const symbol = token.symbol.replace('/', '').replace('SOL', 'SOLUSDT').replace('USDT', 'USDT')
     const binanceSymbol = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`
@@ -84,12 +82,10 @@ export default function TokenDetailPage() {
         if (data?.candles && data.candles.length > 0) {
           setCandles(data.candles)
           setIndicators(data.indicators as Record<string, Array<{ time: number; value: number }>>)
-          setChartStatus('live')
-        } else {
-          setChartStatus('error')
-        }
+                  } else {
+                  }
       })
-      .catch(() => setChartStatus('error'))
+      .catch(() => {})
   }, [token, interval])
 
   return (
@@ -130,7 +126,7 @@ export default function TokenDetailPage() {
         )}
 
         {/* Chart Panel */}
-        <Panel title="Price Chart" subtitle="Real OHLCV from Binance" liveStatus={chartStatus === 'live' ? 'live' : 'stale'}>
+        <Panel title="Price Chart" subtitle="Real OHLCV from Binance" liveStatus="live">
           <div className="p-2">
             <div className="flex items-center gap-1 mb-2">
               {['5m', '15m', '1h', '4h', '1d'].map(tf => (
@@ -143,17 +139,12 @@ export default function TokenDetailPage() {
                 </button>
               ))}
             </div>
-            {chartStatus === 'live' && candles.length > 0 ? (
-              <CandlestickChart candles={candles} indicators={indicators} height={450} />
-            ) : chartStatus === 'loading' ? (
-              <div className="flex items-center justify-center h-[450px] text-[12px] font-mono text-text-muted">
-                Loading candlestick data...
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-[450px] text-[12px] font-mono text-text-muted">
-                No OHLCV data for this token. Try a major pair (BTC, ETH, SOL).
-              </div>
-            )}
+            <TradingViewChart 
+              symbol={`BINANCE:${token?.symbol?.split('/')[0]?.toUpperCase() ?? 'BTC'}USDT`}
+              interval={interval === '5m' ? '5' : interval === '15m' ? '15' : interval === '1h' ? '60' : interval === '4h' ? '240' : 'D'}
+              height={500}
+              studies={['RSI', 'MACD', 'BB']}
+            />
           </div>
         </Panel>
 
