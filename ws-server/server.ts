@@ -257,10 +257,6 @@ async function fetchDexPrices() {
 fetchDexPrices()
 setInterval(fetchDexPrices, 30_000)
 
-// Fetch DEX prices on startup and every 15s
-fetchDexPrices()
-setInterval(fetchDexPrices, 15_000)
-
 // Compute arbitrage opportunities on every price update
 function computeArbitrage() {
   const opportunities: Array<{
@@ -393,6 +389,83 @@ arbitrageNs.on("connection", (socket) => {
   socket.on("disconnect", () => {})
 })
 
+
+// ═══════════════════════════════════════════════════════════
+// MEMECOIN: Solana Raydium + Pump.fun WS → /memecoins namespace
+// Real-time swap events on Solana DEXes via public RPC
+// ═══════════════════════════════════════════════════════════
+const memecoinsNs = io.of("/memecoins")
+
+// Solana programs to monitor
+const SOL_PROGRAMS: Record<string, string> = {
+  raydium: '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8',
+  raydium_cpmm: 'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C',
+  pumpfun: '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P',
+}
+
+function connectSolanaWS() {
+  const ws = new WebSocket('wss://api.mainnet-beta.solana.com')
+  activeStreams++
+
+  ws.on('open', () => {
+    console.log('[memecoins] Solana WS connected')
+    for (const [name, programId] of Object.entries(SOL_PROGRAMS)) {
+      ws.send(JSON.stringify({
+        jsonrpc: '2.0',
+        id: Math.floor(Math.random() * 10000),
+        method: 'logsSubscribe',
+        params: [
+          { mentions: [programId] },
+          { commitment: 'confirmed' }
+        ]
+      }))
+      console.log('[memecoins] Subscribed to ' + name)
+    }
+  })
+
+  ws.on('message', (data: Buffer) => {
+    try {
+      const msg = JSON.parse(data.toString())
+      if (msg.method === 'logsNotification') {
+        const log = msg.params?.result
+        if (!log) return
+        
+        const signature = log.signature as string
+        const logs = (log.logs || []) as string[]
+        
+        const isSwap = logs.some((l: string) => 
+          l.includes('ray_log') || 
+          l.includes('Instruction: Swap') ||
+          l.includes('Instruction: Buy') ||
+          l.includes('Instruction: Sell')
+        )
+        
+        if (isSwap) {
+          memecoinsNs.emit('memecoin', {
+            type: 'swap',
+            signature,
+            chain: 'solana',
+            program: 'raydium',
+            success: !log.err,
+            timestamp: Date.now(),
+          })
+        }
+      }
+    } catch {}
+  })
+
+  ws.on('error', () => {})
+  ws.on('close', () => {
+    activeStreams--
+    console.log('[memecoins] Solana WS disconnected, reconnecting...')
+    setTimeout(connectSolanaWS, 3000)
+  })
+}
+
+memecoinsNs.on('connection', (socket) => {
+  console.log('[memecoins] Client: ' + socket.id)
+  socket.on('disconnect', () => {})
+})
 // ═══════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════
@@ -400,6 +473,7 @@ for (const sym of DEPTH_SYMBOLS) connectDepth(sym)
 connectTicker()
 connectFuturesTicker()
 connectLiquidations()
+connectSolanaWS()
 
 const subscriber = startSubscriber(io);
 
