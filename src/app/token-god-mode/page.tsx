@@ -1,0 +1,226 @@
+"use client"
+
+import { useState, useEffect, useCallback } from 'react'
+import { NexusLayout } from '@/components/layout/NexusLayout'
+import { Panel } from '@/components/shell/Panel'
+import { PriceTag } from '@/components/primitives/PriceTag'
+import { DeltaBadge } from '@/components/primitives/DeltaBadge'
+import { LiveDot } from '@/components/primitives/LiveDot'
+import { Search } from 'lucide-react'
+
+interface Holder {
+  address: string
+  chain: string
+  entityName: string | null
+  entityType: string | null
+  entityTvl: number
+  verified: boolean
+  smartMoneyScore: number
+}
+
+interface Pool {
+  address: string
+  name: string
+  dex: string
+  priceUsd: number
+  volume24h: number
+  liquidity: number
+}
+
+interface TokenData {
+  token: {
+    address: string
+    name: string
+    symbol: string
+    price: number
+    fdv: number
+    marketCap: number
+    volume24h: number
+    priceChange24h: number
+    totalSupply: string
+  }
+  holders: Holder[]
+  entityDistribution: Record<string, { count: number; tvl: number }>
+  topHolders: Array<{ name: string; type: string; tvl: number; score: number }>
+  pools: Pool[]
+}
+
+function fmtUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`
+  return `$${n.toFixed(2)}`
+}
+
+const typeColors: Record<string, string> = {
+  exchange: 'bg-accent-amber/20 text-accent-amber',
+  fund: 'bg-purple-400/20 text-purple-400',
+  whale: 'bg-data-bull/20 text-data-bull',
+  protocol: 'bg-teal-vivid/20 text-teal-vivid',
+  bridge: 'bg-data-bear/20 text-data-bear',
+}
+
+export default function TokenGodModePage() {
+  const [address, setAddress] = useState('')
+  const [network, setNetwork] = useState('eth')
+  const [data, setData] = useState<TokenData | null>(null)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'live' | 'error'>('idle')
+
+  const fetchToken = useCallback(async () => {
+    if (!address.trim()) return
+    setStatus('loading')
+    try {
+      const res = await fetch(`/api/v1/token/god-mode?address=${encodeURIComponent(address)}&network=${network}`)
+      const d = await res.json()
+      if (d.data) {
+        setData(d.data as TokenData)
+        setStatus('live')
+      } else {
+        setStatus('error')
+      }
+    } catch {
+      setStatus('error')
+    }
+  }, [address, network])
+
+  return (
+    <NexusLayout>
+      <div className="p-4 space-y-4 max-w-7xl mx-auto">
+        <div className="flex items-end justify-between">
+          <div>
+            <h1 className="text-[24px] font-head font-bold text-text-primary flex items-center gap-2">
+              <span className="text-teal-vivid">🔬</span> Token God Mode
+            </h1>
+            <p className="text-[12px] text-text-muted font-mono mt-1">
+              Deep analysis of any token — holders, pools, entity attribution. Inspired by Nansen.
+            </p>
+          </div>
+          <LiveDot status={status === 'live' ? 'live' : status === 'error' ? 'error' : 'stale'} label />
+        </div>
+
+        {/* Search */}
+        <Panel title="Token Analysis" subtitle="Enter any token contract address">
+          <div className="p-3 space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') fetchToken() }}
+                placeholder="0x... or token address"
+                className="flex-1 bg-bg-raised border border-bg-border rounded px-3 py-2 text-[12px] font-mono text-text-primary placeholder:text-text-muted outline-none focus:border-teal-vivid"
+              />
+              <select
+                value={network}
+                onChange={e => setNetwork(e.target.value)}
+                className="bg-bg-raised border border-bg-border rounded px-3 py-2 text-[12px] font-mono text-text-primary"
+              >
+                <option value="eth">Ethereum</option>
+                <option value="bsc">BNB Chain</option>
+                <option value="arbitrum">Arbitrum</option>
+                <option value="base">Base</option>
+                <option value="solana">Solana</option>
+                <option value="polygon">Polygon</option>
+              </select>
+              <button
+                onClick={fetchToken}
+                disabled={status === 'loading'}
+                className="px-4 py-2 bg-teal-vivid text-bg-base rounded text-[11px] font-mono font-bold hover:bg-teal-vivid/80 transition-colors disabled:opacity-50"
+              >
+                {status === 'loading' ? 'Scanning...' : 'ANALYZE'}
+              </button>
+            </div>
+          </div>
+        </Panel>
+
+        {/* Token Info */}
+        {data && (
+          <>
+            <div className="grid grid-cols-6 gap-2">
+              <KPI label="Price" value={`$${data.token.price.toLocaleString(undefined, { maximumFractionDigits: 6 })}`} />
+              <KPI label="24h" value={`${data.token.priceChange24h > 0 ? '+' : ''}${data.token.priceChange24h.toFixed(2)}%`} color={data.token.priceChange24h >= 0 ? 'text-data-bull' : 'text-data-bear'} />
+              <KPI label="FDV" value={fmtUsd(data.token.fdv)} />
+              <KPI label="Volume 24h" value={fmtUsd(data.token.volume24h)} />
+              <KPI label="Pools" value={String(data.pools.length)} />
+              <KPI label="Known Holders" value={String(data.holders.length)} />
+            </div>
+
+            {/* Pools */}
+            <Panel title="Liquidity Pools" subtitle={`${data.pools.length} pools from GeckoTerminal`}>
+              <div className="overflow-auto scrollbar-thin">
+                <table className="w-full border-separate border-spacing-0">
+                  <thead>
+                    <tr className="text-text-muted">
+                      <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-left">Pool</th>
+                      <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-left">DEX</th>
+                      <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Price</th>
+                      <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Volume 24h</th>
+                      <th className="text-[10px] font-mono uppercase px-3 py-2 border-b border-bg-border text-right">Liquidity</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.pools.map((p, i) => (
+                      <tr key={i} className="border-b border-bg-border/30 hover:bg-bg-raised transition-colors">
+                        <td className="text-[11px] font-mono px-3 py-1.5 text-text-primary font-bold">{p.name}</td>
+                        <td className="text-[10px] font-mono px-3 py-1.5 text-teal-vivid">{p.dex}</td>
+                        <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-primary tabular-nums">${p.priceUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+                        <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-secondary tabular-nums">{fmtUsd(p.volume24h)}</td>
+                        <td className="text-[11px] font-mono px-3 py-1.5 text-right text-text-secondary tabular-nums">{fmtUsd(p.liquidity)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+
+            {/* Known Holders */}
+            <Panel title="Known Holders" subtitle={`${data.holders.length} entities identified from database`}>
+              <div className="p-3 grid grid-cols-2 gap-3">
+                {data.holders.map((h, i) => (
+                  <div key={i} className="bg-bg-raised p-3 rounded border border-bg-border">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[12px] font-mono font-bold text-text-primary">{h.entityName ?? 'Unknown'}</span>
+                      {h.verified && <span className="text-teal-vivid text-[10px]">✓</span>}
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      {h.entityType && (
+                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${typeColors[h.entityType] ?? 'bg-bg-raised text-text-muted'}`}>
+                          {h.entityType.toUpperCase()}
+                        </span>
+                      )}
+                      <span className="text-[10px] font-mono text-text-muted">{h.chain}</span>
+                    </div>
+                    <div className="text-[10px] font-mono text-text-muted">TVL: {fmtUsd(h.entityTvl)}</div>
+                    <div className="text-[10px] font-mono text-text-muted mt-1">{h.address.slice(0, 16)}...</div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+
+            {/* Entity Distribution */}
+            <Panel title="Entity Distribution" subtitle="Holder composition by type">
+              <div className="p-3 grid grid-cols-5 gap-3">
+                {Object.entries(data.entityDistribution).map(([type, dist]) => (
+                  <div key={type} className="bg-bg-raised p-3 rounded border border-bg-border">
+                    <div className="text-[10px] font-mono text-text-muted uppercase mb-1">{type}</div>
+                    <div className="text-[16px] font-head font-bold text-text-primary">{dist.count}</div>
+                    <div className="text-[10px] font-mono text-text-muted">TVL: {fmtUsd(dist.tvl)}</div>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          </>
+        )}
+      </div>
+    </NexusLayout>
+  )
+}
+
+function KPI({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="bg-bg-panel border border-bg-border p-3 rounded">
+      <div className="text-[10px] text-text-muted font-mono uppercase mb-1">{label}</div>
+      <div className={`text-[16px] font-head font-bold tabular-nums ${color ?? 'text-text-primary'}`}>{value}</div>
+    </div>
+  )
+}
