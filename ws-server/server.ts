@@ -12,6 +12,18 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ];
 
+// Global error handlers — prevent Redis crashes from taking down the server
+process.on('uncaughtException', (err) => {
+  console.error('[WS] Uncaught exception (non-fatal):', err.message)
+})
+process.on('unhandledRejection', (reason) => {
+  if (reason && (reason as Error).message?.includes('Redis') || (reason as Error).message?.includes('ioredis')) {
+    // Redis errors are non-fatal — ignore to prevent crash
+    return
+  }
+  console.error('[WS] Unhandled rejection:', reason)
+})
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
