@@ -66,6 +66,16 @@ export default function TokenGodModePage() {
   const [data, setData] = useState<TokenData | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'live' | 'error'>('idle')
 
+  // Popular tokens for quick analysis
+  const POPULAR_TOKENS = [
+    { address: '0xdac17f958d2ee523a2206206994597c13d831ec7', name: 'USDT', network: 'eth' },
+    { address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', name: 'USDC', network: 'eth' },
+    { address: '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9', name: 'AAVE', network: 'eth' },
+    { address: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984', name: 'UNI', network: 'eth' },
+    { address: '0x514910771af9ca656af840dff83e8264ecf986ca', name: 'LINK', network: 'eth' },
+    { address: '0x6b175474e89094c44da98b954eedeac495271d0f', name: 'DAI', network: 'eth' },
+  ]
+
   const fetchToken = useCallback(async () => {
     if (!address.trim()) return
     setStatus('loading')
@@ -80,6 +90,13 @@ export default function TokenGodModePage() {
       }
     } catch {
       setStatus('error')
+    }
+  }, [address, network])
+
+  // Auto-fetch when address changes (from preset click)
+  useEffect(() => {
+    if (address.trim() && status !== 'loading') {
+      fetchToken()
     }
   }, [address, network])
 
@@ -132,6 +149,24 @@ export default function TokenGodModePage() {
             </div>
           </div>
         </Panel>
+
+        {/* Quick Start */}
+        {!data && (
+          <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
+            <h3 className="text-xs font-mono text-accent-cyan mb-2">QUICK START</h3>
+            <p className="text-[10px] text-text-muted mb-3">Popular tokens to analyze — click to load</p>
+            <div className="flex flex-wrap gap-2">
+              {POPULAR_TOKENS.map(token => (
+                <button key={token.address} onClick={() => { setAddress(token.address); setNetwork(token.network) }}
+                  className="px-3 py-1.5 text-[10px] font-mono border border-border-dim rounded hover:border-teal-vivid hover:bg-bg-elevated transition-colors">
+                  <span className="text-accent-cyan font-bold">{token.name}</span>
+                  <span className="text-text-muted ml-1">{token.network}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-text-dim mt-2">Select a token, then click ANALYZE</p>
+          </div>
+        )}
 
         {/* Token Info */}
         {data && (
