@@ -70,8 +70,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Macro Hub',     href: '/macro-hub',      icon: Globe },
       { label: 'Indonesia',     href: '/indonesia-macro', icon: Globe },
       { label: 'Calendar',      href: '/calendar',       icon: Calendar },
-      { label: 'Fear & Greed',  href: '/fear-greed',     icon: Activity },
       { label: 'Correlations',  href: '/correlations',   icon: GitCompare },
+      { label: 'Corr Matrix',   href: '/correlation-matrix', icon: GitCompare },
       { label: 'Gaps',          href: '/gaps',            icon: ArrowUpDown },
       { label: 'News Feed',     href: '/news',           icon: Newspaper },
     ],
@@ -89,6 +89,8 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Analytics Hub', href: '/analytics',      icon: Zap },
       { label: 'Screener',      href: '/screener',       icon: BarChart3 },
+      { label: 'Fundamentals',  href: '/fundamentals',   icon: Building2 },
+      { label: 'Heatmap',       href: '/heatmap',        icon: PieChart },
       { label: 'Compare',       href: '/compare',        icon: GitCompare },
       { label: 'Insider',       href: '/insider',        icon: Users },
       { label: 'Weather',       href: '/weather',        icon: Cloud },
