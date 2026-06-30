@@ -61,7 +61,14 @@ for (const ns of authNamespaces) {
 
 // ─── Public namespaces (no auth, browser-facing) ────────────
 
-const DEPTH_SYMBOLS = ["btcusdt", "ethusdt", "solusdt", "xrpusdt", "dogeusdt", "avaxusdt", "linkusdt", "arbusdt", "opusdt"]
+const DEPTH_SYMBOLS = [
+  "btcusdt", "ethusdt", "solusdt", "xrpusdt", "dogeusdt",
+  "avaxusdt", "linkusdt", "arbusdt", "opusdt", "maticusdt",
+  "adausdt", "dotusdt", "ltcusdt", "bchusdt", "uniusdt",
+  "aaveusdt", "atomusdt", "nearusdt", "aptusdt", "suiusdt",
+  "pepeusdt", "wifusdt", "jupusdt", "tiausdt", "injusdt",
+  "ftmusdt", "sandusdt", "manausdt", "galausdt", "blurusdt",
+]
 let activeStreams = 0
 
 // ═══════════════════════════════════════════════════════════

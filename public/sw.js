@@ -41,8 +41,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Skip non-GET
+  // Skip non-GET and non-http(s) schemes (chrome-extension, etc.)
   if (request.method !== 'GET') return
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return
 
   // Static assets: cache-first
   if (
