@@ -1,41 +1,54 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useTicker } from "@/lib/hooks/useWsStream"
 
-interface TickerItem {
-  symbol: string
-  price: string
-  change: string
-  positive: boolean
-}
-
-// Default tickers — will be replaced with live data from module registry
-const DEFAULT_TICKERS: TickerItem[] = [
-  { symbol: "BTC", price: "—", change: "—", positive: true },
-  { symbol: "ETH", price: "—", change: "—", positive: true },
-  { symbol: "SOL", price: "—", change: "—", positive: true },
-  { symbol: "GOLD", price: "—", change: "—", positive: true },
-  { symbol: "DXY", price: "—", change: "—", positive: false },
-  { symbol: "SPX", price: "—", change: "—", positive: true },
+const TICKER_CONFIG = [
+  { symbol: "BTC", wsSymbol: "BTCUSDT" },
+  { symbol: "ETH", wsSymbol: "ETHUSDT" },
+  { symbol: "SOL", wsSymbol: "SOLUSDT" },
+  { symbol: "GOLD", wsSymbol: "GOLD" },
+  { symbol: "DXY", wsSymbol: "DXY" },
+  { symbol: "SPX", wsSymbol: "SPX" },
 ]
 
+function LiveTicker({ symbol, wsSymbol }: { symbol: string; wsSymbol: string }) {
+  const { price, change, connected } = useTicker(wsSymbol)
+
+  if (!connected || price === 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 mr-6">
+        <span className="text-text-dim">{symbol}</span>
+        <span className="text-text-dim">—</span>
+      </span>
+    )
+  }
+
+  const positive = change >= 0
+
+  return (
+    <span className="inline-flex items-center gap-1.5 mr-6">
+      <span className="text-text-dim">{symbol}</span>
+      <span className="text-text-primary">
+        ${price.toLocaleString(undefined, { maximumFractionDigits: price > 100 ? 0 : 2 })}
+      </span>
+      <span className={positive ? 'text-accent-green' : 'text-accent-red'}>
+        {positive ? '+' : ''}{change.toFixed(2)}%
+      </span>
+    </span>
+  )
+}
+
 export function TickerStrip() {
-  const [tickers, setTickers] = useState<TickerItem[]>(DEFAULT_TICKERS)
   const [fgValue, setFgValue] = useState<number | null>(null)
 
   useEffect(() => {
-    // Fetch prices + sentiment in parallel
-    Promise.allSettled([
-      fetch('/api/v1/market/prices').then(r => r.json()),
-      fetch('/api/v1/market/sentiment').then(r => r.json()),
-    ]).then(([priceRes, fgRes]) => {
-      if (priceRes.status === 'fulfilled' && priceRes.value?.data?.tickers?.length) {
-        setTickers(priceRes.value.data.tickers)
-      }
-      if (fgRes.status === 'fulfilled' && fgRes.value?.data?.fearGreed != null) {
-        setFgValue(fgRes.value.data.fearGreed)
-      }
-    })
+    fetch('/api/v1/fear-greed')
+      .then(r => r.json())
+      .then(d => {
+        if (d.data?.value != null) setFgValue(d.data.value)
+      })
+      .catch(() => {})
   }, [])
 
   const fgColor = fgValue == null ? 'text-text-dim' : fgValue >= 55 ? 'text-accent-green' : fgValue >= 45 ? 'text-accent-amber' : 'text-accent-red'
@@ -50,14 +63,8 @@ export function TickerStrip() {
 
       <div className="ticker-strip flex-1">
         <div className="ticker-content">
-          {[...tickers, ...tickers].map((t, i) => (
-            <span key={i} className="inline-flex items-center gap-1.5 mr-6">
-              <span className="text-text-dim">{t.symbol}</span>
-              <span className="text-text-primary">{t.price}</span>
-              <span className={t.positive ? 'text-accent-green' : 'text-accent-red'}>
-                {t.change}
-              </span>
-            </span>
+          {TICKER_CONFIG.map(t => (
+            <LiveTicker key={t.symbol} symbol={t.symbol} wsSymbol={t.wsSymbol} />
           ))}
         </div>
       </div>
