@@ -104,6 +104,14 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/v1/screener",
   "/api/v1/keys",
   "/api/auth",
+  "/api/v1/historical-financials",
+  // New TradFi routes
+  "/api/v1/forex",
+  "/api/v1/commodities",
+  "/api/v1/equities",
+  "/api/v1/global-macro",
+  "/api/v1/alerts/evaluate",
+  "/api/v1/alerts/log",
 ]);
 
 // ─── Rate Limiting (in-memory, per-edge instance) ──────────
