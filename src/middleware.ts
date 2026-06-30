@@ -112,7 +112,7 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/v1/etf-flows",
   "/api/v1/onchain-intel",
   "/api/v1/risk-intel",
-  "/api/v1/alerts/evaluate",
+  "/api/v1/composite-alerts",
   "/api/v1/alerts/log",
 ]);
 

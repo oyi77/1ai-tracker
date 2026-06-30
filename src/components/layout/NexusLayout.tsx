@@ -57,7 +57,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'On-Chain Intel', href: '/onchain-intel', icon: Radio },
       { label: 'Token God Mode', href: '/token-god-mode', icon: Target },
       { label: 'Risk Intel',     href: '/risk-intel',     icon: Shield },
-      { label: 'Top Traders',   href: '/top-traders',    icon: TrendingUp },
+
     ],
   },
   {
@@ -70,6 +70,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Liquidations',  href: '/liquidations',   icon: Activity },
       { label: 'Arbitrage',     href: '/arbitrage',      icon: Activity },
       { label: 'MEV Detector',  href: '/mev',            icon: Shield },
+      { label: 'Composite Signals', href: '/composite-alerts', icon: Activity },
+
     ],
   },
   {
