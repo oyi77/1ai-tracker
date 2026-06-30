@@ -9,6 +9,7 @@
 
 import { NextRequest } from 'next/server'
 import { apiSuccess, cacheHeaders } from '@/lib/api/response'
+import { getFredSeries } from '@/lib/fred-client'
 
 interface CalendarEvent {
   date: string        // YYYY-MM-DD
@@ -28,27 +29,27 @@ const FRED_API_KEY = process.env.FRED_API_KEY ?? ''
 const FRED_BASE = 'https://api.stlouisfed.org/fred'
 
 // Key FRED release IDs and their metadata
-const KEY_RELEASES: Record<number, { name: string; impact: CalendarEvent['impact']; category: string; country: string; time: string }> = {
-  53:   { name: 'Gross Domestic Product',         impact: 'high',   category: 'growth',      country: 'US', time: '08:30' },
-  10:   { name: 'Consumer Price Index',            impact: 'high',   category: 'inflation',   country: 'US', time: '08:30' },
-  50:   { name: 'Employment Situation',            impact: 'high',   category: 'employment',  country: 'US', time: '08:30' },
-  54:   { name: 'Personal Income and Outlays',     impact: 'high',   category: 'inflation',   country: 'US', time: '08:30' },
-  96:   { name: 'ISM Manufacturing PMI',           impact: 'high',   category: 'growth',      country: 'US', time: '10:00' },
-  105:  { name: 'New Residential Construction',    impact: 'medium', category: 'housing',     country: 'US', time: '08:30' },
-  95:   { name: 'Consumer Confidence',             impact: 'medium', category: 'sentiment',   country: 'US', time: '10:00' },
-  144:  { name: 'Advance Retail Sales',            impact: 'high',   category: 'growth',      country: 'US', time: '08:30' },
-  46:   { name: 'Durable Goods Orders',            impact: 'medium', category: 'growth',      country: 'US', time: '08:30' },
-  41:   { name: 'Construction Spending',           impact: 'low',    category: 'housing',     country: 'US', time: '10:00' },
-  47:   { name: 'Factory Orders',                  impact: 'medium', category: 'growth',      country: 'US', time: '10:00' },
-  111:  { name: 'Quarterly Financial Report',      impact: 'low',    category: 'corporate',   country: 'US', time: '10:00' },
-  300:  { name: 'Job Openings and Labor Turnover', impact: 'high',   category: 'employment',  country: 'US', time: '10:00' },
-  48:   { name: 'Producer Price Index',            impact: 'high',   category: 'inflation',   country: 'US', time: '08:30' },
-  188:  { name: 'Consumer Sentiment',              impact: 'medium', category: 'sentiment',   country: 'US', time: '10:00' },
-  239:  { name: 'International Trade',             impact: 'medium', category: 'trade',       country: 'US', time: '08:30' },
-  330:  { name: 'ADP National Employment',         impact: 'medium', category: 'employment',  country: 'US', time: '08:15' },
-  44:   { name: 'Chicago Fed National Activity',   impact: 'low',    category: 'growth',      country: 'US', time: '08:30' },
-  57:   { name: 'Beige Book',                      impact: 'medium', category: 'monetary',    country: 'US', time: '14:00' },
-  329:  { name: 'Atlanta Fed GDPNow',              impact: 'medium', category: 'growth',      country: 'US', time: '16:00' },
+const KEY_RELEASES: Record<number, { name: string; impact: CalendarEvent['impact']; category: string; country: string; time: string; seriesId?: string }> = {
+  53:   { name: 'Gross Domestic Product',         impact: 'high',   category: 'growth',      country: 'US', time: '08:30', seriesId: 'GDP' },
+  10:   { name: 'Consumer Price Index',          impact: 'high',   category: 'inflation',   country: 'US', time: '08:30', seriesId: 'CPIAUCSL' },
+  50:   { name: 'Employment Situation',          impact: 'high',   category: 'employment',  country: 'US', time: '08:30', seriesId: 'PAYEMS' },
+  54:   { name: 'Personal Income and Outlays',   impact: 'high',   category: 'inflation',   country: 'US', time: '08:30' },
+  96:   { name: 'ISM Manufacturing PMI',         impact: 'high',   category: 'growth',      country: 'US', time: '10:00' },
+  105:  { name: 'New Residential Construction',  impact: 'medium', category: 'housing',     country: 'US', time: '08:30', seriesId: 'HOUST' },
+  95:   { name: 'Consumer Confidence',           impact: 'medium', category: 'sentiment',   country: 'US', time: '10:00', seriesId: 'UMCSENT' },
+  144:  { name: 'Advance Retail Sales',          impact: 'high',   category: 'growth',      country: 'US', time: '08:30' },
+  46:   { name: 'Durable Goods Orders',          impact: 'medium', category: 'growth',      country: 'US', time: '08:30' },
+  41:   { name: 'Construction Spending',         impact: 'low',    category: 'housing',     country: 'US', time: '10:00' },
+  47:   { name: 'Factory Orders',                impact: 'medium', category: 'growth',      country: 'US', time: '10:00' },
+  111:  { name: 'Quarterly Financial Report',    impact: 'low',    category: 'corporate',   country: 'US', time: '10:00' },
+  300:  { name: 'Job Openings and Labor Turnover', impact: 'high', category: 'employment', country: 'US', time: '10:00' },
+  48:   { name: 'Producer Price Index',          impact: 'high',   category: 'inflation',   country: 'US', time: '08:30' },
+  188:  { name: 'Consumer Sentiment',            impact: 'medium', category: 'sentiment',   country: 'US', time: '10:00', seriesId: 'UMCSENT' },
+  239:  { name: 'International Trade',           impact: 'medium', category: 'trade',       country: 'US', time: '08:30' },
+  330:  { name: 'ADP National Employment',       impact: 'medium', category: 'employment',  country: 'US', time: '08:15' },
+  44:   { name: 'Chicago Fed National Activity', impact: 'low',    category: 'growth',      country: 'US', time: '08:30' },
+  57:   { name: 'Beige Book',                    impact: 'medium', category: 'monetary',    country: 'US', time: '14:00' },
+  329:  { name: 'Atlanta Fed GDPNow',            impact: 'medium', category: 'growth',      country: 'US', time: '16:00' },
 }
 
 
@@ -154,9 +155,9 @@ async function fetchFredReleases(start: string, end: string): Promise<CalendarEv
   const events: CalendarEvent[] = []
   const startD = new Date(start + 'T00:00:00Z')
   const endD = new Date(end + 'T00:00:00Z')
+  const obsCache = new Map<string, Promise<{ actual: string | null; previous: string }>>()
 
   try {
-    // Fetch release dates for key releases
     const url = `${FRED_BASE}/releases/dates?api_key=${FRED_API_KEY}&file_type=json&sort_order=asc&include_release_dates_with_no_data=false&limit=200`
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
     if (!res.ok) return []
@@ -171,15 +172,32 @@ async function fetchFredReleases(start: string, end: string): Promise<CalendarEv
       if (!meta) continue
       if (!isInRange(rd.date, startD, endD)) continue
 
+      let actual: string | null = null
+      let previous = ''
+      if (meta.seriesId) {
+        if (!obsCache.has(meta.seriesId)) {
+          obsCache.set(meta.seriesId, (async () => {
+            const series = await getFredSeries(meta.seriesId!, 2)
+            return {
+              actual: series.observations[0]?.value ?? null,
+              previous: series.observations[1]?.value ?? '',
+            }
+          })())
+        }
+        const obs = await obsCache.get(meta.seriesId)!
+        actual = obs.actual
+        previous = obs.previous
+      }
+
       events.push({
         date: rd.date,
         time: meta.time,
         country: meta.country,
         event: meta.name,
         impact: meta.impact,
-        previous: '',
+        previous,
         forecast: '',
-        actual: null,
+        actual,
         category: meta.category,
       })
     }
@@ -192,12 +210,33 @@ async function fetchFredReleases(start: string, end: string): Promise<CalendarEv
 
 // ─── Build central bank events ────────────────────────────
 
-function buildCentralBankEvents(start: Date, end: Date): CalendarEvent[] {
+async function buildCentralBankEvents(start: Date, end: Date): Promise<CalendarEvent[]> {
   const events: CalendarEvent[] = []
+  let fedFundsActual: string | null = null
+  let fedFundsPrevious = ''
+
+  try {
+    const fedFunds = await getFredSeries('FEDFUNDS', 2)
+    fedFundsActual = fedFunds.observations[0]?.value ?? null
+    fedFundsPrevious = fedFunds.observations[1]?.value ?? ''
+  } catch {
+    // best-effort only
+  }
 
   function add(date: string, time: string, country: string, event: string, impact: CalendarEvent['impact'], category: string) {
     if (isInRange(date, start, end)) {
-      events.push({ date, time, country, event, impact, previous: '', forecast: '', actual: null, category })
+      const isFomc = event === 'FOMC Rate Decision'
+      events.push({
+        date,
+        time,
+        country,
+        event,
+        impact,
+        previous: isFomc ? fedFundsPrevious : '',
+        forecast: '',
+        actual: isFomc ? fedFundsActual : null,
+        category,
+      })
     }
   }
 

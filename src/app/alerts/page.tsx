@@ -21,6 +21,14 @@ interface Alert {
   config: Record<string, unknown>
 }
 
+interface AlertLogEntry {
+  alertId: string
+  alertName: string
+  triggeredAt: number
+  value: unknown
+  message: string
+}
+
 const ALERT_TYPES: Record<AlertType, { label: string; icon: string; description: string; category: 'tradfi' | 'crypto' }> = {
   price_threshold:        { label: 'Price Alert',     icon: '📈', description: 'Stock, commodity, or index crosses a price level', category: 'tradfi' },
   forex_rate:             { label: 'Forex Rate',      icon: '💱', description: 'Currency pair crosses a rate threshold', category: 'tradfi' },
@@ -252,6 +260,7 @@ export default function AlertsPage() {
   const [error, setError] = useState<string | null>(null)
   const [evaluating, setEvaluating] = useState(false)
   const [evalSummary, setEvalSummary] = useState<{ evaluated: number; triggered: number; results: Array<{ id: string; type: string; triggered: boolean; message: string }> } | null>(null)
+  const [alertLog, setAlertLog] = useState<AlertLogEntry[]>([])
 
   useEffect(() => {
     fetch('/api/v1/alerts')
@@ -259,6 +268,13 @@ export default function AlertsPage() {
       .then(d => { if (d.data) setAlerts(d.data); else setError(d.error ?? 'Failed to load alerts') })
       .catch((e) => setError((e as Error).message))
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/v1/alerts/log')
+      .then(r => r.json())
+      .then(d => { if (d.data?.log) setAlertLog(d.data.log) })
+      .catch(() => {})
   }, [])
 
   const toggleAlert = useCallback(async (id: string) => {
@@ -304,16 +320,18 @@ export default function AlertsPage() {
 
   const evaluateAlerts = useCallback(async () => {
     setEvaluating(true)
+    setError(null)
     try {
       const res = await fetch('/api/v1/alerts/evaluate')
       const d = await res.json()
-      if (d.data) {
-        setEvalSummary(d.data)
-        // refresh latest lastTriggered timestamps after evaluation
-        const alertsRes = await fetch('/api/v1/alerts')
-        const alertsJson = await alertsRes.json()
-        if (alertsJson.data) setAlerts(alertsJson.data)
-      }
+      if (!res.ok || !d.data) throw new Error(d.error ?? 'Evaluation failed')
+      setEvalSummary(d.data)
+      const [alertsRes, logRes] = await Promise.all([fetch('/api/v1/alerts'), fetch('/api/v1/alerts/log')])
+      const [alertsJson, logJson] = await Promise.all([alertsRes.json(), logRes.json()])
+      if (alertsJson.data) setAlerts(alertsJson.data)
+      if (logJson.data?.log) setAlertLog(logJson.data.log)
+    } catch (e) {
+      setError((e as Error).message)
     } finally {
       setEvaluating(false)
     }
@@ -511,6 +529,29 @@ export default function AlertsPage() {
           ))}
         </div>
 
+        <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xs font-mono text-accent-cyan">ALERT HISTORY</h2>
+            <span className="text-[10px] font-mono text-text-muted">{alertLog.length} recent events</span>
+          </div>
+          {alertLog.length === 0 ? (
+            <div className="text-[10px] text-text-muted font-mono">No alert events recorded yet.</div>
+          ) : (
+            <div className="space-y-1.5">
+              {alertLog.slice().reverse().slice(0, 10).map((event) => (
+                <div key={`${event.alertId}-${event.triggeredAt}`} className="flex items-start justify-between gap-3 text-[10px] font-mono border-b border-border-dim/30 pb-1">
+                  <div>
+                    <div className="text-text-primary">{event.alertName}</div>
+                    <div className="text-text-muted">{event.message}</div>
+                  </div>
+                  <div className="text-right text-text-dim whitespace-nowrap">
+                    {new Date(event.triggeredAt).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         {alerts.length === 0 && !showCreate && (
           <div className="text-center py-12">
             <p className="text-text-muted text-sm font-mono">No alerts configured</p>
