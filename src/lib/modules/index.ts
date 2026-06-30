@@ -82,6 +82,7 @@ import googleTrends from './sentiment/google-trends'
 import weiboHot from './sentiment/weibo-hot'
 import zhihuTrends from './sentiment/zhihu-trends'
 import hackernews from './sentiment/hackernews'
+import cryptocompare from './sentiment/cryptocompare'
 
 // Dev ecosystem
 import pypiStats from './dev/pypi-stats'
@@ -132,7 +133,7 @@ export function registerAllModules() {
     metalsRe,
     // Sentiment (8)
     longshortDerived, lunarcrushRe, santimentRe, githubApi,
-    googleTrends, weiboHot, zhihuTrends, hackernews,
+    googleTrends, weiboHot, zhihuTrends, hackernews, cryptocompare,
     // Dev ecosystem (2)
     pypiStats, npmStats,
     // Governance (1)

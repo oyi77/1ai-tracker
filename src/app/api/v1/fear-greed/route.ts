@@ -140,8 +140,8 @@ export async function GET(_request: NextRequest) {
     const momentumScore = mapMomentum(btcChange7d);
     const dominanceScore = mapDominance(btcDom);
     const volumeScore = mapVolume(volumeChange);
-    // Social activity proxy: derived from volume change (higher volume = higher social interest)
-    const socialScore = mapVolume(volumeChange);
+    // Social activity: derived from BTC price movement (large moves spike social interest)
+    const socialScore = mapMomentum(btcChange24h);
 
     // Weighted composite
     const weights = {
