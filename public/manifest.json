@@ -1,14 +1,16 @@
 {
-  "name": "NEXUS — Intelligence Terminal",
+  "name": "NEXUS — Finance Intelligence Terminal",
   "short_name": "NEXUS",
-  "description": "AI-powered intelligence terminal for news, markets, macro, and alternative data",
-  "start_url": "/",
+  "description": "All-in-one finance intelligence: US + IDX markets, macro, on-chain, AI insights. Bloomberg-grade analytics for Indonesian trading desks.",
+  "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#080b0f",
   "theme_color": "#080b0f",
   "scope": "/",
-  "categories": ["finance", "news", "utilities"],
+  "categories": ["finance", "business", "news"],
+  "lang": "en",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -28,7 +30,6 @@
       "type": "image/svg+xml"
     }
   ],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "Dashboard",
@@ -36,13 +37,23 @@
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Tokens",
-      "url": "/tokens",
+      "name": "Screener",
+      "url": "/screener",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Indonesia",
+      "url": "/indonesia-macro",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Alerts",
       "url": "/alerts",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Portfolio",
+      "url": "/portfolio",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]

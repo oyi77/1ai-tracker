@@ -1,178 +1,212 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
-import { Panel } from '@/components/shell/Panel'
-import { AlertPill } from '@/components/primitives/AlertPill'
 import { LiveDot } from '@/components/primitives/LiveDot'
-import { PriceTag } from '@/components/primitives/PriceTag'
-import { TxHash } from '@/components/primitives/TxHash'
 
-interface AlertRule {
+interface Alert {
   id: string
   name: string
-  type: string
   condition: string
-  severity: 'critical' | 'high' | 'medium' | 'low'
+  channel: 'whatsapp' | 'telegram' | 'email' | 'push'
   enabled: boolean
-  lastTriggered: string
-  fireCount: number
+  lastTriggered: string | null
 }
 
-interface TriggeredAlert {
-  id: string
-  ruleId: string
-  ruleName: string
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  message: string
-  value: number
-  txHash?: string
-  timestamp: string
+const DEFAULT_ALERTS: Alert[] = [
+  { id: '1', name: 'BTC Price Alert', condition: 'BTC-USD > $75,000 OR < $60,000', channel: 'whatsapp', enabled: true, lastTriggered: null },
+  { id: '2', name: 'IHSG Daily Close', condition: 'IHSG closes > 5,900 OR < 5,700', channel: 'whatsapp', enabled: true, lastTriggered: null },
+  { id: '3', name: 'USD/IDR Alert', condition: 'USD/IDR > 18,000 OR < 17,500', channel: 'whatsapp', enabled: true, lastTriggered: null },
+  { id: '4', name: 'Fed Rate Decision', condition: 'FEDFUNDS rate changes', channel: 'telegram', enabled: true, lastTriggered: '2026-06-15' },
+  { id: '5', name: 'Whale Alert > $10M', condition: 'Any whale transfer > $10M', channel: 'telegram', enabled: true, lastTriggered: '2026-06-29' },
+  { id: '6', name: 'Fear & Greed < 20', condition: 'Fear & Greed Index drops below 20', channel: 'email', enabled: false, lastTriggered: null },
+  { id: '7', name: 'Gold > $4,000', condition: 'Gold price exceeds $4,000/oz', channel: 'push', enabled: true, lastTriggered: null },
+  { id: '8', name: 'BBCA.JK Earnings', condition: 'BBCA.JK quarterly earnings release', channel: 'whatsapp', enabled: true, lastTriggered: '2026-04-28' },
+]
+
+const CHANNEL_INFO: Record<string, { name: string; icon: string; color: string; description: string }> = {
+  whatsapp: { name: 'WhatsApp', icon: '📱', color: '#25d366', description: 'Instant delivery to your WhatsApp number' },
+  telegram: { name: 'Telegram', icon: '✈️', color: '#0088cc', description: 'Fast delivery via Telegram bot' },
+  email: { name: 'Email', icon: '📧', color: '#ea4335', description: 'Detailed alert via email' },
+  push: { name: 'Push', icon: '🔔', color: '#f59e0b', description: 'Browser push notification' },
 }
 
 export default function AlertsPage() {
-  const [rules, setRules] = useState<AlertRule[]>([])
-  const [triggered, setTriggered] = useState<TriggeredAlert[]>([])
-  const [feedStatus, setFeedStatus] = useState<'live' | 'stale' | 'error'>('live')
+  const [alerts, setAlerts] = useState<Alert[]>(DEFAULT_ALERTS)
   const [showCreate, setShowCreate] = useState(false)
+  const [newAlert, setNewAlert] = useState({ name: '', condition: '', channel: 'whatsapp' as Alert['channel'] })
 
-  const fetchAlerts = useCallback(async () => {
-    try {
-      const res = await fetch('/api/v1/alerts')
+  const toggleAlert = (id: string) => {
+    setAlerts(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a))
+  }
 
-      if (res.status === 401) {
-        setRules([])
-        setTriggered([])
-        setFeedStatus('error')
-        return
-      }
+  const deleteAlert = (id: string) => {
+    setAlerts(prev => prev.filter(a => a.id !== id))
+  }
 
-      const data = await res.json() as { data?: { rules?: AlertRule[]; triggered?: TriggeredAlert[] } }
-
-      setRules(data.data?.rules ?? [])
-      setTriggered(data.data?.triggered ?? [])
-      setFeedStatus('live')
-    } catch {
-      setFeedStatus('error')
+  const createAlert = () => {
+    if (!newAlert.name || !newAlert.condition) return
+    const alert: Alert = {
+      id: Date.now().toString(),
+      name: newAlert.name,
+      condition: newAlert.condition,
+      channel: newAlert.channel,
+      enabled: true,
+      lastTriggered: null,
     }
-  }, [])
+    setAlerts(prev => [...prev, alert])
+    setNewAlert({ name: '', condition: '', channel: 'whatsapp' })
+    setShowCreate(false)
+  }
 
-  useEffect(() => {
-    const invoke = () => fetchAlerts()
-    invoke()
-    const interval = setInterval(fetchAlerts, 15_000)
-    return () => clearInterval(interval)
-  }, [fetchAlerts])
+  const enabledCount = alerts.filter(a => a.enabled).length
+  const channelCounts = alerts.reduce((acc, a) => {
+    acc[a.channel] = (acc[a.channel] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
 
   return (
     <NexusLayout>
-      <div className="p-3 space-y-3">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="p-6 space-y-4">
+        <div className="flex items-end justify-between">
           <div>
-            <h1 className="text-[20px] font-head font-bold text-text-primary">Alerts</h1>
-            <p className="text-[11px] text-text-muted font-mono">Configurable on-chain alert engine</p>
+            <h1 className="text-xl font-bold font-mono text-accent-cyan">ALERT CENTER</h1>
+            <p className="text-xs text-text-muted font-mono mt-1">
+              {enabledCount} active alerts across {Object.keys(channelCounts).length} channels
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <LiveDot status={feedStatus} label />
-            <button
-              onClick={() => setShowCreate(!showCreate)}
-              className="px-3 py-1.5 rounded bg-teal-dim/30 text-teal-vivid text-[11px] font-mono hover:bg-teal-dim/50 transition-colors"
-            >
+            <LiveDot status="live" label />
+            <button onClick={() => setShowCreate(!showCreate)}
+              className="px-3 py-1.5 text-xs font-mono bg-teal-vivid text-bg-base rounded hover:bg-teal-vivid/80">
               + New Alert
             </button>
           </div>
         </div>
 
-        {/* Create Alert Form (toggle) */}
+        {/* Channel Overview */}
+        <div className="grid grid-cols-4 gap-4">
+          {Object.entries(CHANNEL_INFO).map(([key, info]) => (
+            <div key={key} className="bg-bg-panel border border-border-dim rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span>{info.icon}</span>
+                <span className="text-xs font-mono text-text-primary">{info.name}</span>
+              </div>
+              <p className="text-lg font-bold font-mono text-text-primary">{channelCounts[key] ?? 0}</p>
+              <p className="text-[9px] text-text-muted">{info.description}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Create Alert Form */}
         {showCreate && (
-          <Panel title="Create Alert" subtitle="Configure new alert rule">
-            <div className="p-3 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] text-text-muted font-mono block mb-1">ALERT NAME</label>
-                  <input className="w-full bg-bg-raised border border-bg-border rounded px-2 py-1.5 text-[11px] font-mono text-text-primary" placeholder="My Alert" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-text-muted font-mono block mb-1">TYPE</label>
-                  <select className="w-full bg-bg-raised border border-bg-border rounded px-2 py-1.5 text-[11px] font-mono text-text-primary">
-                    <option>Wallet Movement</option>
-                    <option>Price Threshold</option>
-                    <option>Large Swap</option>
-                    <option>Smart Money Signal</option>
-                    <option>Liquidation</option>
-                  </select>
-                </div>
+          <div className="bg-bg-panel border border-teal-vivid rounded-lg p-4">
+            <h3 className="text-xs font-mono text-accent-cyan mb-3">CREATE NEW ALERT</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-[10px] text-text-muted font-mono block mb-1">Alert Name</label>
+                <input
+                  type="text"
+                  value={newAlert.name}
+                  onChange={e => setNewAlert(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., BTC Breakout"
+                  className="w-full px-3 py-2 text-xs font-mono bg-bg-elevated border border-border-dim rounded text-text-primary"
+                />
               </div>
               <div>
-                <label className="text-[10px] text-text-muted font-mono block mb-1">CONDITION</label>
-                <input className="w-full bg-bg-raised border border-bg-border rounded px-2 py-1.5 text-[11px] font-mono text-text-primary" placeholder="e.g., transfers > $500K" />
+                <label className="text-[10px] text-text-muted font-mono block mb-1">Condition</label>
+                <input
+                  type="text"
+                  value={newAlert.condition}
+                  onChange={e => setNewAlert(prev => ({ ...prev, condition: e.target.value }))}
+                  placeholder="e.g., BTC-USD > $75,000"
+                  className="w-full px-3 py-2 text-xs font-mono bg-bg-elevated border border-border-dim rounded text-text-primary"
+                />
               </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 rounded text-[11px] font-mono text-text-muted hover:text-text-secondary">Cancel</button>
-                <button className="px-3 py-1.5 rounded bg-teal-vivid text-bg-base text-[11px] font-mono font-bold">Create Alert</button>
+              <div>
+                <label className="text-[10px] text-text-muted font-mono block mb-1">Channel</label>
+                <select
+                  value={newAlert.channel}
+                  onChange={e => setNewAlert(prev => ({ ...prev, channel: e.target.value as Alert['channel'] }))}
+                  className="w-full px-3 py-2 text-xs font-mono bg-bg-elevated border border-border-dim rounded text-text-primary"
+                >
+                  {Object.entries(CHANNEL_INFO).map(([key, info]) => (
+                    <option key={key} value={key}>{info.icon} {info.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
-          </Panel>
+            <div className="flex gap-2 mt-3">
+              <button onClick={createAlert}
+                className="px-4 py-2 text-xs font-mono bg-teal-vivid text-bg-base rounded hover:bg-teal-vivid/80">
+                Create Alert
+              </button>
+              <button onClick={() => setShowCreate(false)}
+                className="px-4 py-2 text-xs font-mono bg-bg-elevated border border-border-dim text-text-muted rounded hover:border-border-active">
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-1">
-          {/* Alert Rules */}
-          <Panel
-            title="Alert Rules"
-            subtitle={`${rules.filter(r => r.enabled).length} active`}
-            liveStatus={feedStatus}
-            maxHeight={500}
-          >
-            <div className="space-y-0">
-              {rules.map((rule) => (
-                <div
-                  key={rule.id}
-                  className="flex items-center gap-3 px-3 py-2 border-b border-bg-border/50 hover:bg-bg-raised/50 transition-colors"
-                >
-                  <AlertPill severity={rule.severity} size="xs" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-medium text-text-primary">{rule.name}</div>
-                    <div className="text-[10px] text-text-muted font-mono">{rule.condition}</div>
+        {/* Alerts List */}
+        <div className="space-y-2">
+          {alerts.map(alert => (
+            <div key={alert.id} className={`bg-bg-panel border rounded-lg p-4 transition-colors ${
+              alert.enabled ? 'border-border-dim hover:border-border-active' : 'border-border-dim/50 opacity-60'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button onClick={() => toggleAlert(alert.id)}
+                    className={`w-10 h-5 rounded-full transition-colors ${
+                      alert.enabled ? 'bg-teal-vivid' : 'bg-bg-elevated'
+                    }`}>
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      alert.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                    }`} />
+                  </button>
+                  <div>
+                    <p className="text-sm font-mono text-text-primary">{alert.name}</p>
+                    <p className="text-[10px] text-text-muted font-mono">{alert.condition}</p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-[10px] text-text-muted">Last: {rule.lastTriggered}</div>
-                    <div className="text-[10px] text-text-muted">Fires: {rule.fireCount}</div>
-                  </div>
-                  <div className={`w-2 h-2 rounded-full ${rule.enabled ? 'bg-data-bull' : 'bg-text-muted'}`} />
                 </div>
-              ))}
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{
+                    backgroundColor: CHANNEL_INFO[alert.channel].color + '20',
+                    color: CHANNEL_INFO[alert.channel].color,
+                  }}>
+                    {CHANNEL_INFO[alert.channel].icon} {CHANNEL_INFO[alert.channel].name}
+                  </span>
+                  {alert.lastTriggered && (
+                    <span className="text-[9px] text-text-muted font-mono">
+                      Last: {alert.lastTriggered}
+                    </span>
+                  )}
+                  <button onClick={() => deleteAlert(alert.id)}
+                    className="text-[10px] font-mono text-data-bear hover:text-data-bear/80">
+                    Delete
+                  </button>
+                </div>
+              </div>
             </div>
-          </Panel>
+          ))}
+        </div>
 
-          {/* Triggered Alerts */}
-          <Panel
-            title="Triggered Alerts"
-            subtitle={`${triggered.length} recent`}
-            liveStatus={feedStatus}
-            maxHeight={500}
-          >
-            <div className="space-y-0">
-              {triggered.map((alert) => (
-                <div
-                  key={alert.id}
-                  className="px-3 py-2 border-b border-bg-border/50 hover:bg-bg-raised/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertPill severity={alert.severity} size="xs" />
-                    <span className="text-[10px] text-text-muted font-mono">{alert.timestamp}</span>
-                    <span className="text-[10px] text-text-secondary">{alert.ruleName}</span>
-                  </div>
-                  <div className="text-[11px] font-mono text-text-primary">{alert.message}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    {alert.value && <PriceTag value={alert.value} size="xs" />}
-                    {alert.txHash && <TxHash hash={alert.txHash} truncate={6} />}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Panel>
+        {/* WhatsApp Setup Guide */}
+        <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
+          <h2 className="text-xs font-mono text-accent-cyan mb-2">WHATSAPP SETUP</h2>
+          <div className="text-xs text-text-dim space-y-2">
+            <p>To receive alerts on WhatsApp:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Connect your WhatsApp number in Settings</li>
+              <li>Send "JOIN nexus" to the NEXUS WhatsApp bot number</li>
+              <li>Confirm your subscription via the verification code</li>
+              <li>Alerts will be delivered instantly to your WhatsApp</li>
+            </ol>
+            <p className="text-[10px] text-text-muted mt-2">
+              WhatsApp Business API integration. Alerts are delivered via the official WhatsApp Business API for reliable, instant delivery.
+            </p>
+          </div>
         </div>
       </div>
     </NexusLayout>
