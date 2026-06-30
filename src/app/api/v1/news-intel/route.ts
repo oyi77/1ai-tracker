@@ -1,157 +1,48 @@
 // ─────────────────────────────────────────────────────────────
-// GET /api/v1/news-intel — News Intelligence API
-// Actions: gdelt, rss, local-exclusive
+// GET /api/v1/news-intel — News & Sentiment Intelligence
+// GDELT, SEC EDGAR, exchange status, sentiment aggregation
+// Zero API keys — all public endpoints
 // ─────────────────────────────────────────────────────────────
 
-import { type NextRequest } from 'next/server'
-import { apiSuccess, apiError } from '@/lib/api/response'
-import { searchGdelt, getTopNews } from '@/lib/dal/news/gdelt'
-import { getFeedsByCountry, getAllFeeds, type CountryCode } from '@/lib/dal/news/rss-registry'
-import { calculateLocalScore, isLocalExclusive } from '@/lib/dal/news/local-score'
+import { NextRequest } from "next/server";
+import { apiSuccess, apiError, cacheHeaders } from "@/lib/api/response";
+import { fetchNewsIntelligence } from "@/lib/modules/news/news-intel";
+import { fetchSentimentIntelligence } from "@/lib/modules/sentiment/sentiment-intel";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
-// ─── Handler ───────────────────────────────────────────────
+let cachedNews: unknown = null;
+let cachedSentiment: unknown = null;
+let cacheTs = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const action = searchParams.get('action') ?? 'gdelt'
-
   try {
-    switch (action) {
-      case 'gdelt': {
-        // Race GDELT against a 10s deadline so the handler never hangs
-        const r = await Promise.race([
-          handleGdelt(searchParams),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('GDELT timeout')), 10_000)),
-        ])
-        r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
-        return r
+    const action = request.nextUrl.searchParams.get("action") ?? "all";
+    const now = Date.now();
+
+    if (action === "news" || action === "all") {
+      if (!cachedNews || now - cacheTs > CACHE_TTL) {
+        cachedNews = await fetchNewsIntelligence();
+        cacheTs = now;
       }
-      case 'rss': {
-        const r = handleRss(searchParams)
-        r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
-        return r
-      }
-      case 'local-exclusive': {
-        const r = await Promise.race([
-          handleLocalExclusive(searchParams),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Local exclusive timeout')), 10_000)),
-        ])
-        r.headers.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=240')
-        return r
-      }
-      default:
-        return apiError(`Unknown action: ${action}. Use gdelt, rss, or local-exclusive.`, 400)
     }
-  } catch (err) {
-    return apiError(`News intel error: ${(err as Error).message}`, 500)
+
+    if (action === "sentiment" || action === "all") {
+      if (!cachedSentiment || now - cacheTs > CACHE_TTL) {
+        cachedSentiment = await fetchSentimentIntelligence();
+      }
+    }
+
+    const data = action === "news"
+      ? { news: cachedNews }
+      : action === "sentiment"
+      ? { sentiment: cachedSentiment }
+      : { news: cachedNews, sentiment: cachedSentiment };
+
+    return cacheHeaders(apiSuccess(data), 300);
+  } catch (error) {
+    console.error("GET /api/v1/news-intel error:", error);
+    return apiError("Failed to fetch news intelligence", 502);
   }
-}
-
-// ─── GDELT Search ─────────────────────────────────────────
-
-async function handleGdelt(searchParams: URLSearchParams) {
-  const q = searchParams.get('q')
-  const country = searchParams.get('country') ?? undefined
-  const theme = searchParams.get('theme') ?? undefined
-  const language = searchParams.get('language') ?? undefined
-  const maxRecords = Math.min(Number(searchParams.get('limit') ?? 25), 100)
-
-  // If no query, get top news for country
-  const articles = q
-    ? await searchGdelt(q, { country, theme, language, maxRecords })
-    : await getTopNews(country)
-
-  return apiSuccess({
-    action: 'gdelt',
-    query: q,
-    country: country ?? 'global',
-    count: articles.length,
-    articles: articles.map((a) => ({
-      title: a.title,
-      url: a.url,
-      source: a.domain,
-      country: a.sourcecountry,
-      language: a.language,
-      publishedAt: a.seendate,
-      sentiment: a.sentiment,
-      imageUrl: a.socialimage,
-    })),
-  })
-}
-
-// ─── RSS Feeds ─────────────────────────────────────────────
-
-function handleRss(searchParams: URLSearchParams) {
-  const country = (searchParams.get('country') ?? 'GLOBAL').toUpperCase()
-  const feeds = country === 'ALL' ? getAllFeeds() : getFeedsByCountry(country as CountryCode)
-
-  if (feeds.length === 0) {
-    return apiError(`No feeds registered for country: ${country}`, 404)
-  }
-
-  return apiSuccess({
-    action: 'rss',
-    country,
-    feedCount: feeds.length,
-    feeds: feeds.map((f) => ({
-      id: f.id,
-      name: f.name,
-      url: f.url,
-      country: f.country,
-      language: f.language,
-      category: f.category,
-      credibility: f.credibility,
-    })),
-    note: 'Use ?action=rss&fetch=<feed-url> to fetch feed content',
-  })
-}
-
-// ─── Local Exclusive ───────────────────────────────────────
-
-async function handleLocalExclusive(searchParams: URLSearchParams) {
-  const country = (searchParams.get('country') ?? 'ID').toUpperCase()
-  const minScore = Number(searchParams.get('minScore') ?? 70)
-
-  // Fetch recent news from GDELT for the country
-  const articles = await getTopNews(country)
-
-  // Score each article for local exclusivity
-  const scored = articles.map((a) => {
-    const item = {
-      source: a.domain,
-      country: a.sourcecountry || country,
-      headline: a.title,
-      publishedAt: new Date(a.seendate),
-      url: a.url,
-      entities: [], // GDELT basic tier doesn't provide entity arrays
-    }
-
-    const result = calculateLocalScore(item)
-
-    return {
-      title: a.title,
-      url: a.url,
-      source: a.domain,
-      publishedAt: a.seendate,
-      localOnlyScore: result.localOnlyScore,
-      isCrossBorder: result.isCrossBorder,
-      minutesSincePublish: result.minutesSincePublish,
-      reasons: result.reasons,
-      isLocalExclusive: isLocalExclusive(item),
-    }
-  })
-
-  // Filter to high local-only scores
-  const exclusive = scored.filter((s) => s.localOnlyScore >= minScore)
-
-  return apiSuccess({
-    action: 'local-exclusive',
-    country,
-    minScore,
-    totalScanned: articles.length,
-    exclusiveCount: exclusive.length,
-    items: exclusive,
-  })
 }
