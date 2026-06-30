@@ -58,17 +58,15 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: 'Trading',
+    title: 'Analysis',
     items: [
-      { label: 'Trading',       href: '/trading',        icon: BarChart3 },
       { label: 'Charts',        href: '/charts',         icon: BarChart3 },
       { label: 'Backtest',      href: '/backtest',       icon: Activity },
-      { label: 'Options',       href: '/options',        icon: TrendingUp },
+      { label: 'Options Chain', href: '/options',        icon: TrendingUp },
       { label: 'Basis Scanner', href: '/basis',          icon: Activity },
       { label: 'Liquidations',  href: '/liquidations',   icon: Activity },
       { label: 'Arbitrage',     href: '/arbitrage',      icon: Activity },
       { label: 'MEV Detector',  href: '/mev',            icon: Shield },
-      { label: 'Compliance',    href: '/compliance',     icon: Shield },
     ],
   },
   {
