@@ -6,7 +6,8 @@
 
 "use client"
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
 
 interface WsMessage {
   [key: string]: unknown
@@ -14,13 +15,11 @@ interface WsMessage {
 
 const WS_URL = 'wss://tracker-ws.aitradepulse.com'
 
+// Crypto symbols that come from the WS server /prices namespace
+const CRYPTO_SYMBOLS = new Set(['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'AVAX', 'LINK', 'ARB', 'OP'])
+
 /**
  * Connect to a WebSocket stream on the nexus-ws server.
- * Returns the latest message and connection status.
- *
- * @param namespace — Socket.IO namespace (e.g., "orderbook", "prices", "derivatives", "liquidations")
- * @param room — Optional room to join (e.g., "btcusdt")
- * @returns { data, connected, error }
  */
 export function useWsStream<T extends WsMessage = WsMessage>(namespace: string, room?: string) {
   const [data, setData] = useState<T | null>(null)
@@ -31,51 +30,30 @@ export function useWsStream<T extends WsMessage = WsMessage>(namespace: string, 
 
   useEffect(() => {
     let mounted = true
+    const url = room ? `${WS_URL}/${namespace}?room=${room}` : `${WS_URL}/${namespace}`
 
-    const connect = () => {
+    function connect() {
+      if (!mounted) return
       try {
-        // Socket.IO WebSocket transport
-        const url = `${WS_URL}/socket.io/?EIO=4&transport=websocket`
         const ws = new WebSocket(url)
         wsRef.current = ws
 
-        ws.onopen = () => {
-          if (!mounted) return
-          setConnected(true)
-          setError(null)
-
-          // Socket.IO connect handshake
-          // Send connect packet for the namespace
-          ws.send(`42/${namespace},["subscribe","${room ?? ''}"]`)
-        }
-
+        ws.onopen = () => { if (mounted) setConnected(true) }
         ws.onmessage = (event) => {
-          if (!mounted) return
           try {
-            const raw = event.data as string
-            // Socket.IO wraps: 42/namespace,[event,data]
-            if (raw.startsWith(`42/${namespace},`)) {
-              const payload = JSON.parse(raw.slice(`42/${namespace},`.length))
-              if (Array.isArray(payload) && payload.length >= 2) {
-                setData(payload[1] as T)
-              }
-            }
-          } catch { /* silent */ }
+            const parsed = JSON.parse(event.data as string) as T
+            if (mounted) setData(parsed)
+          } catch {}
         }
-
-        ws.onerror = () => {
-          if (!mounted) return
-          setError('Connection error')
-        }
-
+        ws.onerror = () => { if (mounted) setError('Connection error') }
         ws.onclose = () => {
-          if (!mounted) return
-          setConnected(false)
-          // Reconnect after 3s
-          reconnectTimeoutRef.current = setTimeout(connect, 3000)
+          if (mounted) {
+            setConnected(false)
+            reconnectTimeoutRef.current = setTimeout(connect, 5000)
+          }
         }
-      } catch (e) {
-        if (mounted) setError(String(e))
+      } catch (err) {
+        if (mounted) setError((err as Error).message)
       }
     }
 
@@ -92,8 +70,8 @@ export function useWsStream<T extends WsMessage = WsMessage>(namespace: string, 
 }
 
 /**
- * Subscribe to Binance ticker updates for a symbol.
- * Returns real-time price, change, volume.
+ * Subscribe to price updates for a symbol.
+ * Routes through WS server /prices namespace (crypto) or REST fallback (TradFi).
  */
 export function useTicker(symbol: string) {
   const [price, setPrice] = useState<number>(0)
@@ -103,25 +81,51 @@ export function useTicker(symbol: string) {
   const [low24h, setLow24h] = useState<number>(0)
   const [connected, setConnected] = useState(false)
 
+  const isCrypto = CRYPTO_SYMBOLS.has(symbol)
+
   useEffect(() => {
-    const ws = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}usdt@ticker`)
+    if (isCrypto) {
+      // Route through WS server /prices namespace
+      const ws = new WebSocket(`${WS_URL}/prices`)
 
-    ws.onopen = () => setConnected(true)
-    ws.onmessage = (event) => {
-      try {
-        const d = JSON.parse(event.data as string)
-        setPrice(parseFloat(d.c))
-        setChange(parseFloat(d.P))
-        setVolume(parseFloat(d.q))
-        setHigh24h(parseFloat(d.h))
-        setLow24h(parseFloat(d.l))
-      } catch {}
+      ws.onopen = () => setConnected(true)
+      ws.onmessage = (event) => {
+        try {
+          const d = JSON.parse(event.data as string)
+          if (d.symbol === symbol.toLowerCase()) {
+            setPrice(d.price ?? 0)
+            setChange(d.change24h ?? 0)
+            setVolume(d.volume24h ?? 0)
+            setHigh24h(d.high24h ?? 0)
+            setLow24h(d.low24h ?? 0)
+          }
+        } catch {}
+      }
+      ws.onerror = () => setConnected(false)
+      ws.onclose = () => setConnected(false)
+
+      return () => ws.close()
+    } else {
+      // TradFi symbols: REST fallback via our API
+      const fetchPrice = async () => {
+        try {
+          const res = await fetch(`/api/v1/market/prices?symbols=${symbol}`)
+          if (res.ok) {
+            const d = await res.json()
+            const ticker = d.data?.[0]
+            if (ticker) {
+              setPrice(ticker.price ?? 0)
+              setChange(ticker.change24h ?? 0)
+              setConnected(true)
+            }
+          }
+        } catch {}
+      }
+      fetchPrice()
+      const interval = setInterval(fetchPrice, 30_000)
+      return () => clearInterval(interval)
     }
-    ws.onerror = () => setConnected(false)
-    ws.onclose = () => setConnected(false)
-
-    return () => ws.close()
-  }, [symbol])
+  }, [symbol, isCrypto])
 
   return { price, change, volume, high24h, low24h, connected }
 }
