@@ -115,6 +115,8 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/v1/composite-alerts",
   "/api/v1/intelligence-score",
   "/api/v1/backtest",
+  "/api/v1/bonds",
+  "/api/v1/dex/boosted",
 ]);
 
 // ─── Rate Limiting (in-memory, per-edge instance) ──────────

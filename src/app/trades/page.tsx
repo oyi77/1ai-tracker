@@ -40,69 +40,68 @@ export default function TradesPage() {
   const [totalBuy, setTotalBuy] = useState(0)
   const [totalSell, setTotalSell] = useState(0)
   const [connected, setConnected] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
+  const [wsRef] = useState<{ current: ReturnType<typeof setInterval> | null }>({ current: null })
 
-  // Connect to Binance trade stream directly (realtime)
+
+  // Fetch recent trades via our server API (no direct Binance connection)
   useEffect(() => {
-    const streams = SYMBOLS.map(s => `${s}usdt@trade`).join('/')
-    const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
-    wsRef.current = ws
     let buyVol = 0
     let sellVol = 0
 
-    ws.onopen = () => setConnected(true)
-
-    ws.onmessage = (event) => {
+    const fetchTrades = async () => {
       try {
-        const msg = JSON.parse(event.data as string)
-        const d = msg.data
-        if (!d || !d.T) return
+        const res = await fetch('/api/v1/trades')
+        if (!res.ok) return
+        const d = await res.json()
+        const serverTrades = d.data?.trades ?? []
+        if (!serverTrades.length) return
 
-        const symbol = d.s.replace('USDT', '').toUpperCase()
-        const price = parseFloat(d.p)
-        const size = parseFloat(d.q)
-        const usdValue = price * size
-        const side = d.m ? 'sell' : 'buy'
+        setConnected(true)
 
-        const trade: Trade = {
-          exchange: 'Binance',
-          pair: symbol,
-          price,
-          size,
-          side,
-          timestamp: d.T,
-          usdValue,
+        const mapped: Trade[] = serverTrades.map((t: { exchange?: string; pair?: string; symbol?: string; price: number; size: number; side: string; timestamp: number }) => ({
+          exchange: t.exchange ?? 'Binance',
+          pair: (t.pair ?? t.symbol ?? '').replace('USDT', ''),
+          price: t.price,
+          size: t.size,
+          side: t.side as 'buy' | 'sell',
+          timestamp: t.timestamp,
+          usdValue: t.price * t.size,
+        }))
+
+        setTrades(prev => [...mapped, ...prev].slice(0, 200))
+
+        for (const t of mapped) {
+          if (t.side === 'buy') buyVol += t.usdValue
+          else sellVol += t.usdValue
         }
-
-        if (side === 'buy') buyVol += usdValue
-        else sellVol += usdValue
         setTotalBuy(buyVol)
         setTotalSell(sellVol)
 
-        setTrades(prev => [trade, ...prev].slice(0, 100))
-
         setPrices(prev => {
           const next = new Map(prev)
-          const existing = next.get(symbol)
-          next.set(symbol, {
-            symbol,
-            price,
-            change24h: existing?.change24h ?? 0,
-            volume24h: existing?.volume24h ?? 0,
-            high24h: Math.max(existing?.high24h ?? price, price),
-            low24h: Math.min(existing?.low24h ?? price, price),
-            trades24h: (existing?.trades24h ?? 0) + 1,
-          })
+          for (const t of mapped) {
+            const existing = next.get(t.pair)
+            next.set(t.pair, {
+              symbol: t.pair,
+              price: t.price,
+              change24h: existing?.change24h ?? 0,
+              volume24h: existing?.volume24h ?? 0,
+              high24h: Math.max(existing?.high24h ?? t.price, t.price),
+              low24h: Math.min(existing?.low24h ?? t.price, t.price),
+              trades24h: (existing?.trades24h ?? 0) + 1,
+            })
+          }
           return next
         })
       } catch {}
     }
 
-    ws.onerror = () => setConnected(false)
-    ws.onclose = () => setConnected(false)
+    fetchTrades()
+    wsRef.current = setInterval(fetchTrades, 3000)
 
-    return () => ws.close()
-  }, [])
+    return () => { if (wsRef.current) clearInterval(wsRef.current) }
+  }, [wsRef])
+
 
   const totalVol = totalBuy + totalSell
   const buyPct = totalVol > 0 ? (totalBuy / totalVol) * 100 : 50

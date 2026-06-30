@@ -59,23 +59,18 @@ export default function WatchlistPage() {
       if (tokenItems.length === 0) return
 
       const symbols = tokenItems.map(i => i.symbol.toUpperCase())
-      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=[${symbols.map(s => `"${s}USDT"`).join(',')}]`)
+      const res = await fetch(`/api/v1/market/prices?symbols=${symbols.join(',')}`)
       if (!res.ok) return
-      const data = (await res.json()) as Array<{
-        symbol: string
-        lastPrice: string
-        priceChangePercent: string
-        quoteVolume: string
-      }>
+      const resp = await res.json()
+      const data = resp.data ?? []
 
       const newPrices = new Map<string, TokenPrice>()
       for (const d of data) {
-        const sym = d.symbol.replace('USDT', '')
-        newPrices.set(sym, {
-          symbol: sym,
-          price: parseFloat(d.lastPrice),
-          change24h: parseFloat(d.priceChangePercent),
-          volume24h: parseFloat(d.quoteVolume),
+        newPrices.set(d.symbol ?? d.s ?? '', {
+          symbol: d.symbol ?? d.s ?? '',
+          price: d.price ?? d.lastPrice ?? parseFloat(d.c ?? '0'),
+          change24h: d.change24h ?? d.priceChangePercent ?? parseFloat(d.P ?? '0'),
+          volume24h: d.volume24h ?? d.quoteVolume ?? parseFloat(d.q ?? '0'),
         })
       }
       setPrices(newPrices)

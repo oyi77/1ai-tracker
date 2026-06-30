@@ -53,7 +53,7 @@ export default function OrderBookPage() {
     } catch { /* silent */ }
   }, [symbol])
 
-  // WebSocket for realtime depth updates
+  // WebSocket for realtime depth updates via WS server proxy
   useEffect(() => {
     const binanceSymbol = symbol.toLowerCase() + 'usdt'
     let ws: WebSocket | null = null
@@ -61,18 +61,22 @@ export default function OrderBookPage() {
 
     const connect = () => {
       try {
-        // Connect directly to Binance depth stream (free, no key)
-        ws = new WebSocket(`wss://stream.binance.com:9443/ws/${binanceSymbol}@depth20@100ms`)
+        ws = new WebSocket('wss://tracker-ws.aitradepulse.com/orderbook')
         wsRef.current = ws
 
         ws.onopen = () => {
           setWsConnected(true)
           setStatus('live')
+          ws?.send(`42["subscribe","${binanceSymbol}"]`)
         }
 
         ws.onmessage = (event) => {
           try {
-            const msg = JSON.parse(event.data as string) as { bids: Array<[string, string]>; asks: Array<[string, string]> }
+            const raw = event.data as string
+            if (!raw.startsWith('42')) return
+            const parsed = JSON.parse(raw.slice(2)) as [string, { symbol: string; bids: Array<[string, string]>; asks: Array<[string, string]> }]
+            if (parsed[0] !== 'depth') return
+            const msg = parsed[1]
             const bids: DepthLevel[] = (msg.bids ?? []).slice(0, 15).map(([p, q]) => {
               const price = parseFloat(p); const quantity = parseFloat(q)
               return { price, quantity, total: price * quantity }
@@ -107,7 +111,6 @@ export default function OrderBookPage() {
     }
 
     connect()
-    // Also fetch ticker data via REST every 30s
     fetchData()
     const tickerInterval = setInterval(fetchData, 30_000)
 
@@ -117,6 +120,7 @@ export default function OrderBookPage() {
       if (ws) ws.close()
     }
   }, [symbol, fetchData])
+
 
   const maxTotal = data ? Math.max(
     ...data.bids.map(b => b.total),

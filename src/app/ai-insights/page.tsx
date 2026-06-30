@@ -77,48 +77,52 @@ export default function AiInsightsPage() {
           }
         } catch { /* skip */ }
 
-        // 4. Fetch real treasury yields
+        // 4. Fetch treasury yields from our macro API (server-proxied)
         try {
-          const { getFredSeries } = await import('@/lib/fred-client')
-          const dgs10 = await getFredSeries('DGS10', 1)
-          if (dgs10.observations.length > 0) {
+          const macroRes = await fetch('/api/v1/macro')
+          const macroData = await macroRes.json()
+          const indicators = macroData.data?.indicators ?? []
+          const dgs10 = indicators.find((i: { name?: string; seriesId?: string }) => i.seriesId === 'DGS10' || i.name?.includes('10-Year'))
+          if (dgs10?.value != null) {
             generated.push({
               id: 'treasury-10y',
               timestamp: now.toISOString(),
               category: 'rates',
               title: 'US 10-Year Treasury Yield',
-              data: `${dgs10.observations[0].value}% (${dgs10.observations[0].date})`,
+              data: `${dgs10.value}%`,
               source: 'US Treasury / FRED',
             })
           }
-          const spread = await getFredSeries('T10Y2Y', 1)
-          if (spread.observations.length > 0) {
+          const spread = indicators.find((i: { name?: string; seriesId?: string }) => i.seriesId === 'T10Y2Y' || i.name?.includes('Spread'))
+          if (spread?.value != null) {
             generated.push({
               id: 'yield-spread',
               timestamp: now.toISOString(),
               category: 'rates',
               title: '10Y-2Y Yield Spread',
-              data: `${spread.observations[0].value}% — ${Number.parseFloat(spread.observations[0].value) > 0 ? 'Positive (no recession signal)' : 'Negative (recession signal)'}`,
+              data: `${spread.value}% — ${Number.parseFloat(String(spread.value)) > 0 ? 'Positive (no recession signal)' : 'Negative (recession signal)'}`,
               source: 'US Treasury / FRED',
             })
           }
         } catch { /* skip */ }
 
-        // 5. Fetch real forex
+        // 5. Fetch forex from our API (server-proxied)
         try {
-          const fxRes = await fetch('https://open.er-api.com/v6/latest/USD')
-          const fxData = await fxRes.json()
-          if (fxData.rates) {
+          const fxRes = await fetch('/api/v1/forex')
+          const fxResp = await fxRes.json()
+          const idr = fxResp.data?.pairs?.find((p: { pair?: string }) => p.pair?.includes('IDR'))?.rate ?? fxResp.data?.IDR
+          if (idr) {
             generated.push({
               id: 'forex-usdidr',
               timestamp: now.toISOString(),
               category: 'forex',
               title: 'USD/IDR Exchange Rate',
-              data: `IDR ${fxData.rates.IDR?.toFixed(2) ?? '—'}`,
+              data: `IDR ${Number(idr).toFixed(2)}`,
               source: 'ExchangeRate-API',
             })
           }
         } catch { /* skip */ }
+
 
         setInsights(generated)
         setLoading(false)

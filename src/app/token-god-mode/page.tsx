@@ -92,7 +92,7 @@ export default function TokenGodModePage() {
 
   // Fetch trending tokens from DexScreener on mount
   useEffect(() => {
-    fetch('https://api.dexscreener.com/token-boosts/top/v1', { signal: AbortSignal.timeout(10_000) })
+    fetch('/api/v1/dex/boosted', { signal: AbortSignal.timeout(10_000) })
       .then(r => r.json())
       .then((data: Array<{ chainId: string; tokenAddress: string; description?: string; links?: Array<{ label?: string }> }>) => {
         const tokens: TrendingToken[] = data.slice(0, 12).map(t => ({

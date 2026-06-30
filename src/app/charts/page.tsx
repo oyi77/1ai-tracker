@@ -69,28 +69,20 @@ export default function ChartsPage() {
       try {
         const range = timeframe === '1d' ? '3mo' : timeframe === '1h' ? '5d' : '1mo'
         const interval = timeframe === '1d' ? '1d' : timeframe === '1h' ? '1h' : '1wk'
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(selected)}?interval=${interval}&range=${range}`
+        const url = `/api/v1/historical?symbol=${encodeURIComponent(selected)}&interval=${interval}&range=${range}`
         const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
-        const data = await res.json()
-        const result = data.chart?.result?.[0]
-        if (!result?.timestamp) { setLoading(false); return }
+        const resp = await res.json()
+        const candles = resp.data?.candles ?? resp.candles ?? []
+        if (!candles.length) { setLoading(false); return }
 
-        const timestamps = result.timestamp
-        const quotes = result.indicators.quote[0]
-        const candleData: Candle[] = []
-
-        for (let i = 0; i < timestamps.length; i++) {
-          if (quotes.open[i] && quotes.high[i] && quotes.low[i] && quotes.close[i]) {
-            candleData.push({
-              time: timestamps[i],
-              open: quotes.open[i],
-              high: quotes.high[i],
-              low: quotes.low[i],
-              close: quotes.close[i],
-              volume: quotes.volume[i] ?? 0,
-            })
-          }
-        }
+        const candleData: Candle[] = candles.map((c: { time?: string; timestamp?: number; open: number; high: number; low: number; close: number; volume?: number }) => ({
+          time: c.time ?? c.timestamp ?? 0,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+          volume: c.volume ?? 0,
+        }))
 
         setCandles(candleData)
         setLoading(false)

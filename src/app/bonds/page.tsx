@@ -42,14 +42,16 @@ export default function BondsPage() {
     // Use US Treasury yields as reference for IDR bond pricing
     const fetchYields = async () => {
       try {
-        const res = await fetch('https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/2026/all?type=daily_treasury_yield_curve&field_tdr_date_value=2026&page&_format=csv')
-        const text = await res.text()
+        const res = await fetch('/api/v1/bonds')
+        const d = await res.json()
+        const text = d.data?.csv ?? ''
         const lines = text.trim().split('\n')
-        const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim())
-        const latest = lines[1]?.split(',').map(v => v.replace(/"/g, '').trim())
+        const headers = lines[0].split(',').map((h: string) => h.replace(/"/g, '').trim())
+        const latest = lines[1]?.split(',').map((v: string) => v.replace(/"/g, '').trim())
+
 
         const getCol = (name: string) => {
-          const idx = headers.findIndex(h => h === name)
+          const idx = headers.findIndex((h: string) => h === name)
           return idx >= 0 && latest[idx] ? Number.parseFloat(latest[idx]) : null
         }
 
