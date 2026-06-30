@@ -46,6 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Bonds',         href: '/bonds',          icon: TrendingUp },
       { label: 'Derivatives',   href: '/derivatives',    icon: TrendingUp },
       { label: 'Deriv Intel',   href: '/derivatives-intel', icon: TrendingUp },
+      { label: 'ETF Flows',     href: '/etf-flows',        icon: TrendingUp },
     ],
   },
   {

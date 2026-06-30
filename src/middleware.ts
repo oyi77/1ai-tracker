@@ -109,7 +109,7 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/v1/derivatives-intel",
   "/api/v1/news-intel",
   "/api/v1/unlocks",
-  "/api/v1/commodities",
+  "/api/v1/etf-flows",
   "/api/v1/equities",
   "/api/v1/global-macro",
   "/api/v1/alerts/evaluate",
