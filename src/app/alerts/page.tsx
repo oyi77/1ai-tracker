@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { LiveDot } from '@/components/primitives/LiveDot'
 
@@ -248,32 +248,55 @@ export default function AlertsPage() {
   const [config, setConfig] = useState<Record<string, unknown>>({})
   const [channel, setChannel] = useState<Channel>('telegram')
   const [filterCategory, setFilterCategory] = useState<'all' | 'tradfi' | 'crypto'>('all')
+  const [loading, setLoading] = useState(true)
 
-  const toggleAlert = (id: string) => {
+  // Load alerts from API on mount
+  useEffect(() => {
+    fetch('/api/v1/alerts')
+      .then(r => r.json())
+      .then(d => { if (d.data) setAlerts(d.data) })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const toggleAlert = useCallback(async (id: string) => {
+    // Optimistic update
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a))
-  }
-
-  const deleteAlert = (id: string) => {
-    setAlerts(prev => prev.filter(a => a.id !== id))
-  }
-
-  const createAlert = () => {
-    const meta = ALERT_TYPES[alertType]
-    const alert: Alert = {
-      id: Date.now().toString(),
-      type: alertType,
-      name: meta.label,
-      description: '',
-      channel,
-      enabled: true,
-      lastTriggered: null,
-      config,
+    try {
+      await fetch('/api/v1/alerts', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+    } catch {
+      // Revert on error
+      setAlerts(prev => prev.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a))
     }
-    alert.description = describeAlert(alert)
-    setAlerts(prev => [...prev, alert])
+  }, [])
+
+  const deleteAlert = useCallback(async (id: string) => {
+    const prev = alerts
+    setAlerts(a => a.filter(x => x.id !== id))
+    try {
+      await fetch(`/api/v1/alerts?id=${id}`, { method: 'DELETE' })
+    } catch {
+      setAlerts(prev)
+    }
+  }, [alerts])
+
+  const createAlert = useCallback(async () => {
+    const meta = ALERT_TYPES[alertType]
+    const body = { type: alertType, name: meta.label, config, channel }
+    try {
+      const res = await fetch('/api/v1/alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const d = await res.json()
+      if (d.data) {
+        setAlerts(prev => [d.data, ...prev])
+      }
+    } catch {
+      // Fallback: add locally
+      const alert: Alert = { id: Date.now().toString(), type: alertType, name: meta.label, description: describeAlert({ type: alertType, config } as Alert), channel, enabled: true, lastTriggered: null, config }
+      setAlerts(prev => [...prev, alert])
+    }
     setConfig({})
     setShowCreate(false)
-  }
+  }, [alertType, config, channel])
 
   const loadPreset = (preset: typeof PRESETS[0]) => {
     setAlertType(preset.type)

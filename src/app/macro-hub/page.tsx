@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { MacroCommandCenterContent } from '../macro/page'
-import { NewsPageContent } from '../news/page'
+import { NewsFeedContent } from '../news-feed/page'
 import { CalendarPageContent } from '../calendar/page'
 import { CorrelationsPageContent } from '../correlations/page'
 import { IndonesiaMacroContent } from '../indonesia-macro/page'
@@ -11,7 +11,7 @@ import { IndonesiaMacroContent } from '../indonesia-macro/page'
 const TABS = [
   { key: 'macro', label: '🏛 Macro', content: MacroCommandCenterContent },
   { key: 'indonesia', label: '🇮🇩 Indonesia', content: IndonesiaMacroContent },
-  { key: 'news', label: '📰 News Feed', content: NewsPageContent },
+  { key: 'news', label: '📰 News Feed', content: NewsFeedContent },
   { key: 'calendar', label: '📅 Calendar', content: CalendarPageContent },
   { key: 'correlations', label: '🔗 Correlations', content: CorrelationsPageContent },
 ] as const

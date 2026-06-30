@@ -7,7 +7,6 @@ export const dynamic = 'force-dynamic'
 
 import { type NextRequest } from 'next/server'
 import { apiSuccess, apiError } from '@/lib/api/response'
-import '@/lib/dal/tradfi' // trigger auto-register
 import {
   searchCompany,
   getCompanyFacts,

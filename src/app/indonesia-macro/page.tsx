@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
@@ -12,10 +12,17 @@ interface IndonesiaIndicator {
   category: string
   latestValue: string
   latestDate: string
+  source?: 'world-bank' | 'fred' | 'bi'
+}
+
+interface IndonesiaMacroResponse {
+  entries: IndonesiaIndicator[]
+  biRate: { value: string; date: string } | null
 }
 
 export function IndonesiaMacroContent() {
   const [data, setData] = useState<IndonesiaIndicator[]>([])
+  const [biRate, setBiRate] = useState<{ value: string; date: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,7 +30,9 @@ export function IndonesiaMacroContent() {
     fetch('/api/v1/indonesia-macro')
       .then(r => r.json())
       .then(d => {
-        setData(d.data ?? [])
+        const resp = d.data as IndonesiaMacroResponse | undefined
+        setData(resp?.entries ?? [])
+        setBiRate(resp?.biRate ?? null)
         setLoading(false)
       })
       .catch(err => {
@@ -42,7 +51,7 @@ export function IndonesiaMacroContent() {
             <span className="text-teal-vivid">🇮🇩</span> Indonesia Macro Dashboard
           </h1>
           <p className="text-[12px] text-text-muted font-mono mt-1">
-            Bank Indonesia, BPS, World Bank — {data.length} indicators tracked
+            Bank Indonesia, BPS, World Bank, FRED — {data.length} indicators tracked
           </p>
         </div>
         <LiveDot status={loading ? 'stale' : error ? 'error' : 'live'} label />
@@ -60,8 +69,16 @@ export function IndonesiaMacroContent() {
         <div className="text-text-dim text-xs p-8 text-center">No data available</div>
       ) : (
         <div className="grid grid-cols-12 gap-4">
-          {/* Summary Panel */}
+          {/* BI Rate + Summary Panel */}
           <div className="col-span-4 space-y-4">
+            {biRate && (
+              <Panel title="BI Rate" subtitle="Bank Indonesia Policy Rate">
+                <div className="p-4 text-center">
+                  <div className="text-[36px] font-head font-bold text-teal-vivid tabular-nums">{biRate.value}</div>
+                  <div className="text-[10px] text-text-muted font-mono mt-1">As of {biRate.date}</div>
+                </div>
+              </Panel>
+            )}
             <Panel title="Indonesia Key Metrics" subtitle="Latest available data">
               <div className="space-y-3 p-2">
                 {data.filter(d => ['IDN-GDP', 'IDN-INFLATION', 'IDN-UNEMPLOYMENT', 'IDN-POPULATION'].includes(d.id)).map(ind => (
@@ -89,7 +106,12 @@ export function IndonesiaMacroContent() {
                         {ind.latestValue}
                         <span className="text-[10px] text-text-muted ml-1">{ind.unit}</span>
                       </div>
-                      <div className="text-[9px] font-mono text-text-muted mt-1">{ind.latestDate}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] font-mono text-text-muted">{ind.latestDate}</span>
+                        {ind.source && ind.source !== 'world-bank' && (
+                          <span className="text-[8px] font-mono px-1 rounded bg-teal-vivid/10 text-teal-vivid">{ind.source.toUpperCase()}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -102,8 +124,8 @@ export function IndonesiaMacroContent() {
       <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
         <h2 className="text-xs font-mono text-accent-cyan mb-2">SOURCE</h2>
         <p className="text-xs text-text-dim">
-          World Bank Open Data (api.worldbank.org) — free, no API key. Annual data for Indonesia (IDN).
-          For real-time BI Rate and monthly data, Bank Indonesia API integration is planned.
+          World Bank Open Data (annual) + FRED (monthly/quarterly) + Bank Indonesia.
+          Covers GDP, CPI, inflation, unemployment, trade balance, FDI, and BI Rate.
         </p>
       </div>
     </div>

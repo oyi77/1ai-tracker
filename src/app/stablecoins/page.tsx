@@ -26,12 +26,6 @@ interface StablecoinsResponse {
   summary?: Record<string, unknown>
 }
 
-const FALLBACK: Stablecoin[] = [
-  { name: 'Tether', symbol: 'USDT', price: 1.0001, marketCap: 110e9, change24h: 0.01, deviation: 0.01, pegStatus: 'ON PEG' },
-  { name: 'USD Coin', symbol: 'USDC', price: 0.9999, marketCap: 32e9, change24h: -0.01, deviation: 0.01, pegStatus: 'ON PEG' },
-  { name: 'Dai', symbol: 'DAI', price: 1.0002, marketCap: 5e9, change24h: 0.02, deviation: 0.02, pegStatus: 'ON PEG' },
-  { name: 'Ethena USDe', symbol: 'USDe', price: 1.0003, marketCap: 2.5e9, change24h: 0.03, deviation: 0.03, pegStatus: 'ON PEG' },
-]
 
 function fmtVol(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`
@@ -46,7 +40,7 @@ export default function StablecoinsPage() {
   })
 
   // Hook auto-unwraps { data, error } envelope → resp = { stablecoins, summary }
-  const stablecoins: Stablecoin[] = resp?.stablecoins || FALLBACK
+  const stablecoins: Stablecoin[] = resp?.stablecoins || []
 
   const columns: Column<Stablecoin>[] = [
     { key: 'symbol', header: 'Token', width: 80, render: r => <span className="text-teal-vivid font-bold">{r.symbol}</span> },

@@ -1,94 +1,49 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { LiveDot } from '@/components/primitives/LiveDot'
-
-interface MacroIndicator {
-  country: string
-  countryCode: string
-  flag: string
-  gdp: string | null
-  gdpGrowth: string | null
-  inflation: string | null
-  unemployment: string | null
-  population: string | null
-  interestRate: string | null
-}
+import { useLiveFetch } from '@/lib/hooks/useLiveFetch'
 
 const COUNTRIES = [
-  { code: 'USA', name: 'United States', flag: '🇺🇸', wbCode: 'US' },
-  { code: 'CHN', name: 'China', flag: '🇨🇳', wbCode: 'CN' },
-  { code: 'JPN', name: 'Japan', flag: '🇯🇵', wbCode: 'JP' },
-  { code: 'DEU', name: 'Germany', flag: '🇩🇪', wbCode: 'DE' },
-  { code: 'GBR', name: 'United Kingdom', flag: '🇬🇧', wbCode: 'GB' },
-  { code: 'IND', name: 'India', flag: '🇮🇳', wbCode: 'IN' },
-  { code: 'FRA', name: 'France', flag: '🇫🇷', wbCode: 'FR' },
-  { code: 'ITA', name: 'Italy', flag: '🇮🇹', wbCode: 'IT' },
-  { code: 'BRA', name: 'Brazil', flag: '🇧🇷', wbCode: 'BR' },
-  { code: 'CAN', name: 'Canada', flag: '🇨🇦', wbCode: 'CA' },
-  { code: 'KOR', name: 'South Korea', flag: '🇰🇷', wbCode: 'KR' },
-  { code: 'AUS', name: 'Australia', flag: '🇦🇺', wbCode: 'AU' },
-  { code: 'IDN', name: 'Indonesia', flag: '🇮🇩', wbCode: 'ID' },
-  { code: 'MEX', name: 'Mexico', flag: '🇲🇽', wbCode: 'MX' },
-  { code: 'SGP', name: 'Singapore', flag: '🇸🇬', wbCode: 'SG' },
-  { code: 'THA', name: 'Thailand', flag: '🇹🇭', wbCode: 'TH' },
-  { code: 'MYS', name: 'Malaysia', flag: '🇲🇾', wbCode: 'MY' },
-  { code: 'PHL', name: 'Philippines', flag: '🇵🇭', wbCode: 'PH' },
-  { code: 'VNM', name: 'Vietnam', flag: '🇻🇳', wbCode: 'VN' },
+  { code: 'USA', name: 'United States', flag: '🇺🇸' },
+  { code: 'CHN', name: 'China', flag: '🇨🇳' },
+  { code: 'JPN', name: 'Japan', flag: '🇯🇵' },
+  { code: 'DEU', name: 'Germany', flag: '🇩🇪' },
+  { code: 'GBR', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'IND', name: 'India', flag: '🇮🇳' },
+  { code: 'FRA', name: 'France', flag: '🇫🇷' },
+  { code: 'ITA', name: 'Italy', flag: '🇮🇹' },
+  { code: 'BRA', name: 'Brazil', flag: '🇧🇷' },
+  { code: 'CAN', name: 'Canada', flag: '🇨🇦' },
+  { code: 'KOR', name: 'South Korea', flag: '🇰🇷' },
+  { code: 'AUS', name: 'Australia', flag: '🇦🇺' },
+  { code: 'IDN', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'MEX', name: 'Mexico', flag: '🇲🇽' },
+  { code: 'SGP', name: 'Singapore', flag: '🇸🇬' },
+  { code: 'THA', name: 'Thailand', flag: '🇹🇭' },
+  { code: 'MYS', name: 'Malaysia', flag: '🇲🇾' },
+  { code: 'PHL', name: 'Philippines', flag: '🇵🇭' },
+  { code: 'VNM', name: 'Vietnam', flag: '🇻🇳' },
 ]
 
-const INDICATORS = [
-  { wbId: 'NY.GDP.MKTP.CD', name: 'GDP', transform: (v: number) => `$${(v / 1e9).toFixed(0)}B` },
-  { wbId: 'NY.GDP.MKTP.KD.ZG', name: 'GDP Growth', transform: (v: number) => `${v.toFixed(1)}%` },
-  { wbId: 'FP.CPI.TOTL', name: 'CPI', transform: (v: number) => v.toFixed(1) },
-  { wbId: 'FP.CPI.TOTL.ZG', name: 'Inflation', transform: (v: number) => `${v.toFixed(1)}%` },
-  { wbId: 'SL.UEM.TOTL.ZS', name: 'Unemployment', transform: (v: number) => `${v.toFixed(1)}%` },
-  { wbId: 'SP.POP.TOTL', name: 'Population', transform: (v: number) => `${(v / 1e6).toFixed(0)}M` },
-  { wbId: 'FR.INR.RINR', name: 'Real Interest', transform: (v: number) => `${v.toFixed(1)}%` },
-]
+const INDICATORS = ['GDP', 'GDP Growth', 'CPI', 'Inflation', 'Unemployment', 'Population', 'Real Interest']
+
+interface MacroData {
+  [countryCode: string]: { [indicator: string]: string }
+}
 
 export default function GlobalMacroPage() {
-  const [data, setData] = useState<Record<string, Record<string, string>>>({})
-  const [loading, setLoading] = useState(true)
+  const { data, status } = useLiveFetch<MacroData>({ url: '/api/v1/global-macro', interval: 30 * 60_000 })
   const [selectedIndicator, setSelectedIndicator] = useState('GDP Growth')
+  const loading = status === 'stale' && !data
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      const results: Record<string, Record<string, string>> = {}
-
-      for (const country of COUNTRIES) {
-        results[country.code] = {}
-        for (const indicator of INDICATORS) {
-          try {
-            const url = `https://api.worldbank.org/v2/country/${country.wbCode}/indicator/${indicator.wbId}?format=json&per_page=5`
-            const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
-            const json = await res.json()
-
-            if (Array.isArray(json) && json.length >= 2 && Array.isArray(json[1])) {
-              const latest = json[1].find((obs: { value: number | null }) => obs.value !== null)
-              if (latest) {
-                results[country.code][indicator.name] = indicator.transform(latest.value as number)
-              }
-            }
-          } catch {
-            // Skip failed fetches
-          }
-        }
-      }
-
-      setData(results)
-      setLoading(false)
-    }
-
-    fetchAll()
-  }, [])
+  const macroData: MacroData = data ?? {}
 
   // Sort countries by selected indicator
   const sortedCountries = [...COUNTRIES].sort((a, b) => {
-    const av = data[a.code]?.[selectedIndicator] ?? ''
-    const bv = data[b.code]?.[selectedIndicator] ?? ''
-    // Extract numeric value for sorting
+    const av = macroData[a.code]?.[selectedIndicator] ?? ''
+    const bv = macroData[b.code]?.[selectedIndicator] ?? ''
     const aNum = Number.parseFloat(av.replace(/[^0-9.-]/g, '')) || 0
     const bNum = Number.parseFloat(bv.replace(/[^0-9.-]/g, '')) || 0
     return bNum - aNum
@@ -109,14 +64,14 @@ export default function GlobalMacroPage() {
 
         {/* Indicator Selector */}
         <div className="flex flex-wrap gap-2">
-          {INDICATORS.map(ind => (
-            <button key={ind.name} onClick={() => setSelectedIndicator(ind.name)}
+          {INDICATORS.map(name => (
+            <button key={name} onClick={() => setSelectedIndicator(name)}
               className={`px-3 py-1 text-[10px] font-mono rounded border transition-colors ${
-                selectedIndicator === ind.name
+                selectedIndicator === name
                   ? 'bg-teal-vivid text-bg-base border-teal-vivid font-bold'
                   : 'bg-bg-panel border-border-dim text-text-muted hover:border-border-active'
               }`}>
-              {ind.name}
+              {name}
             </button>
           ))}
         </div>
@@ -136,7 +91,7 @@ export default function GlobalMacroPage() {
                     <th className="text-left py-2 font-mono w-8">#</th>
                     <th className="text-left py-2 font-mono">COUNTRY</th>
                     {INDICATORS.map(ind => (
-                      <th key={ind.name} className="text-right py-2 font-mono">{ind.name.toUpperCase()}</th>
+                      <th key={ind} className="text-right py-2 font-mono">{ind.toUpperCase()}</th>
                     ))}
                   </tr>
                 </thead>
@@ -149,8 +104,8 @@ export default function GlobalMacroPage() {
                         <span className="text-text-primary">{country.name}</span>
                       </td>
                       {INDICATORS.map(ind => (
-                        <td key={ind.name} className="py-2 text-right font-mono text-text-dim">
-                          {data[country.code]?.[ind.name] ?? '—'}
+                        <td key={ind} className="py-2 text-right font-mono text-text-dim">
+                          {macroData[country.code]?.[ind] ?? '—'}
                         </td>
                       ))}
                     </tr>
@@ -166,7 +121,7 @@ export default function GlobalMacroPage() {
           <p className="text-xs text-text-dim">
             World Bank Open Data (api.worldbank.org) — free, no API key.
             Covers {COUNTRIES.length} countries across {INDICATORS.length} macro indicators.
-            Data is annual (latest available year). For real-time data, FRED (US), ECB (EU), BOJ (Japan) integration is planned.
+            Data is annual (latest available year). Served via backend proxy with 30-min cache.
           </p>
         </div>
       </div>

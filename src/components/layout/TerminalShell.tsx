@@ -41,7 +41,7 @@ export function TerminalShell({ children }: { children: React.ReactNode }) {
               { label: '3:TOKENS', href: '/tokens' },
               { label: '4:DeFi', href: '/defi' },
               { label: '5:MACRO', href: '/macro' },
-              { label: '6:NEWS', href: '/news' },
+              { label: '6:NEWS', href: '/news-feed' },
             ].map(tab => (
               <a
                 key={tab.href}

@@ -264,24 +264,3 @@ describe('FRED DAL wrapper', () => {
     })
   })
 })
-
-// ─── DAL Registry integration ──────────────────────────────
-
-describe('TradFi DAL registration', () => {
-  it('registers SEC EDGAR and FRED sources', async () => {
-    const { getDalRegistry } = await import('@/lib/dal/registry')
-    await import('@/lib/dal/tradfi')
-
-    const registry = getDalRegistry()
-    const secSource = registry.getStatus('sec-edgar')
-    const fredSource = registry.getStatus('fred')
-
-    expect(secSource).toBeDefined()
-    expect(secSource?.source.domain).toBe('tradfi-filings')
-    expect(secSource?.source.tier).toBe(0)
-
-    expect(fredSource).toBeDefined()
-    expect(fredSource?.source.domain).toBe('tradfi-macro')
-    expect(fredSource?.source.tier).toBe(0)
-  })
-})

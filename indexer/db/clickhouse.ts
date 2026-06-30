@@ -1,5 +1,10 @@
 // ─────────────────────────────────────────────────────────────
-// ClickHouse client wrapper with connection pooling and retry
+// ClickHouse client wrapper — SCAFFOLDED FOR FUTURE USE
+// Status: Provisioned in Docker, NOT wired to any data pipeline.
+// Purpose: Future time-series analytics (OHLCV, on-chain events,
+// alert history) when PostgreSQL + Redis hit query limits.
+// Current scale works fine with PostgreSQL + Redis.
+// Do NOT wire without a concrete performance bottleneck.
 // ─────────────────────────────────────────────────────────────
 import { createClient } from "@clickhouse/client";
 

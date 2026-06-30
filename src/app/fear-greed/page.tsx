@@ -1,9 +1,10 @@
-"use client"
+"use client";
 
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { LiveDot } from '@/components/primitives/LiveDot'
 import { useLiveFetch } from '@/lib/hooks/useLiveFetch'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 interface FearGreedResponse {
   composite: { score: number; label: string }
@@ -42,9 +43,9 @@ export default function FearGreedPage() {
 
             <Panel title="Category Breakdown" subtitle="Component scores">
               <div className="p-3 grid grid-cols-2 lg:grid-cols-3 gap-2">
-                {d.categories && Object.entries(d.categories).map(([name, cat]) => (
-                  <div key={name} className="bg-bg-raised rounded p-3">
-                    <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">{name}</div>
+                {d.categories && (Array.isArray(d.categories) ? d.categories : Object.entries(d.categories).map(([name, cat]) => ({ name, ...(cat as { score: number; weight: number }) }))).map((cat, i) => (
+                  <div key={i} className="bg-bg-raised rounded p-3">
+                    <div className="text-[10px] text-text-muted font-mono uppercase tracking-wider mb-1">{cat.name}</div>
                     <div className="flex items-baseline gap-2">
                       <span className={`text-[20px] font-head font-bold tabular-nums ${scoreColor(cat.score)}`}>{cat.score}</span>
                       <span className="text-[10px] text-text-muted font-mono">×{cat.weight}</span>
@@ -57,19 +58,30 @@ export default function FearGreedPage() {
               </div>
             </Panel>
 
-            {d.history && d.history.length > 0 && (
-              <Panel title="7-Day History">
-                <div className="p-3 flex items-end gap-1 h-24">
-                  {d.history.map((h, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="text-[9px] font-mono text-text-muted">{h.score}</div>
-                      <div className={`w-full rounded-t ${scoreColor(h.score).replace('text-', 'bg-')}`} style={{ height: `${h.score}%` }} />
-                      <div className="text-[8px] font-mono text-text-muted">{h.date.slice(5)}</div>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-            )}
+            <Panel title="History" subtitle={`${d.history?.length ?? 0} data points`}>
+              <div className="p-3" style={{ height: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={d.history ?? []} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="fgGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#14b8a6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                    <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#6b7280' }} tickFormatter={(v: string) => v.slice(5)} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: '#6b7280' }} width={30} />
+                    <Tooltip
+                      contentStyle={{ background: '#1a1a2e', border: '1px solid #2a2a3e', borderRadius: 6, fontSize: 11, fontFamily: 'monospace' }}
+                      labelStyle={{ color: '#9ca3af' }}
+                      formatter={(value: unknown) => [String(value), 'Score']}
+                    />
+                    <Area type="monotone" dataKey="score" stroke="#14b8a6" fill="url(#fgGradient)" strokeWidth={2} dot={{ r: 3, fill: '#14b8a6' }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Panel>
+
           </>
         )}
       </div>

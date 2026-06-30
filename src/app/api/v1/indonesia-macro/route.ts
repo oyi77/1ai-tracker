@@ -11,20 +11,22 @@ interface IndonesiaMacroEntry {
   category: string
   latestValue: string
   latestDate: string
+  source: 'world-bank' | 'fred' | 'bi'
 }
 
 // In-memory cache
-let cachedData: IndonesiaMacroEntry[] | null = null
+let cachedData: { entries: IndonesiaMacroEntry[]; biRate: { value: string; date: string } | null } | null = null
 let cacheTimestamp = 0
 const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 
-async function fetchIndonesiaData(): Promise<IndonesiaMacroEntry[]> {
+async function fetchIndonesiaData(): Promise<{ entries: IndonesiaMacroEntry[]; biRate: { value: string; date: string } | null }> {
   if (cachedData && Date.now() - cacheTimestamp <= CACHE_TTL) {
     return cachedData
   }
 
   const entries: IndonesiaMacroEntry[] = []
 
+  // 1. World Bank annual data (existing)
   for (const [id, meta] of Object.entries(INDONESIA_INDICATORS)) {
     const url = `https://api.worldbank.org/v2/country/IDN/indicator/${meta.wbId}?format=json&per_page=5`
     try {
@@ -43,15 +45,55 @@ async function fetchIndonesiaData(): Promise<IndonesiaMacroEntry[]> {
         category: meta.category,
         latestValue: meta.transform(latest.value as number),
         latestDate: latest.date,
+        source: 'world-bank',
       })
     } catch {
       // Skip failed indicators
     }
   }
 
-  cachedData = entries
+  // 2. FRED data for Indonesia (recent monthly/quarterly)
+  let biRate: { value: string; date: string } | null = null
+
+  const fredSeries: Array<{ id: string; title: string; unit: string; category: string; transform: (v: number) => string }> = [
+    { id: 'IDNCPIALLMINMEI', title: 'Indonesia CPI (Monthly)', unit: 'Index', category: 'inflation', transform: (v) => v.toFixed(1) },
+    { id: 'IDNIRNST', title: 'BI Rate (Interbank)', unit: '%', category: 'rates', transform: (v) => `${v.toFixed(2)}%` },
+    { id: 'IDNGDPNQDSMEI', title: 'Indonesia GDP (Quarterly)', unit: 'IDR B', category: 'growth', transform: (v) => `${(v / 1e3).toFixed(0)}T` },
+  ]
+
+  for (const series of fredSeries) {
+    try {
+      const { registerAllModules } = await import('@/lib/modules')
+      const registry = registerAllModules()
+      const result = await registry.fetchOne('fred', { series: series.id, limit: 3 })
+      const data = result?.data as { observations?: Array<{ date: string; value: number | null }> } | undefined
+      const obs = data?.observations?.find(o => o.value !== null)
+      if (obs && obs.value != null) {
+        const entry: IndonesiaMacroEntry = {
+          id: series.id,
+          title: series.title,
+          unit: series.unit,
+          category: series.category,
+          latestValue: series.transform(obs.value),
+          latestDate: obs.date,
+          source: 'fred',
+        }
+        entries.push(entry)
+
+        // Capture BI Rate separately
+        if (series.id === 'IDNIRNST') {
+          biRate = { value: series.transform(obs.value), date: obs.date }
+        }
+      }
+    } catch {
+      // FRED data not available (no API key or series doesn't exist)
+    }
+  }
+
+  const result = { entries, biRate }
+  cachedData = result
   cacheTimestamp = Date.now()
-  return entries
+  return result
 }
 
 export async function GET(_request: NextRequest) {
