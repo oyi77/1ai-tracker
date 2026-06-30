@@ -443,3 +443,150 @@ model PaperTrade {
   @@index([createdAt(sort: Desc)])
   @@index([status])
 }
+
+model DerivativesSnapshot {
+  id             String   @id @default(cuid())
+  exchange       String
+  symbol         String
+  fundingRate    Float    @default(0)
+  openInterest   Float    @default(0)
+  longShortRatio Float?
+  markPrice      Float?
+  indexPrice     Float?
+  timestamp      DateTime @default(now())
+
+  @@index([exchange, symbol, timestamp(sort: Desc)])
+  @@index([fundingRate(sort: Desc)])
+}
+
+model LiquidationEvent {
+  id               String   @id @default(cuid())
+  exchange         String
+  symbol           String
+  side             String
+  quantity         Float
+  price            Float
+  estimatedValueUsd Float
+  timestamp        DateTime
+
+  @@index([exchange, timestamp(sort: Desc)])
+  @@index([estimatedValueUsd(sort: Desc)])
+  @@index([symbol, timestamp(sort: Desc)])
+}
+
+model SentimentSnapshot {
+  id           String   @id @default(cuid())
+  source       String
+  score        Float
+  label        String?
+  metadata     Json?
+  timestamp    DateTime @default(now())
+
+  @@index([source, timestamp(sort: Desc)])
+}
+
+model UnlockEvent {
+  id               String   @id @default(cuid())
+  token            String
+  unlockDate       DateTime
+  amountUsd        Float?
+  percentOfSupply  Float?
+  source           String
+  createdAt        DateTime @default(now())
+
+  @@index([unlockDate(sort: Desc)])
+  @@index([token])
+}
+
+model ETFFlowSnapshot {
+  id               String   @id @default(cuid())
+  issuer           String
+  asset            String
+  netFlowUsd       Float
+  cumulativeFlowUsd Float   @default(0)
+  date             DateTime
+  createdAt        DateTime @default(now())
+
+  @@unique([issuer, asset, date])
+  @@index([asset, date(sort: Desc)])
+}
+
+model PremiumSnapshot {
+  id          String   @id @default(cuid())
+  venuePair   String
+  asset       String
+  premiumPct  Float
+  timestamp   DateTime @default(now())
+
+  @@index([venuePair, asset, timestamp(sort: Desc)])
+}
+
+model MempoolEvent {
+  id          String   @id @default(cuid())
+  chain       String
+  type        String
+  asset       String
+  estUsd      Float?
+  detectedAt  DateTime
+  confirmedAt DateTime?
+  metadata    Json?
+
+  @@index([chain, detectedAt(sort: Desc)])
+  @@index([type, detectedAt(sort: Desc)])
+}
+
+model BridgeFlowEvent {
+  id           String   @id @default(cuid())
+  sourceChain  String
+  destChain    String
+  asset        String
+  amountUsd    Float
+  timestamp    DateTime
+
+  @@index([sourceChain, destChain, timestamp(sort: Desc)])
+  @@index([amountUsd(sort: Desc)])
+}
+
+model StakingFlowSnapshot {
+  id          String   @id @default(cuid())
+  asset       String
+  entryQueue  Float?
+  exitQueue   Float?
+  netStaked   Float?
+  timestamp   DateTime @default(now())
+
+  @@index([asset, timestamp(sort: Desc)])
+}
+
+model CreditRiskSnapshot {
+  id               String   @id @default(cuid())
+  protocol         String
+  asset            String
+  atRiskUsd        Float
+  avgHealthFactor  Float?
+  positionCount    Int?
+  timestamp        DateTime @default(now())
+
+  @@index([protocol, timestamp(sort: Desc)])
+  @@index([atRiskUsd(sort: Desc)])
+}
+
+model MinerFlowSnapshot {
+  id                      String   @id @default(cuid())
+  outflowToExchangesUsd   Float
+  hashRate                Float?
+  timestamp               DateTime @default(now())
+
+  @@index([timestamp(sort: Desc)])
+}
+
+model SectorFlowSnapshot {
+  id                    String   @id @default(cuid())
+  sector                String
+  netSmartMoneyFlowUsd  Float
+  tokenCount            Int
+  timestamp             DateTime @default(now())
+
+  @@index([sector, timestamp(sort: Desc)])
+  @@index([netSmartMoneyFlowUsd(sort: Desc)])
+}
