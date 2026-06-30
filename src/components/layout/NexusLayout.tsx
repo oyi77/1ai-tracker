@@ -88,6 +88,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Analytics',
     items: [
       { label: 'Analytics Hub', href: '/analytics',      icon: Zap },
+      { label: 'Screener',      href: '/screener',       icon: BarChart3 },
       { label: 'Compare',       href: '/compare',        icon: GitCompare },
       { label: 'Insider',       href: '/insider',        icon: Users },
       { label: 'Weather',       href: '/weather',        icon: Cloud },
