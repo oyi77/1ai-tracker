@@ -115,6 +115,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'PnL Tracker',   href: '/pnl',            icon: BarChart3 },
       { label: 'Exchange Flow', href: '/exchange-flow',  icon: BarChart3 },
       { label: 'Gas Tracker',   href: '/gas',            icon: Activity },
+      { label: 'API Docs',      href: '/api-docs',       icon: BarChart3 },
       { label: 'Status',        href: '/status',         icon: Shield },
       { label: 'Live Trades',   href: '/trades',         icon: Activity },
     ],
