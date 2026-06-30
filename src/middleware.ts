@@ -113,7 +113,7 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/v1/onchain-intel",
   "/api/v1/risk-intel",
   "/api/v1/composite-alerts",
-  "/api/v1/alerts/log",
+  "/api/v1/intelligence-score",
 ]);
 
 // ─── Rate Limiting (in-memory, per-edge instance) ──────────

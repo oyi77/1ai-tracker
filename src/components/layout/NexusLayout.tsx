@@ -71,6 +71,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'Arbitrage',     href: '/arbitrage',      icon: Activity },
       { label: 'MEV Detector',  href: '/mev',            icon: Shield },
       { label: 'Composite Signals', href: '/composite-alerts', icon: Activity },
+      { label: 'Intel Score',      href: '/intelligence-score', icon: Activity },
 
     ],
   },
