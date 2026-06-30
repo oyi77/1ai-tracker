@@ -272,6 +272,36 @@ const API_ENDPOINTS: ApiEndpoint[] = [
     response: '{ data: { events: [{ action: "ORDER_SUBMITTED", timestamp: "2026-06-30", details: "BUY 10 AAPL" }] } }',
   },
 
+  // ─── Screener ──────────────────────────────────────────
+  {
+    method: 'GET',
+    path: '/api/v1/screener',
+    description: 'Multi-asset stock screener with filters',
+    category: 'Screener',
+    params: 'sector=Technology&exchange=IDX&minMarketCap=1000000000&maxPE=25&sortBy=marketCap&limit=50',
+    example: 'curl "https://tracker.aitradepulse.com/api/v1/screener?sector=Technology&sortBy=marketCap&limit=10"',
+    response: '{ data: { results: [{ symbol: "AAPL", price: 195.50, pe: 28.5, marketCap: 3e12 }], count: 10 } }',
+  },
+
+  // ─── API Keys ──────────────────────────────────────────
+  {
+    method: 'GET',
+    path: '/api/v1/keys',
+    description: 'List API keys and tier configuration',
+    category: 'System',
+    example: 'curl https://tracker.aitradepulse.com/api/v1/keys',
+    response: '{ data: { keys: [...], tiers: { free: { rateLimit: 100 }, pro: { rateLimit: 1000 } } } }',
+  },
+  {
+    method: 'POST',
+    path: '/api/v1/keys',
+    description: 'Create new API key (free/pro/enterprise)',
+    category: 'System',
+    params: '{ name: "My Service", tier: "pro" }',
+    example: 'curl -X POST https://tracker.aitradepulse.com/api/v1/keys -H "Content-Type: application/json" -d \'{"name":"My Service","tier":"pro"}\'',
+    response: '{ data: { key: "nexus_abc123...", id: "abc123", tier: "pro", rateLimit: 1000 } }',
+  },
+
   // ─── System ─────────────────────────────────────────────
   {
     method: 'GET',
