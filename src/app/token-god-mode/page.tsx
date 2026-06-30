@@ -60,11 +60,25 @@ const typeColors: Record<string, string> = {
   bridge: 'bg-data-bear/20 text-data-bear',
 }
 
+interface TrendingToken {
+  address: string
+  name: string
+  symbol: string
+  network: string
+  priceUsd: number
+  volume24h: number
+  priceChange24h: number
+  liquidity: number
+  fdv: number
+}
+
 export default function TokenGodModePage() {
   const [address, setAddress] = useState('')
   const [network, setNetwork] = useState('eth')
   const [data, setData] = useState<TokenData | null>(null)
   const [status, setStatus] = useState<'idle' | 'loading' | 'live' | 'error'>('idle')
+  const [trending, setTrending] = useState<TrendingToken[]>([])
+  const [trendingLoading, setTrendingLoading] = useState(true)
 
   // Popular tokens for quick analysis
   const POPULAR_TOKENS = [
@@ -75,6 +89,28 @@ export default function TokenGodModePage() {
     { address: '0x514910771af9ca656af840dff83e8264ecf986ca', name: 'LINK', network: 'eth' },
     { address: '0x6b175474e89094c44da98b954eedeac495271d0f', name: 'DAI', network: 'eth' },
   ]
+
+  // Fetch trending tokens from DexScreener on mount
+  useEffect(() => {
+    fetch('https://api.dexscreener.com/token-boosts/top/v1', { signal: AbortSignal.timeout(10_000) })
+      .then(r => r.json())
+      .then((data: Array<{ chainId: string; tokenAddress: string; description?: string; links?: Array<{ label?: string }> }>) => {
+        const tokens: TrendingToken[] = data.slice(0, 12).map(t => ({
+          address: t.tokenAddress,
+          name: t.description ?? t.tokenAddress.slice(0, 8),
+          symbol: t.links?.[0]?.label ?? t.tokenAddress.slice(0, 6),
+          network: t.chainId === 'solana' ? 'solana' : 'eth',
+          priceUsd: 0,
+          volume24h: 0,
+          priceChange24h: 0,
+          liquidity: 0,
+          fdv: 0,
+        }))
+        setTrending(tokens)
+        setTrendingLoading(false)
+      })
+      .catch(() => setTrendingLoading(false))
+  }, [])
 
   const fetchToken = useCallback(async () => {
     if (!address.trim()) return
@@ -150,21 +186,40 @@ export default function TokenGodModePage() {
           </div>
         </Panel>
 
-        {/* Quick Start */}
+        {/* Quick Start: Trending + Popular */}
         {!data && (
-          <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
-            <h3 className="text-xs font-mono text-accent-cyan mb-2">QUICK START</h3>
-            <p className="text-[10px] text-text-muted mb-3">Popular tokens to analyze — click to load</p>
-            <div className="flex flex-wrap gap-2">
-              {POPULAR_TOKENS.map(token => (
-                <button key={token.address} onClick={() => { setAddress(token.address); setNetwork(token.network) }}
-                  className="px-3 py-1.5 text-[10px] font-mono border border-border-dim rounded hover:border-teal-vivid hover:bg-bg-elevated transition-colors">
-                  <span className="text-accent-cyan font-bold">{token.name}</span>
-                  <span className="text-text-muted ml-1">{token.network}</span>
-                </button>
-              ))}
+          <div className="space-y-3">
+            {/* Trending tokens from DexScreener */}
+            {trending.length > 0 && (
+              <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
+                <h3 className="text-xs font-mono text-accent-amber mb-2">TRENDING NOW (DexScreener)</h3>
+                <p className="text-[10px] text-text-muted mb-3">Top boosted tokens — click to analyze</p>
+                <div className="flex flex-wrap gap-2">
+                  {trending.map(token => (
+                    <button key={token.address} onClick={() => { setAddress(token.address); setNetwork(token.network) }}
+                      className="px-3 py-1.5 text-[10px] font-mono border border-accent-amber/30 rounded hover:border-accent-amber hover:bg-bg-elevated transition-colors">
+                      <span className="text-accent-amber font-bold">{token.symbol}</span>
+                      <span className="text-text-muted ml-1">{token.network}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Popular blue-chip tokens */}
+            <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
+              <h3 className="text-xs font-mono text-accent-cyan mb-2">BLUE CHIPS</h3>
+              <p className="text-[10px] text-text-muted mb-3">Major tokens — click to analyze</p>
+              <div className="flex flex-wrap gap-2">
+                {POPULAR_TOKENS.map(token => (
+                  <button key={token.address} onClick={() => { setAddress(token.address); setNetwork(token.network) }}
+                    className="px-3 py-1.5 text-[10px] font-mono border border-border-dim rounded hover:border-teal-vivid hover:bg-bg-elevated transition-colors">
+                    <span className="text-accent-cyan font-bold">{token.name}</span>
+                    <span className="text-text-muted ml-1">{token.network}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <p className="text-[9px] text-text-dim mt-2">Select a token, then click ANALYZE</p>
           </div>
         )}
 

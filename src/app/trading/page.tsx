@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { LiveDot } from '@/components/primitives/LiveDot'
 
+// ─── Types ────────────────────────────────────────────────
+
 interface Position {
   symbol: string
   qty: string
@@ -38,13 +40,40 @@ interface Account {
   unrealized_plpc: string
 }
 
+interface MarketQuote {
+  symbol: string
+  name: string
+  price: number
+  change: number
+  changePct: number
+}
+
+// Popular tickers for market watch
+const WATCHLIST = [
+  { symbol: 'AAPL', name: 'Apple' },
+  { symbol: 'MSFT', name: 'Microsoft' },
+  { symbol: 'GOOGL', name: 'Alphabet' },
+  { symbol: 'AMZN', name: 'Amazon' },
+  { symbol: 'NVDA', name: 'NVIDIA' },
+  { symbol: 'TSLA', name: 'Tesla' },
+  { symbol: 'META', name: 'Meta' },
+  { symbol: 'JPM', name: 'JPMorgan' },
+  { symbol: 'V', name: 'Visa' },
+  { symbol: 'BBCA.JK', name: 'Bank Central Asia' },
+  { symbol: 'BBRI.JK', name: 'Bank Rakyat Indonesia' },
+  { symbol: 'GOTO.JK', name: 'GoTo' },
+]
+
+// ─── Component ────────────────────────────────────────────
+
 export default function TradingPage() {
   const [account, setAccount] = useState<Account | null>(null)
   const [positions, setPositions] = useState<Position[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [alpacaConfigured, setAlpacaConfigured] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'new-order'>('positions')
+  const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'new-order' | 'watchlist'>('watchlist')
   const [newOrder, setNewOrder] = useState({
     symbol: '',
     side: 'buy' as 'buy' | 'sell',
@@ -54,18 +83,46 @@ export default function TradingPage() {
   })
   const [orderStatus, setOrderStatus] = useState<string | null>(null)
 
-  const fetchData = useCallback(async () => {
+  // Market watch data
+  const [watchlist, setWatchlist] = useState<MarketQuote[]>([])
+  const [watchlistLoading, setWatchlistLoading] = useState(true)
+
+  const fetchMarketData = useCallback(async () => {
+    try {
+      const symbols = WATCHLIST.map(w => w.symbol).join(',')
+      const res = await fetch(`/api/v1/modules/fetch?module=yahoo-finance&action=quote&symbols=${symbols}`)
+      const d = await res.json()
+      const quotes: MarketQuote[] = (d.data ?? []).map((q: Record<string, unknown>) => ({
+        symbol: q.symbol as string,
+        name: WATCHLIST.find(w => w.symbol === q.symbol)?.name ?? (q.shortName as string) ?? q.symbol as string,
+        price: (q.regularMarketPrice as number) ?? 0,
+        change: (q.regularMarketChange as number) ?? 0,
+        changePct: (q.regularMarketChangePercent as number) ?? 0,
+      }))
+      setWatchlist(quotes)
+      setWatchlistLoading(false)
+    } catch {
+      setWatchlistLoading(false)
+    }
+  }, [])
+
+  const fetchAlpaca = useCallback(async () => {
     try {
       const [acctRes, posRes, ordRes] = await Promise.all([
-        fetch('/api/v1/trading/account'),
-        fetch('/api/v1/trading/positions'),
-        fetch('/api/v1/trading/orders?status=all&limit=20'),
+        fetch('/api/v1/trading?action=account'),
+        fetch('/api/v1/trading?action=positions'),
+        fetch('/api/v1/trading?action=orders&status=all&limit=20'),
       ])
 
-      if (acctRes.ok) {
-        const acctData = await acctRes.json()
-        setAccount(acctData.data)
+      const acctData = await acctRes.json()
+      if (acctData.data?.configured === false) {
+        setAlpacaConfigured(false)
+        setLoading(false)
+        return
       }
+      setAlpacaConfigured(true)
+
+      if (acctRes.ok) setAccount(acctData.data)
       if (posRes.ok) {
         const posData = await posRes.json()
         setPositions(posData.data ?? [])
@@ -74,24 +131,24 @@ export default function TradingPage() {
         const ordData = await ordRes.json()
         setOrders(ordData.data ?? [])
       }
-
       setLoading(false)
-    } catch (err) {
-      setError((err as Error).message)
+    } catch {
+      setAlpacaConfigured(false)
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 10000) // Refresh every 10s
-    return () => clearInterval(interval)
-  }, [fetchData])
+    fetchMarketData()
+    fetchAlpaca()
+    const marketInterval = setInterval(fetchMarketData, 60_000)
+    const alpacaInterval = setInterval(fetchAlpaca, 10_000)
+    return () => { clearInterval(marketInterval); clearInterval(alpacaInterval) }
+  }, [fetchMarketData, fetchAlpaca])
 
   const handlePlaceOrder = async () => {
     if (!newOrder.symbol || !newOrder.qty) return
     setOrderStatus(null)
-
     try {
       const res = await fetch('/api/v1/trading/orders', {
         method: 'POST',
@@ -104,12 +161,11 @@ export default function TradingPage() {
           limit_price: newOrder.type === 'limit' ? Number.parseFloat(newOrder.limitPrice) : undefined,
         }),
       })
-
       const data = await res.json()
       if (res.ok) {
         setOrderStatus(`Order placed: ${newOrder.side.toUpperCase()} ${newOrder.qty} ${newOrder.symbol.toUpperCase()}`)
         setNewOrder({ symbol: '', side: 'buy', type: 'market', qty: '', limitPrice: '' })
-        fetchData() // Refresh
+        fetchAlpaca()
       } else {
         setOrderStatus(`Error: ${data.error}`)
       }
@@ -121,7 +177,7 @@ export default function TradingPage() {
   const handleCancelOrder = async (orderId: string) => {
     try {
       await fetch(`/api/v1/trading/orders/${orderId}`, { method: 'DELETE' })
-      fetchData()
+      fetchAlpaca()
     } catch { /* ignore */ }
   }
 
@@ -139,6 +195,10 @@ export default function TradingPage() {
     return `${num >= 0 ? '+' : ''}$${num.toFixed(2)}`
   }
 
+  const tabs = alpacaConfigured
+    ? (['watchlist', 'positions', 'orders', 'new-order'] as const)
+    : (['watchlist'] as const)
+
   return (
     <NexusLayout>
       <div className="p-6 space-y-4">
@@ -146,7 +206,7 @@ export default function TradingPage() {
           <div>
             <h1 className="text-xl font-bold font-mono text-accent-cyan">TRADING TERMINAL</h1>
             <p className="text-xs text-text-muted font-mono mt-1">
-              Alpaca Paper Trading · Commission-free · Real-time
+              {alpacaConfigured ? 'Alpaca Paper Trading · Commission-free · Real-time' : 'Market Watch · Connect Alpaca for paper trading'}
             </p>
           </div>
           <LiveDot status={loading ? 'stale' : error ? 'error' : 'live'} label />
@@ -158,8 +218,29 @@ export default function TradingPage() {
           </div>
         )}
 
-        {/* Account Summary */}
-        {account && (
+        {/* Alpaca Setup Guide */}
+        {alpacaConfigured === false && (
+          <div className="bg-bg-panel border border-accent-amber/30 rounded-lg p-4">
+            <h3 className="text-xs font-mono text-accent-amber mb-2">ALPACA PAPER TRADING — FREE SETUP</h3>
+            <div className="text-xs text-text-dim space-y-2">
+              <p>Alpaca offers <span className="text-accent-green font-bold">free paper trading</span> with real market data and zero risk.</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Go to <span className="text-accent-cyan">alpaca.markets</span> and create a free account</li>
+                <li>Enable Paper Trading in your dashboard</li>
+                <li>Generate API keys (Paper Trading section)</li>
+                <li>Add to your <span className="font-mono">.env.local</span>:</li>
+              </ol>
+              <pre className="bg-bg-elevated p-2 rounded text-[10px] font-mono mt-2">
+{`ALPACA_API_KEY=your-paper-api-key
+ALPACA_SECRET_KEY=your-paper-secret-key`}
+              </pre>
+              <p className="mt-2">Restart the server after adding keys. Market watch below works without Alpaca.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Account Summary (only when Alpaca configured) */}
+        {alpacaConfigured && account && (
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
               <p className="text-[10px] text-text-muted font-mono">PORTFOLIO VALUE</p>
@@ -184,20 +265,64 @@ export default function TradingPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-border-dim">
-          {(['positions', 'orders', 'new-order'] as const).map(tab => (
+          {tabs.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 text-xs font-mono transition-colors ${
                 activeTab === tab
                   ? 'text-accent-cyan border-b-2 border-accent-cyan font-bold'
                   : 'text-text-muted hover:text-text-primary'
               }`}>
-              {tab === 'positions' ? `Positions (${positions.length})` : tab === 'orders' ? `Orders (${orders.length})` : 'New Order'}
+              {tab === 'watchlist' ? `Market Watch (${watchlist.length})` :
+               tab === 'positions' ? `Positions (${positions.length})` :
+               tab === 'orders' ? `Orders (${orders.length})` : 'New Order'}
             </button>
           ))}
         </div>
 
-        {/* Positions */}
-        {activeTab === 'positions' && (
+        {/* Market Watch (always available) */}
+        {activeTab === 'watchlist' && (
+          <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-mono text-accent-cyan">MARKET WATCH</h3>
+              <span className="text-[10px] text-text-muted font-mono">Yahoo Finance · Updates every 60s</span>
+            </div>
+            {watchlistLoading ? (
+              <div className="text-text-dim text-xs p-4 text-center">Loading market data...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-text-muted border-b border-border-dim">
+                      <th className="text-left py-2 font-mono">SYMBOL</th>
+                      <th className="text-left py-2 font-mono">NAME</th>
+                      <th className="text-right py-2 font-mono">PRICE</th>
+                      <th className="text-right py-2 font-mono">CHANGE</th>
+                      <th className="text-right py-2 font-mono">CHANGE%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {watchlist.map(q => (
+                      <tr key={q.symbol} className="border-b border-border-dim/30 hover:bg-bg-elevated">
+                        <td className="py-2 font-mono text-accent-cyan font-bold">{q.symbol}</td>
+                        <td className="py-2 text-text-dim">{q.name}</td>
+                        <td className="py-2 text-right font-mono">${fmt(q.price)}</td>
+                        <td className={`py-2 text-right font-mono ${q.change >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
+                          {q.change >= 0 ? '+' : ''}{fmt(q.change)}
+                        </td>
+                        <td className={`py-2 text-right font-mono font-bold ${q.changePct >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
+                          {q.changePct >= 0 ? '+' : ''}{fmt(q.changePct)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Positions (Alpaca only) */}
+        {alpacaConfigured && activeTab === 'positions' && (
           <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
             {positions.length === 0 ? (
               <p className="text-xs text-text-dim p-4 text-center">No open positions</p>
@@ -238,8 +363,8 @@ export default function TradingPage() {
           </div>
         )}
 
-        {/* Orders */}
-        {activeTab === 'orders' && (
+        {/* Orders (Alpaca only) */}
+        {alpacaConfigured && activeTab === 'orders' && (
           <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
             {orders.length === 0 ? (
               <p className="text-xs text-text-dim p-4 text-center">No orders</p>
@@ -293,8 +418,8 @@ export default function TradingPage() {
           </div>
         )}
 
-        {/* New Order */}
-        {activeTab === 'new-order' && (
+        {/* New Order (Alpaca only) */}
+        {alpacaConfigured && activeTab === 'new-order' && (
           <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
             <h3 className="text-xs font-mono text-accent-cyan mb-3">PLACE ORDER (ALPACA PAPER TRADING)</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -361,11 +486,10 @@ export default function TradingPage() {
         )}
 
         <div className="bg-bg-panel border border-border-dim rounded-lg p-4">
-          <h2 className="text-xs font-mono text-accent-cyan mb-2">BROKER</h2>
+          <h2 className="text-xs font-mono text-accent-cyan mb-2">DATA SOURCES</h2>
           <p className="text-xs text-text-dim">
-            Alpaca Paper Trading — commission-free US stock trading with virtual money.
-            Real market data, real order execution, zero risk.
-            Set ALPACA_API_KEY and ALPACA_SECRET_KEY to connect.
+            Market Watch: Yahoo Finance (free, real-time delayed). Trading: Alpaca Paper Trading (free, commission-free, real market data).
+            {alpacaConfigured ? '' : ' Connect Alpaca for paper trading.'}
           </p>
         </div>
       </div>
