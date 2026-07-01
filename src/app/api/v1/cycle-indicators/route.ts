@@ -71,9 +71,64 @@ export async function GET(request: Request) {
     }
   } catch (err) {
     console.error('[cycle-indicators] Error:', err)
+    if (action === 'current') {
+      try {
+        const fallbackData = await fetchLatestFromDb()
+        return NextResponse.json({ data: fallbackData, error: null }, {
+          headers: { 'Cache-Control': 'public, max-age=60' }
+        })
+      } catch (dbErr) {
+        console.error('[cycle-indicators] DB Fallback failed:', dbErr)
+      }
+    }
     return NextResponse.json(
       { data: null, error: (err as Error).message },
       { status: 502 },
     )
+  }
+}
+
+async function fetchLatestFromDb() {
+  const indicators = ['mvrv', 'nupl', 'ssr', 'dominance']
+  const results: Record<string, any> = {}
+  let latestTimestamp = new Date().toISOString()
+
+  for (const ind of indicators) {
+    const row = await prisma.cycleIndicatorSnapshot.findFirst({
+      where: { indicator: ind },
+      orderBy: { timestamp: 'desc' }
+    })
+    if (row) {
+      latestTimestamp = row.timestamp.toISOString()
+      const descriptions: Record<string, string> = {
+        mvrv: 'Market Value to Realized Value Z-Score. Measures deviation of market cap from realized cap. >7 = extreme overvaluation.',
+        nupl: 'Net Unrealized Profit/Loss. Ratio of unrealized profit to market cap. >0.75 = euphoria zone.',
+        ssr: 'Stablecoin Supply Ratio. BTC market cap / stablecoin market cap. Low SSR = high buying pressure ready.',
+        dominance: 'Stablecoin market cap as % of total crypto market cap. Rising = risk-off sentiment.'
+      }
+      const names: Record<string, string> = {
+        mvrv: 'MVRV Z-Score',
+        nupl: 'NUPL',
+        ssr: 'SSR',
+        dominance: 'Stablecoin Dominance'
+      }
+      results[ind] = {
+        name: names[ind],
+        value: row.value,
+        zone: row.zone,
+        description: descriptions[ind] || '',
+        raw: {}
+      }
+    }
+  }
+
+  if (Object.keys(results).length === 0) {
+    throw new Error("No historical data available in database.")
+  }
+
+  return {
+    indicators: results,
+    timestamp: latestTimestamp,
+    source: 'CoinGecko (historical cache)'
   }
 }
