@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { NexusLayout } from "@/components/layout/NexusLayout"
+import { useUserPreferences } from "@/lib/hooks/useUserPreferences"
 
 // Major global indices (US, EU, Asia, EM)
 const INDICES = ['^GSPC', '^IXIC', '^DJI', '^VIX', '^FTSE', '^N225', '^HSI', '^STOXX50E', '^JKSE', '^AXJO', '^STI', '^GSPTSE', '^KS11', '^TWII']
@@ -124,7 +125,7 @@ export default function EquitiesPage() {
   const [quotes, setQuotes] = useState<Record<string, { price: number; change: number; name: string }>>({})
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const { format } = useUserPreferences()
   useEffect(() => {
     const allSymbols = GLOBAL_STOCKS.map(s => s.symbol).join(',')
     fetch(`/api/v1/equities?symbols=${allSymbols}`)
@@ -173,7 +174,7 @@ export default function EquitiesPage() {
                 return (
                   <div key={sym} className="p-2">
                     <p className="text-[10px] text-text-muted">{q?.name ?? sym}</p>
-                    <p className="text-lg font-mono font-bold">{q?.price?.toFixed(2) ?? '—'}</p>
+                    <p className="text-lg font-mono font-bold">{q?.price != null ? format(q.price) : '—'}</p>
                     <p className={`text-xs font-mono ${(q?.change ?? 0) >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                       {q?.change != null ? `${q.change >= 0 ? '+' : ''}${q.change.toFixed(2)}%` : '—'}
                     </p>
@@ -232,7 +233,7 @@ export default function EquitiesPage() {
                           <tr key={s.symbol} className="border-b border-border-dim/30 hover:bg-bg-elevated">
                             <td className="py-2 font-mono text-accent-cyan">{s.symbol}</td>
                             <td className="py-2 text-text-dim">{s.name}</td>
-                            <td className="py-2 text-right font-mono">{q.price?.toFixed(2) ?? '—'}</td>
+                            <td className="py-2 text-right font-mono">{q.price != null ? format(q.price) : '—'}</td>
                             <td className={`py-2 text-right font-mono ${(q.change ?? 0) >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
                               {q.change != null ? `${q.change >= 0 ? '+' : ''}${q.change.toFixed(2)}%` : '—'}
                             </td>

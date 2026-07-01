@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useTicker } from "@/lib/hooks/useWsStream"
+import { useUserPreferences, BaseCurrency } from "@/lib/hooks/useUserPreferences"
 
 const TICKER_CONFIG = [
   { symbol: "BTC" },
@@ -18,6 +19,7 @@ const TICKER_CONFIG = [
 
 function LiveTicker({ symbol }: { symbol: string }) {
   const { price, change, connected } = useTicker(symbol)
+  const { format } = useUserPreferences()
 
   if (!connected || price === 0) {
     return (
@@ -29,14 +31,15 @@ function LiveTicker({ symbol }: { symbol: string }) {
   }
 
   const positive = change >= 0
+  const isAsset = !symbol.includes('/')
 
   return (
     <span className="inline-flex items-center gap-1.5 mr-6">
       <span className="text-text-dim">{symbol}</span>
-      <span className="text-text-primary">
-        ${price.toLocaleString(undefined, { maximumFractionDigits: price > 100 ? 0 : 2 })}
+      <span className="text-text-primary font-mono">
+        {isAsset ? format(price) : price.toLocaleString(undefined, { maximumFractionDigits: price > 100 ? 0 : 4 })}
       </span>
-      <span className={positive ? 'text-accent-green' : 'text-accent-red'}>
+      <span className={`font-mono ${positive ? 'text-accent-green' : 'text-accent-red'}`}>
         {positive ? '+' : ''}{change.toFixed(2)}%
       </span>
     </span>
@@ -78,6 +81,8 @@ export function TickerStrip() {
           FEAR/GREED: <span className={fgColor}>{fgValue ?? '—'} {fgLabel}</span>
         </span>
         <span>|</span>
+        <CurrencySelector />
+        <span>|</span>
         <TickerClock />
       </div>
     </div>
@@ -96,4 +101,30 @@ function TickerClock() {
     return () => clearInterval(id)
   }, [])
   return <span>{time}</span>
+}
+
+function CurrencySelector() {
+  const { currency, setCurrency, fetchRates } = useUserPreferences()
+
+  useEffect(() => {
+    fetchRates()
+  }, [fetchRates])
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-[10px] text-text-muted">CURR:</span>
+      <select
+        value={currency}
+        onChange={(e) => setCurrency(e.target.value as BaseCurrency)}
+        className="bg-transparent text-text-muted hover:text-text-primary outline-none cursor-pointer border-none font-mono text-[10px] uppercase font-bold"
+      >
+        <option value="USD">USD</option>
+        <option value="IDR">IDR</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+        <option value="JPY">JPY</option>
+        <option value="SGD">SGD</option>
+      </select>
+    </div>
+  )
 }
