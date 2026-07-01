@@ -39,7 +39,12 @@ Do NOT add the rules repo as a git submodule. Update rules centrally, then run/s
 5. Run GATE.md before commit/PR.
 
 ## Repo-specific conventions
-- [add conventions specific to this repo]
+- **AUTO BRAIN SAVE**: After EVERY git commit, call `vilona_brain_remember()` with session context. No exceptions.
+- Stack: Next.js / TypeScript / Prisma / PostgreSQL
+- Pattern: provider/plugin (src/lib/modules/<category>/<provider>/module.ts)
+- DB: postgresql://postgres:postgres@localhost:5432/nexus
+- WS: ws://localhost:4401 (Socket.IO)
+- Production: https://tracker.aitradepulse.com (cf-router → port 4400)
 
 ## Commands
 - Dev:   `npm run dev`
