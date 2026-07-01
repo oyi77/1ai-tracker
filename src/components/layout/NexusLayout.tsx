@@ -9,7 +9,7 @@ import {
   TrendingUp, BarChart3, Activity, Shield, Radio, Eye,
   Menu, X, Target, DollarSign, Package, Calendar,
   Cloud, GitCompare, PieChart, Users, ArrowUpDown,
-  Newspaper, Gauge,
+  Newspaper, Gauge, Code,
 } from 'lucide-react'
 import { LiveDot } from '../primitives/LiveDot'
 import { CommandBar } from './CommandBar'
@@ -58,7 +58,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: 'On-Chain Intel', href: '/onchain-intel', icon: Radio },
       { label: 'Token God Mode', href: '/token-god-mode', icon: Target },
       { label: 'Risk Intel',     href: '/risk-intel',     icon: Shield },
-
+      { label: 'Dev Activity',   href: '/dev-activity',   icon: Code },
     ],
   },
   {
