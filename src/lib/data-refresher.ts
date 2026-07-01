@@ -6,16 +6,16 @@
 // ─────────────────────────────────────────────────────────────
 
 import { fetchDerivativesSnapshot, fetchRecentLiquidations, persistDerivativesSnapshot, persistLiquidations } from '@/lib/modules/derived/derivatives-intel'
-import { fetchETFSummary, persistETFFlows } from '@/lib/modules/tradfi/etf-flow'
-import { fetchPremiumSnapshots, persistPremiumSnapshots } from '@/lib/modules/tradfi/premium-monitor'
+import { fetchETFSummary, persistETFFlows } from '@/lib/modules/tradfi/etf/flows'
+import { fetchPremiumSnapshots, persistPremiumSnapshots } from '@/lib/modules/tradfi/premium/monitor'
 import { fetchSentimentIntelligence, persistSentimentSnapshots } from '@/lib/modules/sentiment/sentiment-intel'
 import { fetchNewsIntelligence, persistNewsEvents } from '@/lib/modules/news/news-intel'
-import { fetchCreditRisk, persistCreditRisk } from '@/lib/modules/defi/credit-risk'
-import { fetchMinerFlow, persistMinerFlow } from '@/lib/modules/chain/miner-flow'
+import { fetchCreditRisk, persistCreditRisk } from '@/lib/modules/defi/credit/risk'
+import { fetchMinerFlow, persistMinerFlow } from '@/lib/modules/chain/bitcoin/miner-flow'
 import { fetchNarrativeRotation, persistSectorFlows } from '@/lib/modules/derived/narrative-rotation'
-import { fetchStakingQueue, persistStakingFlow } from '@/lib/modules/chain/staking-queue'
-import { fetchMempoolEvents } from '@/lib/modules/chain/mempool-intel'
-import { fetchBridgeStats } from '@/lib/modules/chain/bridge-flow'
+import { fetchStakingQueue, persistStakingFlow } from '@/lib/modules/chain/ethereum/staking-queue'
+import { fetchMempoolEvents } from '@/lib/modules/chain/mempool/intel'
+import { fetchBridgeStats } from '@/lib/modules/chain/bridge/flows'
 import { evaluateCompositeSignals } from '@/lib/modules/derived/composite-signals'
 import { computeIntelligenceScore } from '@/lib/modules/derived/intelligence-score'
 

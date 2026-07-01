@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError, cacheHeaders } from "@/lib/api/response";
-import { fetchCreditRisk, persistCreditRisk } from "@/lib/modules/defi/credit-risk";
-import { fetchMinerFlow, persistMinerFlow } from "@/lib/modules/chain/miner-flow";
+import { fetchCreditRisk, persistCreditRisk } from "@/lib/modules/defi/credit/risk";
+import { fetchMinerFlow, persistMinerFlow } from "@/lib/modules/chain/bitcoin/miner-flow";
 import { fetchNarrativeRotation, persistSectorFlows } from "@/lib/modules/derived/narrative-rotation";
 import { cacheGet } from "@/lib/data-refresher";
 

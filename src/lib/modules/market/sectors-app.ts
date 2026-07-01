@@ -1,7 +1,7 @@
 import type { DataModule, FetchParams, ModuleResult, ModuleHealth } from '../types'
 import { TTL } from '../types'
 import { cachedFetch } from '../fetch-with-cache'
-import yahooFinanceModule from '../equities/yahoo-finance'
+import yahooFinanceModule from '../equities/yahoo/quotes'
 
 async function fetchSectorsRSC(): Promise<unknown> {
   const url = 'https://sectors.app/indonesia/indeks'

@@ -11,18 +11,18 @@ import defillama from './onchain/defillama'
 import dexscreener from './onchain/dexscreener'
 import hyperliquid from './onchain/hyperliquid'
 import polymarket from './onchain/polymarket'
-import blockscoutEth from './onchain/blockscout-eth'
-import arkhamRe from './onchain/arkham-re'
-import birdeyeRe from './onchain/birdeye-re'
-import mempoolSpace from './onchain/mempool-space'
+import blockscoutEth from './onchain/blockscout'
+import arkhamRe from './onchain/arkham'
+import birdeyeRe from './onchain/birdeye'
+import mempoolSpace from './onchain/mempool'
 import l2beat from './onchain/l2beat'
 import blockchair from './onchain/blockchair'
 import covalent from './onchain/covalent'
 
 // Market
 import coingecko from './market/coingecko'
-import binance from './market/binance-public'
-import bybit from './market/bybit-public'
+import binance from './market/binance'
+import bybit from './market/bybit'
 import coinpaprika from './market/coinpaprika'
 import coincap from './market/coincap'
 import indodax from './market/indodax'
@@ -31,77 +31,79 @@ import eastmoney from './market/eastmoney'
 import marketFlow from './market/market-flow'
 
 // Macro
-import fred from './macro/fred'
-import fearGreed from './macro/fear-greed'
-import frankfurter from './macro/frankfurter'
-import exchangeRate from './macro/exchangerate-api'
-import ecbSdw from './macro/ecb-sdw'
-import worldbank from './macro/worldbank'
-import finnhubRe from './macro/finnhub-re'
-import secEdgar from './macro/sec-edgar'
-import dbnomics from './macro/dbnomics'
-import usTreasury from './macro/us-treasury'
-import usgsEarthquakes from './macro/usgs-earthquakes'
-import gdacsAlerts from './macro/gdacs-alerts'
-import openMeteo from './macro/open-meteo'
-import nasaEonet from './macro/nasa-eonet'
-import reliefweb from './macro/reliefweb'
-import adsbFlight from './macro/adbs'
-import openfema from './macro/openfema'
-import bankOfCanada from './macro/bank-of-canada'
-import ukOns from './macro/uk-ons'
-import imfSdmx from './macro/imf-sdmx'
-import indonesiaMacro from './macro/indonesia'
-import bisSdmx from './macro/bis-sdmx'
-import eurostat from './macro/eurostat'
+import {
+  fred,
+  frankfurter,
+  exchangeRate,
+  ecbSdw,
+  worldbank,
+  finnhubRe,
+  secEdgar,
+  dbnomics,
+  usTreasury,
+  usgsEarthquakes,
+  gdacsAlerts,
+  openMeteo,
+  nasaEonet,
+  reliefweb,
+  adsbFlight,
+  openfema,
+  bankOfCanada,
+  ukOns,
+  imfSdmx,
+  indonesiaMacro,
+  bisSdmx,
+  eurostat,
+} from './macro'
+import fearGreed from './sentiment/alternative-me/fear-greed'
 
 // Derivatives
 import derivativesAggregate from './derivatives/aggregate'
-import deribitOptions from './derivatives/deribit-options'
-import binanceFutures from './derivatives/binance-futures'
+import deribitOptions from './derivatives/deribit/options'
+import binanceFutures from './derivatives/binance/futures'
 
 // Prediction
-import manifold from './prediction/manifold'
-import polymarketGamma from './prediction/polymarket'
+import manifold from './prediction/manifold/markets'
+import polymarketGamma from './prediction/polymarket/markets'
 
 // Equities (RE)
-import yahooFinance from './equities/yahoo-finance'
-import alphaVantageRe from './equities/alpha-vantage-re'
-import fmpRe from './equities/fmp-re'
-import secEdgarInsider from './equities/sec-edgar'
+import yahooFinance from './equities/yahoo/quotes'
+import alphaVantageRe from './equities/alpha-vantage/prices'
+import fmpRe from './equities/fmp/prices'
+import secEdgarInsider from './equities/sec-edgar/filings'
 
 // Commodities (RE)
-import metalsRe from './commodities/metals-re'
+import metalsRe from './commodities/metals/prices'
 
 // Sentiment
 import longshortDerived from './sentiment/longshort-derived'
-import lunarcrushRe from './sentiment/lunarcrush-re'
-import santimentRe from './sentiment/santiment-re'
-import githubApi from './sentiment/github'
-import googleTrends from './sentiment/google-trends'
-import weiboHot from './sentiment/weibo-hot'
-import zhihuTrends from './sentiment/zhihu-trends'
-import hackernews from './sentiment/hackernews'
-import cryptocompare from './sentiment/cryptocompare'
+import lunarcrushRe from './sentiment/lunarcrush/sentiment'
+import santimentRe from './sentiment/santiment/metrics'
+import githubApi from './sentiment/github/activity'
+import googleTrends from './sentiment/google/trends'
+import weiboHot from './sentiment/weibo/hot'
+import zhihuTrends from './sentiment/zhihu/trends'
+import hackernews from './sentiment/hackernews/stories'
+import cryptocompare from './sentiment/cryptocompare/social'
 
 // Dev ecosystem
-import pypiStats from './dev/pypi-stats'
-import npmStats from './dev/npm-stats'
+import pypiStats from './dev/pypi/stats'
+import npmStats from './dev/npm/stats'
 
 // Governance
-import snapshot from './governance/snapshot'
+import snapshot from './governance/snapshot/proposals'
 
 // AI Signals (derived)
 import nexusSmartMoney from './ai-signals/nexus-internal'
 
 // News
-import rssEngine from './news/rss-engine'
-import redditCrypto from './news/reddit-crypto'
-import cryptopanicRe from './news/cryptopanic-re'
-import benzingaRe from './news/benzinga-re'
+import rssEngine from './news/rss'
+import redditCrypto from './news/reddit'
+import cryptopanicRe from './news/cryptopanic'
+import benzingaRe from './news/benzinga'
 import gdelt from './news/gdelt'
-import vimeroFeed from './news/vimero-feed'
-import defillamaResearch from './news/defillama-research'
+import vimeroFeed from './news/vimero'
+import defillamaResearch from './news/defillama'
 
 /** Register all 58 built-in modules. Idempotent — safe to call multiple times. */
 let modulesRegistered = false

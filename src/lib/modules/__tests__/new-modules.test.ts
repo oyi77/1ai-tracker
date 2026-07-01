@@ -9,12 +9,12 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import usTreasury from '../macro/us-treasury'
-import mempool from '../macro/mempool'
-import secEdgar from '../equities/sec-edgar'
-import deribitOptions from '../derivatives/deribit-options'
-import polymarketClob from '../prediction/polymarket'
-import defillamaResearch from '../news/defillama-research'
+import usTreasury from '../macro/treasury/yields'
+import mempool from '../macro/mempool/stats'
+import secEdgar from '../equities/sec-edgar/filings'
+import deribitOptions from '../derivatives/deribit/options'
+import polymarketClob from '../prediction/polymarket/markets'
+import defillamaResearch from '../news/defillama'
 
 describe('New Alpha Data Modules structure & fallback validation', () => {
   const newModules = [

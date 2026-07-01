@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server"
 import { apiJson } from "@/lib/api/response"
-import { INDONESIA_INDICATORS } from "@/lib/modules/macro/indonesia"
+import { INDONESIA_INDICATORS } from "@/lib/modules/macro/bi/statistics"
 
 export const dynamic = "force-dynamic"
 

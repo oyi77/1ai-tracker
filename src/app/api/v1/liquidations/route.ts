@@ -9,7 +9,7 @@ import {
   getHyperliquidMarkets,
   getHyperliquidFundingRates,
   getHyperliquidLeaderboard,
-} from '@/lib/modules/onchain/hyperliquid-dex'
+} from '@/lib/modules/onchain/hyperliquid/dex'
 
 interface HeatmapBin {
   priceLevel: number

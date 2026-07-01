@@ -3,3 +3,4 @@
 // ─────────────────────────────────────────────────────────────
 
 export { binanceOHLCVProvider } from './ohlcv'
+export { default } from './ticker'

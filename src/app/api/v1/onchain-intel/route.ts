@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError, cacheHeaders } from "@/lib/api/response";
-import { fetchMempoolEvents, persistMempoolEvents } from "@/lib/modules/chain/mempool-intel";
-import { fetchBridgeStats, persistBridgeFlows } from "@/lib/modules/chain/bridge-flow";
-import { fetchStakingQueue, persistStakingFlow } from "@/lib/modules/chain/staking-queue";
+import { fetchMempoolEvents, persistMempoolEvents } from "@/lib/modules/chain/mempool/intel";
+import { fetchBridgeStats, persistBridgeFlows } from "@/lib/modules/chain/bridge/flows";
+import { fetchStakingQueue, persistStakingFlow } from "@/lib/modules/chain/ethereum/staking-queue";
 import { cacheGet } from "@/lib/data-refresher";
 
 export const dynamic = "force-dynamic";

@@ -5,14 +5,14 @@
 // Zero hardcoded values — all derived from live module data
 // ─────────────────────────────────────────────────────────────
 
-import { fetchETFSummary } from '@/lib/modules/tradfi/etf-flow'
-import { fetchPremiumSnapshots } from '@/lib/modules/tradfi/premium-monitor'
+import { fetchETFSummary } from '@/lib/modules/tradfi/etf/flows'
+import { fetchPremiumSnapshots } from '@/lib/modules/tradfi/premium/monitor'
 import { fetchDerivativesSnapshot } from '@/lib/modules/derived/derivatives-intel'
 import { fetchSentimentIntelligence } from '@/lib/modules/sentiment/sentiment-intel'
-import { fetchCreditRisk } from '@/lib/modules/defi/credit-risk'
-import { fetchMinerFlow } from '@/lib/modules/chain/miner-flow'
+import { fetchCreditRisk } from '@/lib/modules/defi/credit/risk'
+import { fetchMinerFlow } from '@/lib/modules/chain/bitcoin/miner-flow'
 import { fetchNarrativeRotation } from '@/lib/modules/derived/narrative-rotation'
-import { fetchStakingQueue } from '@/lib/modules/chain/staking-queue'
+import { fetchStakingQueue } from '@/lib/modules/chain/ethereum/staking-queue'
 
 export interface CompositeSignal {
   id: string

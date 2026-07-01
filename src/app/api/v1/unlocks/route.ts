@@ -6,7 +6,7 @@
 
 import { NextRequest } from "next/server";
 import { apiSuccess, apiError, cacheHeaders } from "@/lib/api/response";
-import { fetchUnlockEvents, persistUnlockEvents } from "@/lib/modules/calendar/unlock-calendar";
+import { fetchUnlockEvents, persistUnlockEvents } from "@/lib/modules/calendar/unlocks/calendar";
 
 export const dynamic = "force-dynamic";
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { apiJson } from '@/lib/api/response'
-import { getHyperliquidMarkets, getHyperliquidFundingRates, getHyperliquidOpenInterest, getHyperliquidLeaderboard } from '@/lib/modules/onchain/hyperliquid-dex'
+import { getHyperliquidMarkets, getHyperliquidFundingRates, getHyperliquidOpenInterest, getHyperliquidLeaderboard } from '@/lib/modules/onchain/hyperliquid/dex'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
