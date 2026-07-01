@@ -2,4 +2,4 @@
 export * from './bridge'
 export * from './mempool'
 export * from './bitcoin'
-export * from './ethereum'
+export * from './stablecoin-intel'
