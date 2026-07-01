@@ -267,6 +267,90 @@ liquidationsNs.on("connection", (socket) => {
   console.log(`[liquidations] Client: ${socket.id}`)
   socket.on("disconnect", () => {})
 })
+// ═══════════════════════════════════════════════════════════
+// FOREX: Binance stablecoin pairs + Frankfurter.app (ECB rates)
+// Real-time forex prices → /forex namespace
+// ═══════════════════════════════════════════════════════════
+const forexNs = io.of("/forex")
+const latestForex = new Map<string, Record<string, unknown>>()
+
+// Binance forex-like pairs (stablecoin crosses)
+const FOREX_BINANCE = [
+  "eurusdt", "gbpusdt", "audusdt", "usdcad", "usdchf",
+  "nzdbusdt", "eurgbp", "euraud", "eurjpy", "gbpjpy",
+]
+
+function connectForexTicker() {
+  const streams = FOREX_BINANCE.map(s => `${s}@ticker`).join("/")
+  const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`)
+  activeStreams++
+  ws.on("open", () => console.log(`[forex] Binance forex stream connected (${FOREX_BINANCE.length} pairs)`))
+  ws.on("message", (data) => {
+    try {
+      const msg = JSON.parse(data.toString())
+      const d = msg.data
+      if (!d || !d.s) return
+      const pair = d.s.toLowerCase()
+      const priceData = {
+        pair,
+        price: parseFloat(d.c),
+        change24h: parseFloat(d.P),
+        high24h: parseFloat(d.h),
+        low24h: parseFloat(d.l),
+        volume24h: parseFloat(d.q),
+        timestamp: Date.now(),
+      }
+      latestForex.set(pair, priceData)
+      forexNs.emit("forex", priceData)
+    } catch {}
+  })
+  ws.on("error", () => {})
+  ws.on("close", () => { activeStreams--; setTimeout(connectForexTicker, 3000) })
+}
+
+// Frankfurter.app (ECB rates) — REST fallback, refresh every 60s
+const FRANKFURTER_PAIRS = ["USD", "GBP", "JPY", "CHF", "AUD", "CAD", "NZD", "IDR", "SGD", "HKD"]
+
+async function fetchFrankfurterRates() {
+  try {
+    const res = await fetch(`https://api.frankfurter.dev/v1/latest?base=EUR&symbols=${FRANKFURTER_PAIRS.join(",")}`, {
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!res.ok) return
+    const data = await res.json() as { rates?: Record<string, number> }
+    if (!data.rates) return
+    const now = Date.now()
+    for (const [currency, rate] of Object.entries(data.rates)) {
+      const pair = `eur${currency.toLowerCase()}`
+      const priceData = {
+        pair,
+        price: rate,
+        change24h: 0, // ECB updates once daily
+        high24h: rate,
+        low24h: rate,
+        volume24h: 0,
+        timestamp: now,
+        source: 'ecb',
+      }
+      latestForex.set(pair, priceData)
+      forexNs.emit("forex", priceData)
+    }
+  } catch {}
+}
+
+forexNs.on("connection", (socket) => {
+  console.log(`[forex] Client: ${socket.id}`)
+  // Send latest prices on connect
+  for (const [, price] of latestForex) {
+    socket.emit("forex", price)
+  }
+  socket.on("disconnect", () => {})
+})
+
+// Start forex streams
+connectForexTicker()
+fetchFrankfurterRates()
+setInterval(fetchFrankfurterRates, 60_000)
 
 
 // ═══════════════════════════════════════════════════════════

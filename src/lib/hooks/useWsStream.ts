@@ -13,7 +13,9 @@ interface WsMessage {
   [key: string]: unknown
 }
 
-const WS_URL = 'wss://tracker-ws.aitradepulse.com'
+const WS_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'ws://localhost:4401'
+  : 'wss://tracker-ws.aitradepulse.com'
 
 // Crypto symbols that come from the WS server /prices namespace
 const CRYPTO_SYMBOLS = new Set(['BTC', 'ETH', 'SOL', 'XRP', 'DOGE', 'AVAX', 'LINK', 'ARB', 'OP'])
