@@ -4,16 +4,16 @@ import { useState, useEffect } from "react"
 import { useTicker } from "@/lib/hooks/useWsStream"
 
 const TICKER_CONFIG = [
-  { symbol: "BTC", wsSymbol: "BTCUSDT" },
-  { symbol: "ETH", wsSymbol: "ETHUSDT" },
-  { symbol: "SOL", wsSymbol: "SOLUSDT" },
-  { symbol: "GOLD", wsSymbol: "GOLD" },
-  { symbol: "DXY", wsSymbol: "DXY" },
-  { symbol: "SPX", wsSymbol: "SPX" },
+  { symbol: "BTC" },
+  { symbol: "ETH" },
+  { symbol: "SOL" },
+  { symbol: "GOLD" },
+  { symbol: "IHSG" },
+  { symbol: "S&P 500" },
 ]
 
-function LiveTicker({ symbol, wsSymbol }: { symbol: string; wsSymbol: string }) {
-  const { price, change, connected } = useTicker(wsSymbol)
+function LiveTicker({ symbol }: { symbol: string }) {
+  const { price, change, connected } = useTicker(symbol)
 
   if (!connected || price === 0) {
     return (
@@ -64,7 +64,7 @@ export function TickerStrip() {
       <div className="ticker-strip flex-1">
         <div className="ticker-content">
           {TICKER_CONFIG.map(t => (
-            <LiveTicker key={t.symbol} symbol={t.symbol} wsSymbol={t.wsSymbol} />
+            <LiveTicker key={t.symbol} symbol={t.symbol} />
           ))}
         </div>
       </div>

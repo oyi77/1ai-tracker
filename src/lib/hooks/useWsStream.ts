@@ -81,51 +81,96 @@ export function useTicker(symbol: string) {
   const [low24h, setLow24h] = useState<number>(0)
   const [connected, setConnected] = useState(false)
 
-  const isCrypto = CRYPTO_SYMBOLS.has(symbol)
-
   useEffect(() => {
-    if (isCrypto) {
-      // Route through WS server /prices namespace
-      const ws = new WebSocket(`${WS_URL}/prices`)
+    // Try WS first for crypto, fallback to REST
+    let ws: WebSocket | null = null
+    let restInterval: ReturnType<typeof setInterval> | null = null
+    let wsFailed = false
 
-      ws.onopen = () => setConnected(true)
-      ws.onmessage = (event) => {
-        try {
-          const d = JSON.parse(event.data as string)
-          if (d.symbol === symbol.toLowerCase()) {
-            setPrice(d.price ?? 0)
-            setChange(d.change24h ?? 0)
-            setVolume(d.volume24h ?? 0)
-            setHigh24h(d.high24h ?? 0)
-            setLow24h(d.low24h ?? 0)
-          }
-        } catch {}
-      }
-      ws.onerror = () => setConnected(false)
-      ws.onclose = () => setConnected(false)
-
-      return () => ws.close()
-    } else {
-      // TradFi symbols: REST fallback via our API
-      const fetchPrice = async () => {
-        try {
-          const res = await fetch(`/api/v1/market/prices?symbols=${symbol}`)
-          if (res.ok) {
-            const d = await res.json()
-            const ticker = d.data?.[0]
-            if (ticker) {
-              setPrice(ticker.price ?? 0)
-              setChange(ticker.change24h ?? 0)
-              setConnected(true)
-            }
-          }
-        } catch {}
-      }
-      fetchPrice()
-      const interval = setInterval(fetchPrice, 30_000)
-      return () => clearInterval(interval)
+    const fetchFromRest = async () => {
+      try {
+        const res = await fetch('/api/v1/market/prices')
+        if (!res.ok) return
+        const d = await res.json()
+        const tickers = d.data?.tickers
+        if (!Array.isArray(tickers)) return
+        const ticker = tickers.find((t: { symbol: string }) => t.symbol === symbol)
+        if (ticker) {
+          // Parse price: could be "$108,123" or "108123" or "16,234.50"
+          const priceStr = String(ticker.price ?? '').replace(/[$,]/g, '')
+          const parsedPrice = parseFloat(priceStr)
+          if (!isNaN(parsedPrice)) setPrice(parsedPrice)
+          // Parse change: could be "+1.2%" or "1.2"
+          const changeStr = String(ticker.change ?? '').replace(/[+%]/g, '')
+          const parsedChange = parseFloat(changeStr)
+          if (!isNaN(parsedChange)) setChange(parsedChange)
+          setConnected(true)
+        }
+      } catch {}
     }
-  }, [symbol, isCrypto])
+
+    const isCrypto = CRYPTO_SYMBOLS.has(symbol)
+
+    if (isCrypto) {
+      // Try WebSocket first
+      try {
+        ws = new WebSocket(`${WS_URL}/prices`)
+        const wsTimeout = setTimeout(() => {
+          if (!connected) {
+            wsFailed = true
+            ws?.close()
+            fetchFromRest()
+            restInterval = setInterval(fetchFromRest, 15_000)
+          }
+        }, 5_000)
+
+        ws.onopen = () => {
+          clearTimeout(wsTimeout)
+          setConnected(true)
+        }
+        ws.onmessage = (event) => {
+          try {
+            const d = JSON.parse(event.data as string)
+            if (d.symbol === symbol.toLowerCase()) {
+              setPrice(d.price ?? 0)
+              setChange(d.change24h ?? 0)
+              setVolume(d.volume24h ?? 0)
+              setHigh24h(d.high24h ?? 0)
+              setLow24h(d.low24h ?? 0)
+            }
+          } catch {}
+        }
+        ws.onerror = () => {
+          clearTimeout(wsTimeout)
+          if (!wsFailed) {
+            wsFailed = true
+            fetchFromRest()
+            restInterval = setInterval(fetchFromRest, 15_000)
+          }
+        }
+        ws.onclose = () => {
+          clearTimeout(wsTimeout)
+          if (!wsFailed) {
+            wsFailed = true
+            fetchFromRest()
+            restInterval = setInterval(fetchFromRest, 15_000)
+          }
+        }
+      } catch {
+        fetchFromRest()
+        restInterval = setInterval(fetchFromRest, 15_000)
+      }
+    } else {
+      // TradFi: REST only
+      fetchFromRest()
+      restInterval = setInterval(fetchFromRest, 30_000)
+    }
+
+    return () => {
+      ws?.close()
+      if (restInterval) clearInterval(restInterval)
+    }
+  }, [symbol])
 
   return { price, change, volume, high24h, low24h, connected }
 }
