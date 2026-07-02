@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1920px;
+      height: 1080px;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .grid {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image:
+        linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .container {
+      text-align: center;
+      z-index: 10;
+    }
+    .logo {
+      font-size: 120px;
+      color: #00d4aa;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 72px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -2px;
+    }
+    h1 span { color: #00d4aa; }
+    .subtitle {
+      font-size: 28px;
+      color: #888;
+      margin-bottom: 60px;
+    }
+    .features {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      margin-bottom: 60px;
+    }
+    .feature {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 24px 32px;
+      text-align: center;
+    }
+    .feature-icon { font-size: 36px; margin-bottom: 8px; }
+    .feature-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .signal-demo {
+      background: rgba(0,212,170,0.1);
+      border: 1px solid rgba(0,212,170,0.3);
+      border-radius: 12px;
+      padding: 32px 48px;
+      display: inline-block;
+      margin-bottom: 40px;
+    }
+    .signal-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .signal-badge {
+      background: rgba(0,212,170,0.2);
+      color: #00d4aa;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .signal-levels {
+      display: flex;
+      gap: 48px;
+    }
+    .level { text-align: center; }
+    .level-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .level-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .level-value.entry { color: #fff; }
+    .level-value.tp { color: #00d4aa; }
+    .level-value.sl { color: #ff4444; }
+    .cta {
+      font-size: 20px;
+      color: #888;
+    }
+    .cta strong { color: #00d4aa; }
+    .disclaimer {
+      position: absolute;
+      bottom: 24px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 12px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="container">
+    <div class="logo">◈</div>
+    <h1>NEXUS <span>Alpha Engine</span></h1>
+    <p class="subtitle">AI-Powered Crypto Trading Signals</p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon">🧠</div>
+        <div class="feature-title">AI Signals</div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Trading Levels</div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">⏱️</div>
+        <div class="feature-title">Valid Periods</div>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">📈</div>
+        <div class="feature-title">Backtested</div>
+      </div>
+    </div>
+
+    <div class="signal-demo">
+      <div class="signal-header">
+        <span style="font-size: 32px;">🟢</span>
+        <span style="font-size: 24px; font-weight: 700; color: #00d4aa;">BTC LONG</span>
+        <span class="signal-badge">STR: 85</span>
+        <span class="signal-badge">CONF: 70%</span>
+        <span class="signal-badge">R:R 2.1:1</span>
+      </div>
+      <div class="signal-levels">
+        <div class="level">
+          <div class="level-label">ENTRY</div>
+          <div class="level-value entry">$61,248</div>
+        </div>
+        <div class="level">
+          <div class="level-label">TP1</div>
+          <div class="level-value tp">$62,803</div>
+        </div>
+        <div class="level">
+          <div class="level-label">TP2</div>
+          <div class="level-value tp">$64,359</div>
+        </div>
+        <div class="level">
+          <div class="level-label">TP3</div>
+          <div class="level-value tp">$65,915</div>
+        </div>
+        <div class="level">
+          <div class="level-label">STOP LOSS</div>
+          <div class="level-value sl">$58,914</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="cta">Start free at <strong>tracker.aitradepulse.com</strong></p>
+  </div>
+
+  <p class="disclaimer">Not financial advice. Trading involves risk. Past performance does not guarantee future results.</p>
+</body>
+</html>
