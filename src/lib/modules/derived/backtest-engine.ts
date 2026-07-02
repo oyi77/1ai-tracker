@@ -1,242 +1,352 @@
 // ─────────────────────────────────────────────────────────────
-// Backtest Engine
-// Replays historical snapshots vs actual price outcomes
-// Calculates accuracy metrics per module
-// Uses Prisma-persisted snapshots for historical data
+// Backtest Engine — Replay signals against historical prices
+// Calculates win/loss for each signal (TP hit vs SL hit)
 // ─────────────────────────────────────────────────────────────
 
 import { prisma } from '@/lib/db'
 
-export interface BacktestResult {
-  module: string
-  totalSignals: number
-  correctPredictions: number
-  accuracy: number // 0-100
-  avgConfidence: number
-  signals: BacktestSignal[]
-}
-
 export interface BacktestSignal {
-  timestamp: string
-  predicted: 'bullish' | 'bearish' | 'neutral'
-  actual: 'bullish' | 'bearish' | 'neutral'
-  confidence: number
-  correct: boolean
-  priceChange: number | null
+  id: string
+  symbol: string
+  direction: 'bullish' | 'bearish' | 'neutral'
+  entry: number
+  tp1: number | null
+  tp2: number | null
+  tp3: number | null
+  sl: number | null
+  timestamp: number
+  source: string
 }
 
-export interface BacktestReport {
-  period: { from: string; to: string }
-  modules: BacktestResult[]
-  overall: {
-    totalSignals: number
-    totalCorrect: number
-    accuracy: number
-  }
-  timestamp: string
+export interface BacktestResult {
+  id: string
+  symbol: string
+  direction: string
+  entryPrice: number
+  tp1: number | null
+  tp2: number | null
+  tp3: number | null
+  sl: number | null
+  outcome: 'win' | 'loss' | 'expired'
+  exitPrice: number | null
+  pnlPercent: number | null
+  hitTarget: string | null
+  durationHours: number | null
+  source: string
+  signalId: string | null
+  backtestDate: Date
 }
 
-// ─── Price Outcome ──────────────────────────────────────────
+export interface BacktestStats {
+  totalSignals: number
+  wins: number
+  losses: number
+  expired: number
+  winRate: number
+  avgWin: number
+  avgLoss: number
+  profitFactor: number
+  maxDrawdown: number
+  avgDurationHours: number
+}
 
-async function fetchPriceAtDate(date: Date): Promise<number | null> {
+/**
+ * Fetch historical OHLCV data from Binance
+ */
+async function fetchHistoricalPrices(
+  symbol: string,
+  startTime: number,
+  endTime: number
+): Promise<Array<{ time: number; open: number; high: number; low: number; close: number }>> {
   try {
-    // Use CoinGecko for historical BTC price
-    const dateStr = date.toISOString().slice(0, 10)
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/coins/bitcoin/history?date=${dateStr}&localization=false`,
-      { signal: AbortSignal.timeout(10_000) }
-    )
-    if (!res.ok) return null
-    const data = await res.json() as { market_data?: { current_price?: { usd?: number } } }
-    return data.market_data?.current_price?.usd ?? null
-  } catch { return null }
+    const interval = '1h' // 1 hour candles
+    const limit = 1000
+    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}USDT&interval=${interval}&startTime=${startTime}&endTime=${endTime}&limit=${limit}`
+
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
+    if (!res.ok) return []
+
+    const data = (await res.json()) as Array<[number, string, string, string, string, string]>
+
+    return data.map(k => ({
+      time: k[0],
+      open: parseFloat(k[1]),
+      high: parseFloat(k[2]),
+      low: parseFloat(k[3]),
+      close: parseFloat(k[4]),
+    }))
+  } catch {
+    return []
+  }
 }
 
-function classifyOutcome(priceChange: number): 'bullish' | 'bearish' | 'neutral' {
-  if (priceChange > 2) return 'bullish'
-  if (priceChange < -2) return 'bearish'
-  return 'neutral'
-}
-
-// ─── Module Backtesters ─────────────────────────────────────
-
-async function backtestDerivatives(from: Date, to: Date): Promise<BacktestResult> {
-  const snapshots = await prisma.derivativesSnapshot.findMany({
-    where: { timestamp: { gte: from, lte: to } },
-    orderBy: { timestamp: 'asc' },
-  })
-
-  // Group by hour and compute average funding
-  const hourly = new Map<string, { avgFunding: number; count: number }>()
-  for (const snap of snapshots) {
-    const hour = snap.timestamp.toISOString().slice(0, 13)
-    const existing = hourly.get(hour) ?? { avgFunding: 0, count: 0 }
-    existing.avgFunding += snap.fundingRate
-    existing.count++
-    hourly.set(hour, existing)
+/**
+ * Check if a signal hit TP or SL first
+ */
+function checkOutcome(
+  candles: Array<{ time: number; high: number; low: number; close: number }>,
+  signal: BacktestSignal
+): { outcome: 'win' | 'loss' | 'expired'; exitPrice: number | null; hitTarget: string | null; durationHours: number | null } {
+  if (!signal.entry || !signal.sl) {
+    return { outcome: 'expired', exitPrice: null, hitTarget: null, durationHours: null }
   }
 
-  const signals: BacktestSignal[] = []
-  for (const [hour, data] of hourly) {
-    const avgFunding = data.avgFunding / data.count
-    const predicted = avgFunding > 0.01 ? 'bullish' : avgFunding < -0.01 ? 'bearish' : 'neutral'
-    const confidence = Math.min(100, Math.abs(avgFunding) * 5000)
+  const isBullish = signal.direction === 'bullish'
+  const entryTime = signal.timestamp
 
-    // Check price 24h later
-    const futureDate = new Date(new Date(hour).getTime() + 24 * 60 * 60 * 1000)
-    if (futureDate > new Date()) continue
+  // Check each candle after signal
+  for (const candle of candles) {
+    if (candle.time <= entryTime) continue
 
-    const priceBefore = await fetchPriceAtDate(new Date(hour))
-    const priceAfter = await fetchPriceAtDate(futureDate)
+    // Check if SL hit first
+    if (isBullish) {
+      if (candle.low <= signal.sl) {
+        const duration = (candle.time - entryTime) / (1000 * 60 * 60)
+        return { outcome: 'loss', exitPrice: signal.sl, hitTarget: 'sl', durationHours: duration }
+      }
+    } else {
+      if (candle.high >= signal.sl) {
+        const duration = (candle.time - entryTime) / (1000 * 60 * 60)
+        return { outcome: 'loss', exitPrice: signal.sl, hitTarget: 'sl', durationHours: duration }
+      }
+    }
 
-    if (priceBefore && priceAfter) {
-      const priceChange = ((priceAfter - priceBefore) / priceBefore) * 100
-      const actual = classifyOutcome(priceChange)
-      signals.push({
-        timestamp: hour,
-        predicted,
-        actual,
-        confidence,
-        correct: predicted === actual,
-        priceChange,
-      })
+    // Check TP targets (closest first)
+    const targets = [
+      { price: signal.tp1, name: 'tp1' },
+      { price: signal.tp2, name: 'tp2' },
+      { price: signal.tp3, name: 'tp3' },
+    ].filter(t => t.price !== null)
+
+    for (const target of targets) {
+      if (isBullish) {
+        if (candle.high >= target.price!) {
+          const duration = (candle.time - entryTime) / (1000 * 60 * 60)
+          return { outcome: 'win', exitPrice: target.price!, hitTarget: target.name, durationHours: duration }
+        }
+      } else {
+        if (candle.low <= target.price!) {
+          const duration = (candle.time - entryTime) / (1000 * 60 * 60)
+          return { outcome: 'win', exitPrice: target.price!, hitTarget: target.name, durationHours: duration }
+        }
+      }
     }
   }
 
-  const correct = signals.filter(s => s.correct).length
-  return {
-    module: 'Derivatives',
-    totalSignals: signals.length,
-    correctPredictions: correct,
-    accuracy: signals.length > 0 ? (correct / signals.length) * 100 : 0,
-    avgConfidence: signals.length > 0 ? signals.reduce((s, sig) => s + sig.confidence, 0) / signals.length : 0,
-    signals,
-  }
-}
+  // No TP or SL hit within data range
+  const lastCandle = candles[candles.length - 1]
+  if (lastCandle) {
+    const duration = (lastCandle.time - entryTime) / (1000 * 60 * 60)
+    const pnl = isBullish
+      ? ((lastCandle.close - signal.entry) / signal.entry) * 100
+      : ((signal.entry - lastCandle.close) / signal.entry) * 100
 
-async function backtestSentiment(from: Date, to: Date): Promise<BacktestResult> {
-  const snapshots = await prisma.sentimentSnapshot.findMany({
-    where: { timestamp: { gte: from, lte: to }, source: 'fear_greed' },
-    orderBy: { timestamp: 'asc' },
-  })
-
-  const signals: BacktestSignal[] = []
-  for (const snap of snapshots) {
-    const predicted = snap.score > 60 ? 'bullish' : snap.score < 40 ? 'bearish' : 'neutral'
-    const confidence = Math.abs(snap.score - 50) * 2
-
-    const futureDate = new Date(snap.timestamp.getTime() + 24 * 60 * 60 * 1000)
-    if (futureDate > new Date()) continue
-
-    const priceBefore = await fetchPriceAtDate(snap.timestamp)
-    const priceAfter = await fetchPriceAtDate(futureDate)
-
-    if (priceBefore && priceAfter) {
-      const priceChange = ((priceAfter - priceBefore) / priceBefore) * 100
-      const actual = classifyOutcome(priceChange)
-      signals.push({
-        timestamp: snap.timestamp.toISOString(),
-        predicted,
-        actual,
-        confidence,
-        correct: predicted === actual,
-        priceChange,
-      })
+    return {
+      outcome: 'expired',
+      exitPrice: lastCandle.close,
+      hitTarget: null,
+      durationHours: duration,
     }
   }
 
-  const correct = signals.filter(s => s.correct).length
-  return {
-    module: 'Sentiment',
-    totalSignals: signals.length,
-    correctPredictions: correct,
-    accuracy: signals.length > 0 ? (correct / signals.length) * 100 : 0,
-    avgConfidence: signals.length > 0 ? signals.reduce((s, sig) => s + sig.confidence, 0) / signals.length : 0,
-    signals,
-  }
+  return { outcome: 'expired', exitPrice: null, hitTarget: null, durationHours: null }
 }
 
-async function backtestSectorFlow(from: Date, to: Date): Promise<BacktestResult> {
-  const snapshots = await prisma.sectorFlowSnapshot.findMany({
-    where: { timestamp: { gte: from, lte: to } },
-    orderBy: { timestamp: 'asc' },
-  })
+/**
+ * Run backtest for a set of signals
+ */
+export async function runBacktest(
+  signals: BacktestSignal[],
+  periodDays: number = 30
+): Promise<{ results: BacktestResult[]; stats: BacktestStats }> {
+  const now = Date.now()
+  const startTime = now - periodDays * 24 * 60 * 60 * 1000
+  const results: BacktestResult[] = []
 
-  // Group by day, count inflows vs outflows
-  const daily = new Map<string, { inflows: number; outflows: number }>()
-  for (const snap of snapshots) {
-    const day = snap.timestamp.toISOString().slice(0, 10)
-    const existing = daily.get(day) ?? { inflows: 0, outflows: 0 }
-    if (snap.netSmartMoneyFlowUsd > 3) existing.inflows++
-    else if (snap.netSmartMoneyFlowUsd < -3) existing.outflows++
-    daily.set(day, existing)
+  // Group signals by symbol for efficient price fetching
+  const signalsBySymbol = new Map<string, BacktestSignal[]>()
+  for (const signal of signals) {
+    const existing = signalsBySymbol.get(signal.symbol) ?? []
+    existing.push(signal)
+    signalsBySymbol.set(signal.symbol, existing)
   }
 
-  const signals: BacktestSignal[] = []
-  for (const [day, data] of daily) {
-    const predicted = data.inflows > data.outflows * 1.5 ? 'bullish' : data.outflows > data.inflows * 1.5 ? 'bearish' : 'neutral'
-    const confidence = Math.min(100, Math.abs(data.inflows - data.outflows) * 10)
+  // Process each symbol
+  for (const [symbol, symbolSignals] of signalsBySymbol) {
+    // Fetch historical prices
+    const candles = await fetchHistoricalPrices(symbol, startTime, now)
+    if (candles.length === 0) continue
 
-    const futureDate = new Date(new Date(day).getTime() + 24 * 60 * 60 * 1000)
-    if (futureDate > new Date()) continue
+    // Check each signal
+    for (const signal of symbolSignals) {
+      const { outcome, exitPrice, hitTarget, durationHours } = checkOutcome(candles, signal)
 
-    const priceBefore = await fetchPriceAtDate(new Date(day))
-    const priceAfter = await fetchPriceAtDate(futureDate)
+      // Calculate PnL
+      let pnlPercent: number | null = null
+      if (exitPrice && signal.entry) {
+        if (signal.direction === 'bullish') {
+          pnlPercent = ((exitPrice - signal.entry) / signal.entry) * 100
+        } else {
+          pnlPercent = ((signal.entry - exitPrice) / signal.entry) * 100
+        }
+      }
 
-    if (priceBefore && priceAfter) {
-      const priceChange = ((priceAfter - priceBefore) / priceBefore) * 100
-      const actual = classifyOutcome(priceChange)
-      signals.push({
-        timestamp: day,
-        predicted,
-        actual,
-        confidence,
-        correct: predicted === actual,
-        priceChange,
-      })
+      const result: BacktestResult = {
+        id: `bt-${signal.id}`,
+        symbol: signal.symbol,
+        direction: signal.direction,
+        entryPrice: signal.entry,
+        tp1: signal.tp1,
+        tp2: signal.tp2,
+        tp3: signal.tp3,
+        sl: signal.sl,
+        outcome,
+        exitPrice,
+        pnlPercent,
+        hitTarget,
+        durationHours,
+        source: signal.source,
+        signalId: signal.id,
+        backtestDate: new Date(signal.timestamp),
+      }
+
+      results.push(result)
     }
   }
 
-  const correct = signals.filter(s => s.correct).length
+  // Calculate stats
+  const stats = calculateStats(results)
+
+  return { results, stats }
+}
+
+/**
+ * Calculate backtest statistics
+ */
+function calculateStats(results: BacktestResult[]): BacktestStats {
+  const wins = results.filter(r => r.outcome === 'win')
+  const losses = results.filter(r => r.outcome === 'loss')
+  const expired = results.filter(r => r.outcome === 'expired')
+
+  const winRate = results.length > 0 ? (wins.length / results.length) * 100 : 0
+
+  const avgWin = wins.length > 0
+    ? wins.reduce((sum, r) => sum + (r.pnlPercent ?? 0), 0) / wins.length
+    : 0
+
+  const avgLoss = losses.length > 0
+    ? losses.reduce((sum, r) => sum + (r.pnlPercent ?? 0), 0) / losses.length
+    : 0
+
+  const grossProfit = wins.reduce((sum, r) => sum + Math.abs(r.pnlPercent ?? 0), 0)
+  const grossLoss = losses.reduce((sum, r) => sum + Math.abs(r.pnlPercent ?? 0), 0)
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+
+  // Calculate max drawdown
+  let maxDrawdown = 0
+  let peak = 0
+  let equity = 100 // Starting equity
+  for (const r of results) {
+    equity *= 1 + (r.pnlPercent ?? 0) / 100
+    peak = Math.max(peak, equity)
+    const drawdown = (peak - equity) / peak
+    maxDrawdown = Math.max(maxDrawdown, drawdown)
+  }
+
+  const avgDurationHours = results.length > 0
+    ? results.reduce((sum, r) => sum + (r.durationHours ?? 0), 0) / results.length
+    : 0
+
   return {
-    module: 'Narrative/Sector',
-    totalSignals: signals.length,
-    correctPredictions: correct,
-    accuracy: signals.length > 0 ? (correct / signals.length) * 100 : 0,
-    avgConfidence: signals.length > 0 ? signals.reduce((s, sig) => s + sig.confidence, 0) / signals.length : 0,
-    signals,
+    totalSignals: results.length,
+    wins: wins.length,
+    losses: losses.length,
+    expired: expired.length,
+    winRate,
+    avgWin,
+    avgLoss,
+    profitFactor,
+    maxDrawdown: maxDrawdown * 100,
+    avgDurationHours,
   }
 }
 
-// ─── Main Backtest Runner ───────────────────────────────────
-
-export async function runBacktest(days: number = 30): Promise<BacktestReport> {
-  const to = new Date()
-  const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000)
-
-  const [derivatives, sentiment, sectorFlow] = await Promise.allSettled([
-    backtestDerivatives(from, to),
-    backtestSentiment(from, to),
-    backtestSectorFlow(from, to),
-  ])
-
-  const modules: BacktestResult[] = [
-    derivatives.status === 'fulfilled' ? derivatives.value : { module: 'Derivatives', totalSignals: 0, correctPredictions: 0, accuracy: 0, avgConfidence: 0, signals: [] },
-    sentiment.status === 'fulfilled' ? sentiment.value : { module: 'Sentiment', totalSignals: 0, correctPredictions: 0, accuracy: 0, avgConfidence: 0, signals: [] },
-    sectorFlow.status === 'fulfilled' ? sectorFlow.value : { module: 'Narrative/Sector', totalSignals: 0, correctPredictions: 0, accuracy: 0, avgConfidence: 0, signals: [] },
-  ]
-
-  const totalSignals = modules.reduce((s, m) => s + m.totalSignals, 0)
-  const totalCorrect = modules.reduce((s, m) => s + m.correctPredictions, 0)
-
-  return {
-    period: { from: from.toISOString(), to: to.toISOString() },
-    modules,
-    overall: {
-      totalSignals,
-      totalCorrect,
-      accuracy: totalSignals > 0 ? (totalCorrect / totalSignals) * 100 : 0,
-    },
-    timestamp: new Date().toISOString(),
+/**
+ * Save backtest results to database
+ */
+export async function saveBacktestResults(results: BacktestResult[]): Promise<void> {
+  for (const result of results) {
+    await prisma.backtestResult.create({
+      data: {
+        symbol: result.symbol,
+        direction: result.direction,
+        entryPrice: result.entryPrice,
+        tp1: result.tp1,
+        tp2: result.tp2,
+        tp3: result.tp3,
+        sl: result.sl,
+        outcome: result.outcome,
+        exitPrice: result.exitPrice,
+        pnlPercent: result.pnlPercent,
+        hitTarget: result.hitTarget,
+        durationHours: result.durationHours,
+        source: result.source,
+        signalId: result.signalId,
+        backtestDate: result.backtestDate,
+      },
+    })
   }
+}
+
+/**
+ * Get backtest results from database
+ */
+export async function getBacktestResults(
+  symbol?: string,
+  periodDays?: number,
+  limit: number = 100
+): Promise<BacktestResult[]> {
+  const where: Record<string, unknown> = {}
+  if (symbol) where.symbol = symbol
+  if (periodDays) {
+    where.backtestDate = {
+      gte: new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000),
+    }
+  }
+
+  const results = await prisma.backtestResult.findMany({
+    where,
+    orderBy: { backtestDate: 'desc' },
+    take: limit,
+  })
+
+  return results.map(r => ({
+    id: r.id,
+    symbol: r.symbol,
+    direction: r.direction,
+    entryPrice: r.entryPrice,
+    tp1: r.tp1,
+    tp2: r.tp2,
+    tp3: r.tp3,
+    sl: r.sl,
+    outcome: r.outcome as 'win' | 'loss' | 'expired',
+    exitPrice: r.exitPrice,
+    pnlPercent: r.pnlPercent,
+    hitTarget: r.hitTarget,
+    durationHours: r.durationHours,
+    source: r.source,
+    signalId: r.signalId,
+    backtestDate: r.backtestDate,
+  }))
+}
+
+/**
+ * Get backtest statistics from database
+ */
+export async function getBacktestStats(
+  symbol?: string,
+  periodDays?: number
+): Promise<BacktestStats> {
+  const results = await getBacktestResults(symbol, periodDays, 10000)
+  return calculateStats(results)
 }
