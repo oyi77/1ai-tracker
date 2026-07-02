@@ -175,6 +175,18 @@ function AlphaEnginePageInner() {
                           <span className="text-[9px] font-mono text-text-muted">CONF</span>
                           <span className="text-[12px] font-mono font-bold text-text-primary">{s.confidence}%</span>
                         </div>
+                        {s.entry && s.tp1 && s.sl && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] font-mono text-text-muted">R:R</span>
+                            <span className={`text-[12px] font-mono font-bold ${
+                              ((s.tp1 - s.entry) / (s.entry - s.sl)) > 2 ? 'text-data-bull' :
+                              ((s.tp1 - s.entry) / (s.entry - s.sl)) > 1 ? 'text-data-orange' :
+                              'text-data-bear'
+                            }`}>
+                              {((s.tp1 - s.entry) / (s.entry - s.sl)).toFixed(1)}:1
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
