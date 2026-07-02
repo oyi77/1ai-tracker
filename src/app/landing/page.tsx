@@ -97,6 +97,28 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Promo Video */}
+      <section className="max-w-5xl mx-auto px-6 py-12">
+        <div className="relative rounded-xl overflow-hidden border border-border-dim shadow-2xl shadow-teal-vivid/10">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full"
+            poster="/promo-hero.jpg"
+          >
+            <source src="/promo-video.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-t from-bg-base/80 via-transparent to-transparent" />
+          <div className="absolute bottom-6 left-6 right-6 text-center">
+            <p className="text-sm font-mono text-text-muted">
+              AI-powered signals • Real-time data • Professional grade
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Stats */}
       <section className="border-y border-border-dim">
         <div className="max-w-6xl mx-auto px-6 py-12">
