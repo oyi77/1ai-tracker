@@ -27,6 +27,39 @@ interface AlphaSignal {
   expiresAt: number
 }
 
+interface SignalHistory {
+  id: string
+  symbol: string
+  direction: string
+  entry: number
+  tp1: number | null
+  tp2: number | null
+  tp3: number | null
+  sl: number | null
+  status: 'active' | 'completed'
+  outcome: 'win' | 'loss' | 'expired' | null
+  exitPrice: number | null
+  pnlPercent: number | null
+  hitTarget: string | null
+  source: string
+  strength: number
+  confidence: number
+  validPeriod: string
+  createdAt: string
+  closedAt: string | null
+  durationHours: number | null
+}
+
+interface SignalStats {
+  active: number
+  completed: number
+  wins: number
+  losses: number
+  winRate: number
+  totalPnl: number
+  avgPnl: number
+}
+
 interface Prediction {
   id: string
   symbol: string
@@ -62,15 +95,17 @@ export default function AlphaEnginePage() {
 
 function AlphaEnginePageInner() {
   const [signals, setSignals] = useState<AlphaSignal[]>([])
+  const [history, setHistory] = useState<SignalHistory[]>([])
+  const [signalStats, setSignalStats] = useState<SignalStats>({ active: 0, completed: 0, wins: 0, losses: 0, winRate: 0, totalPnl: 0, avgPnl: 0 })
   const [predictions, setPredictions] = useState<{ open: Prediction[]; closed: Prediction[]; accuracy: Accuracy }>({ open: [], closed: [], accuracy: { total: 0, wins: 0, losses: 0, winRate: 0, avgPnl: 0 } })
   const [status, setStatus] = useState<'live' | 'stale' | 'error'>('stale')
-  const [tab, setTab] = useState<'signals' | 'predictions' | 'accuracy'>('signals')
-
+  const [tab, setTab] = useState<'signals' | 'history' | 'predictions' | 'accuracy'>('signals')
   const fetchData = useCallback(async () => {
     try {
-      const [alphaRes, predRes] = await Promise.allSettled([
+      const [alphaRes, predRes, historyRes] = await Promise.allSettled([
         fetch('/api/v1/alpha-engine').then(r => r.json()),
         fetch('/api/v1/paper-trading').then(r => r.json()),
+        fetch('/api/v1/signals/history?limit=50').then(r => r.json()),
       ])
 
       if (alphaRes.status === 'fulfilled' && alphaRes.value?.data) {
@@ -78,6 +113,10 @@ function AlphaEnginePageInner() {
       }
       if (predRes.status === 'fulfilled' && predRes.value?.data) {
         setPredictions(predRes.value.data)
+      }
+      if (historyRes.status === 'fulfilled' && historyRes.value?.data) {
+        setHistory(historyRes.value.data.signals ?? [])
+        setSignalStats(historyRes.value.data.stats ?? { active: 0, completed: 0, wins: 0, losses: 0, winRate: 0, totalPnl: 0, avgPnl: 0 })
       }
       setStatus('live')
     } catch {
@@ -112,17 +151,17 @@ function AlphaEnginePageInner() {
 
         {/* KPI Strip */}
         <div className="grid grid-cols-6 gap-2">
-          <KPI label="Active Signals" value={String(signals.length)} />
-          <KPI label="Open Predictions" value={String(predictions.open.length)} />
-          <KPI label="Total Closed" value={String(acc.total)} />
-          <KPI label="Win Rate" value={`${acc.winRate.toFixed(1)}%`} color={acc.winRate > 50 ? 'text-data-bull' : acc.winRate > 0 ? 'text-data-bear' : 'text-text-muted'} />
-          <KPI label="Avg PnL" value={`${acc.avgPnl > 0 ? '+' : ''}${acc.avgPnl.toFixed(2)}%`} color={acc.avgPnl >= 0 ? 'text-data-bull' : 'text-data-bear'} />
-          <KPI label="W / L" value={`${acc.wins} / ${acc.losses}`} />
+          <KPI label="Active Signals" value={String(signalStats.active)} />
+          <KPI label="Completed" value={String(signalStats.completed)} />
+          <KPI label="Win Rate" value={`${signalStats.winRate.toFixed(1)}%`} color={signalStats.winRate > 50 ? 'text-data-bull' : signalStats.winRate > 0 ? 'text-data-bear' : 'text-text-muted'} />
+          <KPI label="Total PnL" value={`${signalStats.totalPnl > 0 ? '+' : ''}${signalStats.totalPnl.toFixed(2)}%`} color={signalStats.totalPnl >= 0 ? 'text-data-bull' : 'text-data-bear'} />
+          <KPI label="W / L" value={`${signalStats.wins} / ${signalStats.losses}`} />
+          <KPI label="Avg PnL" value={`${signalStats.avgPnl > 0 ? '+' : ''}${signalStats.avgPnl.toFixed(2)}%`} color={signalStats.avgPnl >= 0 ? 'text-data-bull' : 'text-data-bear'} />
         </div>
 
         {/* Tabs */}
         <div className="flex items-center gap-1">
-          {(['signals', 'predictions', 'accuracy'] as const).map(t => (
+          {(['signals', 'history', 'predictions', 'accuracy'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -229,6 +268,82 @@ function AlphaEnginePageInner() {
               })}
               {signals.length === 0 && (
                 <div className="p-8 text-center text-text-muted text-[12px] font-mono">Alpha engine is warming up...</div>
+              )}
+            </div>
+          </Panel>
+        )}
+
+        {tab === 'history' && (
+          <Panel title="Signal History" subtitle={`${history.length} signals with PnL tracking`} liveStatus={status} onRefresh={fetchData}>
+            <div className="space-y-1 p-2">
+              {history.map((s, i) => {
+                const isWin = s.outcome === 'win'
+                const isLoss = s.outcome === 'loss'
+                const isActive = s.status === 'active'
+
+                return (
+                  <div key={i} className="flex items-center gap-4 py-2 px-3 border-b border-bg-border/50 hover:bg-bg-raised transition-colors">
+                    {/* Status indicator */}
+                    <span className={`text-[16px] ${isActive ? 'text-teal-vivid' : isWin ? 'text-data-bull' : isLoss ? 'text-data-bear' : 'text-text-muted'}`}>
+                      {isActive ? '🔵' : isWin ? '✅' : isLoss ? '❌' : '⏰'}
+                    </span>
+
+                    {/* Symbol & Direction */}
+                    <div className="flex items-center gap-2 min-w-[100px]">
+                      <span className="text-[12px] font-mono font-bold text-teal-vivid">{s.symbol}</span>
+                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                        s.direction === 'bullish' ? 'bg-data-bull/20 text-data-bull' : 'bg-data-bear/20 text-data-bear'
+                      }`}>
+                        {s.direction.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Trading Levels */}
+                    <div className="flex items-center gap-3 text-[10px] font-mono">
+                      <span className="text-text-muted">ENTRY</span>
+                      <span className="text-text-primary">${s.entry.toLocaleString()}</span>
+                      {s.tp1 && (
+                        <>
+                          <span className="text-data-bull">TP1</span>
+                          <span className="text-data-bull">${s.tp1.toLocaleString()}</span>
+                        </>
+                      )}
+                      {s.sl && (
+                        <>
+                          <span className="text-data-bear">SL</span>
+                          <span className="text-data-bear">${s.sl.toLocaleString()}</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Outcome & PnL */}
+                    <div className="flex items-center gap-3 ml-auto">
+                      {s.hitTarget && (
+                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                          s.hitTarget.startsWith('tp') ? 'bg-data-bull/20 text-data-bull' : 'bg-data-bear/20 text-data-bear'
+                        }`}>
+                          {s.hitTarget.toUpperCase()}
+                        </span>
+                      )}
+                      {s.pnlPercent !== null && (
+                        <span className={`text-[12px] font-mono font-bold ${s.pnlPercent >= 0 ? 'text-data-bull' : 'text-data-bear'}`}>
+                          {s.pnlPercent >= 0 ? '+' : ''}{s.pnlPercent.toFixed(2)}%
+                        </span>
+                      )}
+                      {s.durationHours !== null && (
+                        <span className="text-[10px] font-mono text-text-muted">
+                          {s.durationHours < 1 ? '<1h' : `${s.durationHours.toFixed(0)}h`}
+                        </span>
+                      )}
+                      <span className="text-[9px] font-mono text-text-muted">{s.source}</span>
+                    </div>
+                  </div>
+                )
+              })}
+              {history.length === 0 && (
+                <div className="p-8 text-center text-text-muted text-[12px] font-mono">
+                  No signal history yet. Signals will appear here after they expire or hit TP/SL.
+                </div>
               )}
             </div>
           </Panel>
