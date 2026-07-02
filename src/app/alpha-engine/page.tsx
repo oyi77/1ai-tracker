@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { LiveDot } from '@/components/primitives/LiveDot'
+import { FinancialDisclaimer } from '@/components/FinancialDisclaimer'
 
 type ValidPeriod = '4h' | '24h' | '7d'
 
@@ -94,6 +95,7 @@ function AlphaEnginePageInner() {
 
   return (
     <>
+      <FinancialDisclaimer variant="modal" />
       <div className="p-4 space-y-4 max-w-7xl mx-auto">
         <div className="flex items-end justify-between">
           <div>
