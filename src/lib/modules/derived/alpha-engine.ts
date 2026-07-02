@@ -317,22 +317,26 @@ async function fetchAlphaSignals(): Promise<AlphaSignal[]> {
       signal: AbortSignal.timeout(10_000),
     })
     if (liqRes.ok) {
-      const liqData = (await liqRes.json()) as { data?: { total?: number; longs?: number; shorts?: number } }
-      const total = liqData.data?.total ?? 0
-      const longs = liqData.data?.longs ?? 0
-      const shorts = liqData.data?.shorts ?? 0
+      const liqData = (await liqRes.json()) as { data?: { heatmap?: Array<{ longLiquidations: number; shortLiquidations: number }> } }
+      const heatmap = liqData.data?.heatmap ?? []
+      let totalLongs = 0, totalShorts = 0
+      for (const h of heatmap) {
+        totalLongs += h.longLiquidations ?? 0
+        totalShorts += h.shortLiquidations ?? 0
+      }
+      const total = totalLongs + totalShorts
 
-      if (total > 100_000_000) { // >$100M liquidations
-        const longRatio = longs / total
+      if (total > 10_000_000) { // >$10M liquidations
+        const longRatio = total > 0 ? totalLongs / total : 0.5
         symbols.add('BTC')
         signals.push({
           id: `liq-cascade-${now}`,
           symbol: 'BTC',
-          direction: longRatio > 0.7 ? 'bullish' : 'bearish', // Contrarian
+          direction: longRatio > 0.7 ? 'bullish' : 'bearish',
           strength: Math.min(75, Math.round(total / 10_000_000)),
           confidence: 50,
           sources: ['liquidations'],
-          reasoning: `$${(total / 1e6).toFixed(0)}M liquidations — ${longRatio > 0.7 ? 'longs liquidated, potential bounce' : 'shorts squeezed, momentum up'}`,
+          reasoning: `$${(total / 1e6).toFixed(0)}M liquidations — ${longRatio > 0.7 ? 'longs liquidated, potential bounce' : 'shorts squeezed'}`,
           timestamp: now,
         })
       }
@@ -345,35 +349,38 @@ async function fetchAlphaSignals(): Promise<AlphaSignal[]> {
       signal: AbortSignal.timeout(10_000),
     })
     if (flowRes.ok) {
-      const flowData = (await flowRes.json()) as { data?: { inflow?: number; outflow?: number; net?: number } }
-      const net = flowData.data?.net ?? 0
+      const flowData = (await flowRes.json()) as { data?: { flows?: Array<{ exchange: string; netFlow: number }> } }
+      const flows = flowData.data?.flows ?? []
+      let totalNet = 0
+      for (const f of flows) {
+        totalNet += f.netFlow ?? 0
+      }
 
-      if (Math.abs(net) > 10_000_000) { // >$10M net flow
+      if (Math.abs(totalNet) > 10_000_000) { // >$10M net flow
         symbols.add('BTC')
         signals.push({
-          id: `exflow-${net > 0 ? 'in' : 'out'}-${now}`,
+          id: `exflow-${totalNet > 0 ? 'in' : 'out'}-${now}`,
           symbol: 'BTC',
-          direction: net > 0 ? 'bearish' : 'bullish', // Inflow to exchange = sell pressure
-          strength: Math.min(70, Math.round(Math.abs(net) / 5_000_000)),
+          direction: totalNet > 0 ? 'bearish' : 'bullish',
+          strength: Math.min(70, Math.round(Math.abs(totalNet) / 5_000_000)),
           confidence: 50,
           sources: ['exchange-flow'],
-          reasoning: `$${(Math.abs(net) / 1e6).toFixed(0)}M net ${net > 0 ? 'inflow to' : 'outflow from'} exchanges — ${net > 0 ? 'potential sell pressure' : 'accumulation signal'}`,
+          reasoning: `$${(Math.abs(totalNet) / 1e6).toFixed(0)}M net ${totalNet > 0 ? 'inflow to' : 'outflow from'} exchanges — ${totalNet > 0 ? 'potential sell pressure' : 'accumulation'}`,
           timestamp: now,
         })
       }
     }
   } catch { /* silent */ }
-
   // ── Source 8: Gas Tracker (Ethereum) ──────────────────────────
   try {
     const gasRes = await fetch('http://localhost:4400/api/v1/gas', {
       signal: AbortSignal.timeout(10_000),
     })
     if (gasRes.ok) {
-      const gasData = (await gasRes.json()) as { data?: { standard?: number; fast?: number } }
-      const gas = gasData.data?.standard ?? 0
+      const gasData = (await gasRes.json()) as { data?: Array<{ chain: string; standard: number; congestion: string }> }
+      const ethGas = (Array.isArray(gasData.data) ? gasData.data : []).find(g => g.chain === 'Ethereum')
 
-      if (gas > 100) { // High gas = network congestion
+      if (ethGas && ethGas.standard > 50) { // >50 gwei
         symbols.add('ETH')
         signals.push({
           id: `gas-high-${now}`,
@@ -382,7 +389,7 @@ async function fetchAlphaSignals(): Promise<AlphaSignal[]> {
           strength: 40,
           confidence: 35,
           sources: ['gas-tracker'],
-          reasoning: `High gas: ${gas} gwei — network congested, DeFi activity elevated`,
+          reasoning: `High gas: ${ethGas.standard} gwei (${ethGas.congestion}) — network congested, DeFi activity elevated`,
           timestamp: now,
         })
       }
@@ -395,21 +402,23 @@ async function fetchAlphaSignals(): Promise<AlphaSignal[]> {
       signal: AbortSignal.timeout(10_000),
     })
     if (stableRes.ok) {
-      const stableData = (await stableRes.json()) as { data?: { minted?: number; redeemed?: number } }
-      const minted = stableData.data?.minted ?? 0
-      const redeemed = stableData.data?.redeemed ?? 0
-      const net = minted - redeemed
+      const stableData = (await stableRes.json()) as { data?: Array<{ symbol: string; change24h: number }> }
+      const stables = Array.isArray(stableData.data) ? stableData.data : []
+      let totalChange = 0
+      for (const s of stables) {
+        totalChange += s.change24h ?? 0
+      }
 
-      if (Math.abs(net) > 50_000_000) { // >$50M net mint/redeem
+      if (Math.abs(totalChange) > 50_000_000) { // >$50M change
         symbols.add('BTC')
         signals.push({
-          id: `stable-${net > 0 ? 'mint' : 'redeem'}-${now}`,
+          id: `stable-${totalChange > 0 ? 'mint' : 'redeem'}-${now}`,
           symbol: 'BTC',
-          direction: net > 0 ? 'bullish' : 'bearish', // Minting = buying power
-          strength: Math.min(65, Math.round(Math.abs(net) / 25_000_000)),
+          direction: totalChange > 0 ? 'bullish' : 'bearish',
+          strength: Math.min(65, Math.round(Math.abs(totalChange) / 25_000_000)),
           confidence: 45,
           sources: ['stablecoin-flow'],
-          reasoning: `$${(Math.abs(net) / 1e6).toFixed(0)}M net ${net > 0 ? 'USDT minted' : 'stablecoins redeemed'} — ${net > 0 ? 'new capital entering' : 'capital leaving'}`,
+          reasoning: `$${(Math.abs(totalChange) / 1e6).toFixed(0)}M net stablecoin ${totalChange > 0 ? 'minting' : 'redemption'} — ${totalChange > 0 ? 'new capital entering' : 'capital leaving'}`,
           timestamp: now,
         })
       }
@@ -422,22 +431,23 @@ async function fetchAlphaSignals(): Promise<AlphaSignal[]> {
       signal: AbortSignal.timeout(10_000),
     })
     if (derivRes.ok) {
-      const derivData = (await derivRes.json()) as { data?: { maxPain?: number; currentPrice?: number } }
-      const maxPain = derivData.data?.maxPain ?? 0
-      const currentPrice = derivData.data?.currentPrice ?? 0
+      const derivData = (await derivRes.json()) as { data?: { snapshots?: Array<{ symbol: string; fundingRate: number; openInterest: number }> } }
+      const snapshots = derivData.data?.snapshots ?? []
 
-      if (maxPain > 0 && currentPrice > 0) {
-        const diff = ((currentPrice - maxPain) / maxPain) * 100
-        if (Math.abs(diff) > 5) {
-          symbols.add('BTC')
+      // Find extreme funding rates on derivatives
+      for (const snap of snapshots) {
+        if (!snap.symbol.includes('BTC') && !snap.symbol.includes('ETH')) continue
+        if (Math.abs(snap.fundingRate) > 0.01) { // >1% funding
+          const symbol = snap.symbol.replace('USDT', '').replace('USD', '')
+          symbols.add(symbol)
           signals.push({
-            id: `deriv-maxpain-${now}`,
-            symbol: 'BTC',
-            direction: diff > 0 ? 'bearish' : 'bullish', // Price tends toward max pain
-            strength: Math.min(60, Math.round(Math.abs(diff) * 3)),
-            confidence: 40,
+            id: `deriv-extreme-${symbol}-${now}`,
+            symbol,
+            direction: snap.fundingRate > 0 ? 'bearish' : 'bullish',
+            strength: Math.min(70, Math.round(Math.abs(snap.fundingRate) * 1000)),
+            confidence: 45,
             sources: ['derivatives-intel'],
-            reasoning: `BTC ${diff > 0 ? 'above' : 'below'} max pain ($${maxPain.toLocaleString()}) by ${Math.abs(diff).toFixed(1)}% — likely to gravitate toward max pain`,
+            reasoning: `Extreme ${(snap.fundingRate * 100).toFixed(2)}% funding on ${snap.symbol} — crowded ${snap.fundingRate > 0 ? 'longs' : 'shorts'}`,
             timestamp: now,
           })
         }
