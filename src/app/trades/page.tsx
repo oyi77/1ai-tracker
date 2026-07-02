@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
+import { io, Socket } from 'socket.io-client'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { LiveDot } from '@/components/primitives/LiveDot'
@@ -40,65 +41,52 @@ export default function TradesPage() {
   const [totalBuy, setTotalBuy] = useState(0)
   const [totalSell, setTotalSell] = useState(0)
   const [connected, setConnected] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
+  const socketRef = useRef<Socket | null>(null)
 
 
   // Connect to WS server /trade-stream for real-time trades
   useEffect(() => {
     let buyVol = 0
     let sellVol = 0
-    let reconnectTimeout: ReturnType<typeof setTimeout>
 
-    const connect = () => {
-      const ws = new WebSocket('wss://tracker-ws.aitradepulse.com/trade-stream')
-      wsRef.current = ws
+    const socket = io('https://tracker-ws.aitradepulse.com/trade-stream', {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 3000,
+      reconnectionAttempts: Infinity,
+    })
+    socketRef.current = socket
 
-      ws.onopen = () => setConnected(true)
+    socket.on('connect', () => setConnected(true))
+    socket.on('disconnect', () => setConnected(false))
+    socket.on('connect_error', () => setConnected(false))
 
-      ws.onmessage = (event) => {
-        try {
-          const raw = event.data as string
-          // Socket.IO format: 42[event, payload]
-          if (!raw.startsWith('42')) return
-          const parsed = JSON.parse(raw.slice(2)) as [string, Trade]
-          if (parsed[0] !== 'trade') return
-          const t = parsed[1]
+    socket.on('trade', (t: Trade) => {
+      if (t.side === 'buy') buyVol += t.usdValue
+      else sellVol += t.usdValue
+      setTotalBuy(buyVol)
+      setTotalSell(sellVol)
 
-          if (t.side === 'buy') buyVol += t.usdValue
-          else sellVol += t.usdValue
-          setTotalBuy(buyVol)
-          setTotalSell(sellVol)
+      setTrades(prev => [t, ...prev].slice(0, 200))
 
-          setTrades(prev => [t, ...prev].slice(0, 200))
+      setPrices(prev => {
+        const next = new Map(prev)
+        const existing = next.get(t.pair)
+        next.set(t.pair, {
+          symbol: t.pair,
+          price: t.price,
+          change24h: existing?.change24h ?? 0,
+          volume24h: existing?.volume24h ?? 0,
+          high24h: Math.max(existing?.high24h ?? t.price, t.price),
+          low24h: Math.min(existing?.low24h ?? t.price, t.price),
+          trades24h: (existing?.trades24h ?? 0) + 1,
+        })
+        return next
+      })
+    })
 
-          setPrices(prev => {
-            const next = new Map(prev)
-            const existing = next.get(t.pair)
-            next.set(t.pair, {
-              symbol: t.pair,
-              price: t.price,
-              change24h: existing?.change24h ?? 0,
-              volume24h: existing?.volume24h ?? 0,
-              high24h: Math.max(existing?.high24h ?? t.price, t.price),
-              low24h: Math.min(existing?.low24h ?? t.price, t.price),
-              trades24h: (existing?.trades24h ?? 0) + 1,
-            })
-            return next
-          })
-        } catch {}
-      }
-
-      ws.onerror = () => setConnected(false)
-      ws.onclose = () => {
-        setConnected(false)
-        reconnectTimeout = setTimeout(connect, 3000)
-      }
-    }
-
-    connect()
     return () => {
-      clearTimeout(reconnectTimeout)
-      wsRef.current?.close()
+      socket.disconnect()
     }
   }, [])
 

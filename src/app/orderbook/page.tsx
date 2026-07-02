@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { io, Socket } from 'socket.io-client'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { LiveDot } from '@/components/primitives/LiveDot'
-
 interface DepthLevel {
   price: number
   quantity: number
@@ -38,7 +38,7 @@ export default function OrderBookPage() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
   const [wsConnected, setWsConnected] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
+  const socketRef = useRef<Socket | null>(null)
 
   // REST fallback for ticker data
   const fetchData = useCallback(async () => {
@@ -53,71 +53,63 @@ export default function OrderBookPage() {
     } catch { /* silent */ }
   }, [symbol])
 
-  // WebSocket for realtime depth updates via WS server proxy
+  // Socket.IO for realtime depth updates via WS server
   useEffect(() => {
     const binanceSymbol = symbol.toLowerCase() + 'usdt'
-    let ws: WebSocket | null = null
-    let reconnectTimeout: NodeJS.Timeout
+    let socket: Socket | null = null
 
-    const connect = () => {
-      try {
-        ws = new WebSocket('wss://tracker-ws.aitradepulse.com/orderbook')
-        wsRef.current = ws
+    try {
+      socket = io('https://tracker-ws.aitradepulse.com/orderbook', {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 3000,
+        reconnectionAttempts: Infinity,
+      })
+      socketRef.current = socket
 
-        ws.onopen = () => {
-          setWsConnected(true)
-          setStatus('live')
-          ws?.send(`42["subscribe","${binanceSymbol}"]`)
-        }
+      socket.on('connect', () => {
+        setWsConnected(true)
+        setStatus('live')
+        socket?.emit('subscribe', binanceSymbol)
+      })
 
-        ws.onmessage = (event) => {
-          try {
-            const raw = event.data as string
-            if (!raw.startsWith('42')) return
-            const parsed = JSON.parse(raw.slice(2)) as [string, { symbol: string; bids: Array<[string, string]>; asks: Array<[string, string]> }]
-            if (parsed[0] !== 'depth') return
-            const msg = parsed[1]
-            const bids: DepthLevel[] = (msg.bids ?? []).slice(0, 15).map(([p, q]) => {
-              const price = parseFloat(p); const quantity = parseFloat(q)
-              return { price, quantity, total: price * quantity }
-            })
-            const asks: DepthLevel[] = (msg.asks ?? []).slice(0, 15).map(([p, q]) => {
-              const price = parseFloat(p); const quantity = parseFloat(q)
-              return { price, quantity, total: price * quantity }
-            })
-            const bidDepth = bids.reduce((s, b) => s + b.total, 0)
-            const askDepth = asks.reduce((s, a) => s + a.total, 0)
-            const bestBid = bids[0]?.price ?? 0
-            const bestAsk = asks[0]?.price ?? 0
-            const midPrice = (bestBid + bestAsk) / 2
-            const spread = bestAsk - bestBid
-            const spreadBps = midPrice > 0 ? (spread / midPrice) * 10000 : 0
-            const imbalance = bidDepth + askDepth > 0 ? (bidDepth - askDepth) / (bidDepth + askDepth) : 0
+      socket.on('depth', (msg: { symbol: string; bids: Array<[string, string]>; asks: Array<[string, string]> }) => {
+        try {
+          const bids: DepthLevel[] = (msg.bids ?? []).slice(0, 15).map(([p, q]) => {
+            const price = parseFloat(p); const quantity = parseFloat(q)
+            return { price, quantity, total: price * quantity }
+          })
+          const asks: DepthLevel[] = (msg.asks ?? []).slice(0, 15).map(([p, q]) => {
+            const price = parseFloat(p); const quantity = parseFloat(q)
+            return { price, quantity, total: price * quantity }
+          })
+          const bidDepth = bids.reduce((s, b) => s + b.total, 0)
+          const askDepth = asks.reduce((s, a) => s + a.total, 0)
+          const bestBid = bids[0]?.price ?? 0
+          const bestAsk = asks[0]?.price ?? 0
+          const midPrice = (bestBid + bestAsk) / 2
+          const spread = bestAsk - bestBid
+          const spreadBps = midPrice > 0 ? (spread / midPrice) * 10000 : 0
+          const imbalance = bidDepth + askDepth > 0 ? (bidDepth - askDepth) / (bidDepth + askDepth) : 0
 
-            setData(prev => ({
-              bids, asks, bidDepth, askDepth, spread, spreadBps, midPrice, imbalance,
-              ticker: prev?.ticker ?? { price: midPrice, change24h: 0, volume24h: 0, high24h: 0, low24h: 0 },
-            }))
-            setLastUpdate(new Date())
-          } catch { /* silent */ }
-        }
+          setData(prev => ({
+            bids, asks, bidDepth, askDepth, spread, spreadBps, midPrice, imbalance,
+            ticker: prev?.ticker ?? { price: midPrice, change24h: 0, volume24h: 0, high24h: 0, low24h: 0 },
+          }))
+          setLastUpdate(new Date())
+        } catch { /* silent */ }
+      })
 
-        ws.onerror = () => setWsConnected(false)
-        ws.onclose = () => {
-          setWsConnected(false)
-          reconnectTimeout = setTimeout(connect, 3000)
-        }
-      } catch { /* silent */ }
-    }
+      socket.on('disconnect', () => setWsConnected(false))
+      socket.on('connect_error', () => setWsConnected(false))
+    } catch { /* silent */ }
 
-    connect()
     fetchData()
     const tickerInterval = setInterval(fetchData, 30_000)
 
     return () => {
-      clearTimeout(reconnectTimeout)
       clearInterval(tickerInterval)
-      if (ws) ws.close()
+      socket?.disconnect()
     }
   }, [symbol, fetchData])
 

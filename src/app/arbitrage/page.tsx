@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
+import { io, Socket } from 'socket.io-client'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { LiveDot } from '@/components/primitives/LiveDot'
@@ -42,45 +43,27 @@ export default function ArbitragePage() {
   const [data, setData] = useState<ArbitrageData | null>(null)
   const [connected, setConnected] = useState(false)
   const [filter, setFilter] = useState<'all' | 'CEX Spot-Futures' | 'DEX-CEX' | 'Funding Arb'>('all')
-  const wsRef = useRef<WebSocket | null>(null)
+  const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
-    let mounted = true
-    let reconnectTimeout: NodeJS.Timeout
+    const socket = io('https://tracker-ws.aitradepulse.com/arbitrage', {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 3000,
+      reconnectionAttempts: Infinity,
+    })
+    socketRef.current = socket
 
-    const connect = () => {
-      const ws = new WebSocket('wss://tracker-ws.aitradepulse.com/socket.io/?EIO=4&transport=websocket')
-      wsRef.current = ws
+    socket.on('connect', () => setConnected(true))
+    socket.on('disconnect', () => setConnected(false))
+    socket.on('connect_error', () => setConnected(false))
 
-      ws.onopen = () => {
-        if (mounted) setConnected(true)
-        ws.send('42/arbitrage,["subscribe","all"]')
-      }
+    socket.on('arbitrage', (d: ArbitrageData) => {
+      setData(d)
+    })
 
-      ws.onmessage = (event) => {
-        try {
-          const raw = event.data as string
-          if (raw.startsWith('42/arbitrage,')) {
-            const payload = JSON.parse(raw.slice('42/arbitrage,'.length))
-            if (Array.isArray(payload) && payload[0] === 'arbitrage') {
-              if (mounted) setData(payload[1] as ArbitrageData)
-            }
-          }
-        } catch {}
-      }
-
-      ws.onerror = () => { if (mounted) setConnected(false) }
-      ws.onclose = () => {
-        if (mounted) setConnected(false)
-        reconnectTimeout = setTimeout(connect, 3000)
-      }
-    }
-
-    connect()
     return () => {
-      mounted = false
-      clearTimeout(reconnectTimeout)
-      if (wsRef.current) wsRef.current.close()
+      socket.disconnect()
     }
   }, [])
 

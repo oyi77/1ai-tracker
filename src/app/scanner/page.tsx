@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { io, Socket } from 'socket.io-client'
 import { NexusLayout } from '@/components/layout/NexusLayout'
 import { Panel } from '@/components/shell/Panel'
 import { DataTable, type Column } from '@/components/shell/DataTable'
@@ -44,8 +45,7 @@ function DegenScannerPageInner() {
   const [feedStatus, setFeedStatus] = useState<'live' | 'stale' | 'error'>('live')
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [wsConnected, setWsConnected] = useState(false)
-  const wsRef = useRef<WebSocket | null>(null)
-  const wsReconnectRef = useRef<NodeJS.Timeout | null>(null)
+  const socketsRef = useRef<Socket[]>([])
 
   const fetchData = useCallback(async () => {
     try {
@@ -83,105 +83,116 @@ function DegenScannerPageInner() {
     return () => clearInterval(interval)
   }, [fetchData])
 
-  // Real-time WebSocket connection to /dexscreener + /memecoins namespaces
+  // Real-time Socket.IO connections to /dexscreener + /memecoins namespaces
   useEffect(() => {
-    let mounted = true
-    const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://tracker-ws.aitradepulse.com'
+    const WS_URL = process.env.NEXT_PUBLIC_WS_URL
+      ? process.env.NEXT_PUBLIC_WS_URL.replace('wss://', 'https://').replace('ws://', 'http://')
+      : 'https://tracker-ws.aitradepulse.com'
 
-    const connect = () => {
-      try {
-        const ws = new WebSocket(`${WS_URL}/socket.io/?EIO=4&transport=websocket`)
-        wsRef.current = ws
+    const dexSocket = io(`${WS_URL}/dexscreener`, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 3000,
+      reconnectionAttempts: Infinity,
+    })
 
-        ws.onopen = () => {
-          if (!mounted) return
-          setWsConnected(true)
-          ws.send('40/dexscreener')
-          ws.send('40/memecoins')
+    const memeSocket = io(`${WS_URL}/memecoins`, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 3000,
+      reconnectionAttempts: Infinity,
+    })
+
+    socketsRef.current = [dexSocket, memeSocket]
+
+    const onAnyConnect = () => setWsConnected(dexSocket.connected || memeSocket.connected)
+    const onAnyDisconnect = () => setWsConnected(dexSocket.connected || memeSocket.connected)
+
+    dexSocket.on('connect', onAnyConnect)
+    dexSocket.on('disconnect', onAnyDisconnect)
+    dexSocket.on('connect_error', onAnyDisconnect)
+    memeSocket.on('connect', onAnyConnect)
+    memeSocket.on('disconnect', onAnyDisconnect)
+    memeSocket.on('connect_error', onAnyDisconnect)
+
+    // /dexscreener namespace: boost events with enriched metadata
+    dexSocket.on('boost', (d: Record<string, unknown>) => {
+      const addr = String(d.address ?? '')
+      setPairs(prev => {
+        const existing = prev.find(p => p.address === addr)
+        const np: NewPair = {
+          address: addr,
+          name: String(d.name ?? 'Unknown'),
+          priceUsd: Number(d.priceUsd ?? 0),
+          fdv: Number(d.fdv ?? 0),
+          liquidity: Number(d.liquidity ?? 0),
+          ageMinutes: Math.round(Number(d.age ?? 0) / 60),
+          volume5m: Number(d.volume24h ?? 0) / 288,
+          buys5m: 0, sells5m: 0,
+          rugRisk: String(d.risk ?? 'medium'),
+          riskScore: Number(d.score ?? 50),
+          network: String(d.chain ?? 'solana'),
         }
+        if (existing) return prev.map(p => p.address === addr ? { ...p, ...np } : p)
+        return [np, ...prev].slice(0, 100)
+      })
+      setFeedStatus('live')
+      setLastUpdated(new Date())
+    })
 
-        ws.onmessage = (event) => {
-          if (!mounted) return
-          const raw = event.data as string
+    dexSocket.on('token_update', (d: Record<string, unknown>) => {
+      const addr = String(d.address ?? '')
+      setPairs(prev => {
+        const existing = prev.find(p => p.address === addr)
+        if (!existing) return prev
+        return prev.map(p => p.address === addr ? { ...p,
+          priceUsd: Number(d.priceUsd ?? p.priceUsd),
+          fdv: Number(d.fdv ?? p.fdv),
+          liquidity: Number(d.liquidity ?? p.liquidity),
+        } : p)
+      })
+    })
 
-          // /dexscreener namespace (boost events with enriched metadata)
-          if (raw.startsWith('42/dexscreener,')) {
-            try {
-              const payload = JSON.parse(raw.slice('42/dexscreener,'.length))
-              const ev = payload[0] as string
-              const d = payload[1] as Record<string, unknown>
-              if (ev !== 'boost' && ev !== 'token_update') return
-
-              setPairs(prev => {
-                const addr = String(d.address ?? '')
-                const existing = prev.find(p => p.address === addr)
-                const np: NewPair = {
-                  address: addr,
-                  name: String(d.name ?? 'Unknown'),
-                  priceUsd: Number(d.priceUsd ?? 0),
-                  fdv: Number(d.fdv ?? 0),
-                  liquidity: Number(d.liquidity ?? 0),
-                  ageMinutes: Math.round(Number(d.age ?? 0) / 60),
-                  volume5m: Number(d.volume24h ?? 0) / 288,
-                  buys5m: 0, sells5m: 0,
-                  rugRisk: String(d.risk ?? 'medium'),
-                  riskScore: Number(d.score ?? 50),
-                  network: String(d.chain ?? 'solana'),
-                }
-                if (existing) return prev.map(p => p.address === addr ? { ...p, ...np } : p)
-                return [np, ...prev].slice(0, 100)
-              })
-              setFeedStatus('live')
-              setLastUpdated(new Date())
-            } catch { /* ignore parse errors */ }
-          }
-
-          // /memecoins namespace (new_token creation events)
-          if (raw.startsWith('42/memecoins,')) {
-            try {
-              const payload = JSON.parse(raw.slice('42/memecoins,'.length))
-              const ev = payload[0] as string
-              const d = payload[1] as Record<string, unknown>
-              if (ev !== 'new_token' && ev !== 'token_update') return
-
-              const scored = (d.scored as Record<string, unknown>) ?? d
-              const addr = String(scored.address ?? '')
-              setPairs(prev => {
-                const existing = prev.find(p => p.address === addr)
-                const np: NewPair = {
-                  address: addr,
-                  name: `NEW ${String(scored.name ?? 'New Token')}`,
-                  priceUsd: Number(scored.priceUsd ?? 0),
-                  fdv: Number(scored.fdv ?? 0),
-                  liquidity: Number(scored.liquidity ?? 0),
-                  ageMinutes: Math.round(Number(scored.age ?? 0) / 60),
-                  volume5m: Number(scored.volume24h ?? 0) / 288,
-                  buys5m: 0, sells5m: 0,
-                  rugRisk: String(scored.risk ?? 'extreme'),
-                  riskScore: Number(scored.score ?? 50),
-                  network: String(scored.chain ?? 'solana'),
-                }
-                if (existing) return prev.map(p => p.address === addr ? { ...p, ...np } : p)
-                return [np, ...prev].slice(0, 100)
-              })
-            } catch { /* ignore parse errors */ }
-          }
+    // /memecoins namespace: new_token creation events
+    memeSocket.on('new_token', (d: Record<string, unknown>) => {
+      const scored = (d.scored as Record<string, unknown>) ?? d
+      const addr = String(scored.address ?? '')
+      setPairs(prev => {
+        const existing = prev.find(p => p.address === addr)
+        const np: NewPair = {
+          address: addr,
+          name: `NEW ${String(scored.name ?? 'New Token')}`,
+          priceUsd: Number(scored.priceUsd ?? 0),
+          fdv: Number(scored.fdv ?? 0),
+          liquidity: Number(scored.liquidity ?? 0),
+          ageMinutes: Math.round(Number(scored.age ?? 0) / 60),
+          volume5m: Number(scored.volume24h ?? 0) / 288,
+          buys5m: 0, sells5m: 0,
+          rugRisk: String(scored.risk ?? 'extreme'),
+          riskScore: Number(scored.score ?? 50),
+          network: String(scored.chain ?? 'solana'),
         }
+        if (existing) return prev.map(p => p.address === addr ? { ...p, ...np } : p)
+        return [np, ...prev].slice(0, 100)
+      })
+    })
 
-        ws.onclose = () => {
-          if (!mounted) return
-          setWsConnected(false)
-          wsReconnectRef.current = setTimeout(connect, 3000)
-        }
-        ws.onerror = () => { if (mounted) setWsConnected(false) }
-      } catch { /* connection error */ }
-    }
+    memeSocket.on('token_update', (d: Record<string, unknown>) => {
+      const scored = (d.scored as Record<string, unknown>) ?? d
+      const addr = String(scored.address ?? '')
+      setPairs(prev => {
+        const existing = prev.find(p => p.address === addr)
+        if (!existing) return prev
+        return prev.map(p => p.address === addr ? { ...p,
+          priceUsd: Number(scored.priceUsd ?? p.priceUsd),
+          riskScore: Number(scored.score ?? p.riskScore),
+        } : p)
+      })
+    })
 
-    connect()
     return () => {
-      mounted = false
-      if (wsReconnectRef.current) clearTimeout(wsReconnectRef.current)
-      if (wsRef.current) wsRef.current.close()
+      dexSocket.disconnect()
+      memeSocket.disconnect()
     }
   }, [])
 
